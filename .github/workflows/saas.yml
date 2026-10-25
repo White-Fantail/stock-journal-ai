@@ -97,6 +97,7 @@ jobs:
             "SAAS_DATABASE_URL": "postgresql://saas_ci:synthetic_only@localhost:5432/journal_hosted_deploy_ci",
             "SAAS_AUTO_MIGRATE": "1",
             "SAAS_MIGRATION_BACKUP_VERIFIED": "1", # CI simulation, not production backup proof
+            "SAAS_TRADE_RUNTIME_PASSWORD": "a" * 64,
             "RAILWAY_PROJECT_ID": "881e854d-86a2-436f-86a5-b17e5f92e912",
             "RAILWAY_SERVICE_ID": "350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
             "RAILWAY_ENVIRONMENT_ID": "1a79e220-c75e-40be-a608-2d1f21a3ebb8",
@@ -110,10 +111,15 @@ jobs:
                              env=env, check=True)
           with psycopg.connect(env["SAAS_DATABASE_URL"]) as c:
               versions = [r[0] for r in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql"]
+              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql"]
               assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
+          with psycopg.connect("postgresql://saas_trade_app:" + "a"*64 +
+                             "@localhost:5432/journal_hosted_deploy_ci") as limited:
+              from services.saas_api.trades import _runtime_safety
+              _runtime_safety(limited)
+              assert limited.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone() == (False,False)
           PY
       - name: Verify 004-to-005 live upgrade and nonempty-data rollback on disposable PostgreSQL 18
         run: |
@@ -123,7 +129,7 @@ jobs:
           from services.saas_api.schema_admin import manifest
           suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
           sources = manifest()
-          assert len(sources) == 6
+          assert len(sources) == 7
           with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
               for name, _ in suites:
                   c.execute("CREATE DATABASE " + name)
@@ -154,6 +160,7 @@ jobs:
                   "SAAS_DATABASE_URL":dsn,
                   "SAAS_AUTO_MIGRATE":"1",
                   "SAAS_MIGRATION_BACKUP_VERIFIED":"1", # synthetic CI test only
+                  "SAAS_TRADE_RUNTIME_PASSWORD":"a"*64,
                   "RAILWAY_PROJECT_ID":"881e854d-86a2-436f-86a5-b17e5f92e912",
                   "RAILWAY_SERVICE_ID":"350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
                   "RAILWAY_ENVIRONMENT_ID":"1a79e220-c75e-40be-a608-2d1f21a3ebb8",
@@ -166,7 +173,7 @@ jobs:
               assert (result.returncode != 0) if occupied else (result.returncode == 0)
               with psycopg.connect(dsn) as c:
                   names = [v[0] for v in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-                  assert len(names) == (4 if occupied else 6), names
+                  assert len(names) == (4 if occupied else 7), names
                   assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
                   if occupied:
                       assert c.execute("SELECT count(*) FROM saas_csv_import_batches").fetchone()[0] == 1

@@ -17,7 +17,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
         self.assertEqual([m[0] for m in planned],
                          ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql",
                           "004_csv_imports.sql", "005_remove_csv_imports.sql",
-                          "006_journal_security.sql"])
+                          "006_journal_security.sql", "007_trade_runtime_login.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_trade_migration_contains_exactly_one_valid_schema(self):
@@ -50,6 +50,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
             **PRODUCTION_RAILWAY_IDENTITY,
             "SAAS_AUTO_MIGRATE": "1",
             "SAAS_MIGRATION_BACKUP_VERIFIED": "1",
+            "SAAS_TRADE_RUNTIME_PASSWORD": "a" * 64,
         }
         # Main applies the immutable 004 history and compensating 005 removal.
         self.assertEqual({name for name, _, _ in planned}, APPROVED_AUTO_MIGRATIONS)
@@ -103,7 +104,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
 
     def test_reject_changed_or_unknown_history_and_nonprefix(self):
         planned = manifest()
-        first, second, third, fourth, fifth, sixth = planned
+        first, second, third, fourth, fifth, sixth, seventh = planned
         bad_cases = [
             {first[0]: "0" * 64},
             {second[0]: second[1]},
@@ -113,6 +114,9 @@ class HostedSchemaPolicyTests(unittest.TestCase):
              fourth[0]: fourth[1], fifth[0]: "0" * 64},
             {first[0]: first[1], second[0]:second[1], third[0]:third[1],
              fourth[0]:fourth[1], fifth[0]:fifth[1], sixth[0]:"0"*64},
+            {first[0]:first[1],second[0]:second[1],third[0]:third[1],
+             fourth[0]:fourth[1],fifth[0]:fifth[1],sixth[0]:sixth[1],
+             seventh[0]:"0"*64},
             {"999_unknown.sql": "f" * 64},
         ]
         for applied in bad_cases:

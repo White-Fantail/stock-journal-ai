@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import re
 from pathlib import Path
 
 
@@ -33,6 +34,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "004_csv_imports.sql", # immutable applied history; NEVER rewrite/remove
     "005_remove_csv_imports.sql", # forward-only removal of unused staging
     "006_journal_security.sql", # reviewed tenant journal + HMAC nonce/rate tables
+    "007_trade_runtime_login.sql", # restricted login with no inline password
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.
@@ -135,6 +137,8 @@ def main() -> int:
     planned = manifest()
     if args.deploy:
         validate_auto_deploy(dict(os.environ), planned)
+        if not re.fullmatch(r"[0-9a-f]{64}", os.environ.get("SAAS_TRADE_RUNTIME_PASSWORD", "")):
+            raise SchemaRefused("Missing strong runtime DB login secret")
 
     # Import lazily so pure, dependency-free validation tests can run in CI.
     import psycopg
@@ -181,6 +185,18 @@ def main() -> int:
                 if set(REQUIRED_TABLES) - tables:
                     raise SchemaRefused("Expected SaaS tables are missing after applying schema")
                 final_versions = set(applied) | {name for name, _, _ in to_apply}
+                if args.deploy and "007_trade_runtime_login.sql" in final_versions:
+                    # Password arrives only from the private Railway pre-deploy
+                    # environment; keep it out of SQL files, repository and logs.
+                    secret = os.environ["SAAS_TRADE_RUNTIME_PASSWORD"]
+                    c.execute("SELECT set_config('saas.trade_login_secret',%s,true)",(secret,))
+                    c.execute("""DO $set_login$
+                        BEGIN
+                          EXECUTE format('ALTER ROLE saas_trade_app PASSWORD %L',
+                            current_setting('saas.trade_login_secret'));
+                        END
+                        $set_login$""")
+                    c.execute("SELECT set_config('saas.trade_login_secret','',true)")
                 if "005_remove_csv_imports.sql" in final_versions:
                     if {"saas_csv_import_batches", "saas_csv_import_rows"} & tables:
                         raise SchemaRefused("Removed CSV tables unexpectedly remain")

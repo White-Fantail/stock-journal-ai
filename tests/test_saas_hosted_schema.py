@@ -24,6 +24,17 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "014_reconciliation_audit.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
+    def test_reconciliation_schema_enforces_immutable_tenant_staging(self):
+        source = next(sql for name, _, sql in manifest()
+                      if name == "014_reconciliation_audit.sql")
+        for name in ("saas_reconciliation_versions","saas_reconciliation_issues",
+                     "saas_verified_execution_stage","saas_projection_position_stage"):
+            self.assertIn("CREATE TABLE "+name,source)
+            self.assertIn("ALTER TABLE "+name+" FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT, INSERT",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertNotIn("DROP TABLE",source)
+
     def test_paged_checkpoint_migration_is_additive_and_tenant_scoped(self):
         source = next(sql for name, _, sql in manifest()
                       if name == "012_backfill_page_resume.sql")

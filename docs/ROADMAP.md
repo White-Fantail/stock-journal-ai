@@ -49,7 +49,9 @@
 - [x] Build an offline, account-scoped Decimal FIFO native-currency cost-basis/realized-P&L core with adversarial tests (strict verified-history/corporate-action prerequisite; no production data input).
 - [ ] Version and persist authorized projections; reconcile position snapshots at matching as-of time, add verified FX/unrealized returns, user-facing portfolio views and audit provenance.
 - [x] Add account-scoped portfolio readiness UI using freshly authenticated Tiger connection and sync metadata. Unknown cost basis, holdings and performance display as unverified, never zero/dummy values.
-- [ ] Persist reconciled, versioned projections and exception records; provide verified financial position/return tables and source-linked correction workflows once provider history is certified.
+- [x] Implement append-only tenant reconciliation decisions and issue codes (migration 014), versioned *private staging* of execution identities/Decimal FIFO positions only behind independent attestation. Retry idempotency and repaired-input versions verified on disposable PostgreSQL; never publish these as account holdings.
+- [x] Add signed owner-scoped reconciliation review status API and portfolio screen showing latest version/issue codes without raw broker IDs or money.
+- [ ] Build independently verified provider attestation issuer (Tiger approval required), immutable source evidence-to-ledger reconciliation, customer-visible publication gates, verified FX/market pricing, audited correction workflows.
 - **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
 
 ## P5 — AI analysis and notifications (**planned**)

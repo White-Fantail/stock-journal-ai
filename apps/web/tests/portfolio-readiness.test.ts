@@ -11,6 +11,8 @@ test("portfolio loads verified session and server-side private scoped broker met
   assert.ok(page.includes("currentWorkspace()"));
   assert.ok(page.includes("tigerStatus()"));
   assert.ok(page.includes("tigerSyncStatus()"));
+  assert.ok(page.includes("tigerReviewStatus()"));
+  assert.ok(page.includes("review.issues"));
   assert.ok(page.includes("Promise.allSettled"));
   assert.ok(!page.includes("localStorage"));
   assert.ok(!page.includes("Math.random"));

@@ -23,6 +23,14 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
+    def test_paged_checkpoint_migration_is_additive_and_tenant_scoped(self):
+        source = next(sql for name, _, sql in manifest()
+                      if name == "012_backfill_page_resume.sql")
+        self.assertIn("ADD COLUMN pages_staged", source)
+        self.assertIn("pages_staged BETWEEN 0 AND 50", source)
+        self.assertIn("GRANT UPDATE (pages_staged)", source)
+        self.assertNotIn("DROP TABLE", source)
+
     def test_trade_migration_contains_exactly_one_valid_schema(self):
         # A source accident previously spliced repeated fragments into 003:
         # those fragments escaped a manifest checksum-only unit test but made

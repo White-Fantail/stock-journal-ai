@@ -9,10 +9,10 @@ import os
 from uuid import UUID
 
 import psycopg
-from services.broker_connectors.contracts import BrokerFill
+from services.broker_connectors.contracts import BrokerFill, BrokerSyncRequest, SyncWindow
 from services.broker_connectors.paged_contract import ReadPage
 from services.saas_api.backfill_worker import WorkerRefused, enqueue, _claim
-from services.saas_api.paged_backfill import run_page, run_bounded, _cursor_aad
+from services.saas_api.paged_backfill import run_page, run_bounded, _cursor_aad, _commit_page
 from services.saas_api.tiger_oauth import unseal
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
@@ -132,6 +132,38 @@ with psycopg.connect(dsn) as identity:
         def terminal(req,cursor):
             return ReadPage(req,(),None,True)
         assert run_page(identity,broker,user_a[0],transient["jobId"],terminal)["state"]=="PARTIAL"
+
+        # Tampered ciphertext must not leak or silently skip a page.
+        tampered=enqueue(identity,broker,user_a[0],user_a[3],start+timedelta(days=20),
+                         start+timedelta(days=21))
+        assert run_page(identity,broker,user_a[0],tampered["jobId"],reader)["state"]=="NEXT_PAGE_READY"
+        with broker.transaction():
+            broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(user_a[1]),))
+            broker.execute("""UPDATE saas_broker_backfill_windows
+                SET checkpoint_ciphertext=%s WHERE job_id=%s""",
+                (b"corrupt-ciphertext-that-is-too-long",UUID(tampered["jobId"])))
+        compromised=run_page(identity,broker,user_a[0],tampered["jobId"],reader)
+        assert compromised["state"]=="FAILED",compromised
+        with broker.transaction():
+            broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(user_a[1]),))
+            assert broker.execute("""SELECT pages_staged FROM saas_broker_backfill_windows
+                WHERE job_id=%s""",(UUID(tampered["jobId"]),)).fetchone()[0]==1
+
+        # A former lease holder cannot write evidence after expiry.
+        expired=enqueue(identity,broker,user_a[0],user_a[3],start+timedelta(days=25),
+                        start+timedelta(days=26))
+        stale=_claim(identity,broker,user_a[0],UUID(expired["jobId"]))
+        assert stale is not None
+        with broker.transaction():
+            broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(user_a[1]),))
+            broker.execute("""UPDATE saas_broker_backfill_windows
+               SET lease_until=now()-interval '2 seconds'
+               WHERE id=%s""",(stale[3],))
+        stale_response=_commit_page(identity,broker,user_a[0],UUID(expired["jobId"]),
+                                   stale,ReadPage(BrokerSyncRequest(stale[0], stale[1], stale[2],
+                                                             SyncWindow(stale[5], stale[6])),
+                                            (), None, True),[],("HISTORY_COVERAGE_UNVERIFIED",),[],0)
+        assert stale_response=={"state":"LEASE_LOST","written":0},stale_response
 
         # Revoking a grant prevents any queued page from being read.
         identity.execute("""UPDATE saas_broker_connections SET status='DISCONNECTED'

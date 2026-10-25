@@ -18,11 +18,17 @@ from services.saas_api.journal import list_notes, create_note, export_journal
 from services.saas_api.request_security import valid_nonce, consume_signed_request, RequestRejected
 from services.saas_api.account import delete_account
 from services.saas_api.trade_detail import trade_detail
+from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
+    list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
+    disconnect as tiger_disconnect)
 
 _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
-            "/internal/v1/journal/export", "/internal/v1/account/delete", "/internal/v1/trades/detail"}
+            "/internal/v1/journal/export", "/internal/v1/account/delete", "/internal/v1/trades/detail",
+            "/internal/v1/tiger/status", "/internal/v1/tiger/start",
+            "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
+            "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -84,6 +90,38 @@ class Handler(BaseHTTPRequestHandler):
             if not dsn:
                 return self.reply(503,{"error":"NOT_CONFIGURED"})
             import psycopg  # optional runtime dependency; zero packages for security unit tests
+            if path.startswith("/internal/v1/tiger/"):
+                # Broker operations require a separate limited RLS login.
+                # Neither client-provided workspace IDs nor provider URLs are accepted.
+                broker_dsn = os.environ.get("SAAS_BROKER_DATABASE_URL")
+                if not broker_dsn or broker_dsn == dsn:
+                    return self.reply(503,{"error":"BROKER_DB_ROLE_NOT_CONFIGURED"})
+                permitted = {
+                    "/internal/v1/tiger/status": {"subject"},
+                    "/internal/v1/tiger/start": {"subject"},
+                    "/internal/v1/tiger/callback": {"subject","state","code","scope"},
+                    "/internal/v1/tiger/bind": {"subject","connectionId","accountNumber"},
+                    "/internal/v1/tiger/read": {"subject","accountId"},
+                    "/internal/v1/tiger/disconnect": {"subject","connectionId"},
+                }
+                if set(data) != permitted[path]:
+                    return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
+                with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
+                    consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
+                    with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
+                        if path.endswith("/status"):
+                            out=tiger_list(identity_conn,broker_conn,data["subject"])
+                        elif path.endswith("/start"):
+                            out=tiger_begin(identity_conn,broker_conn,data["subject"])
+                        elif path.endswith("/callback"):
+                            out=tiger_finish(identity_conn,broker_conn,data["subject"],data["state"],data["code"],data["scope"])
+                        elif path.endswith("/bind"):
+                            out=tiger_bind(identity_conn,broker_conn,data["subject"],data["connectionId"],data["accountNumber"])
+                        elif path.endswith("/read"):
+                            out=tiger_read(identity_conn,broker_conn,data["subject"],data["accountId"])
+                        else:
+                            out=tiger_disconnect(identity_conn,broker_conn,data["subject"],data["connectionId"])
+                return self.reply(200,out)
             if path == "/internal/v1/account/delete":
                 if set(data) != {"subject","confirmation"}:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
@@ -131,6 +169,10 @@ class Handler(BaseHTTPRequestHandler):
                     if not out:
                         return self.reply(404,{"error":"ACCOUNT_NOT_FOUND"})
             return self.reply(200,out)
+        except TigerError as error:
+            code = error.code
+            return self.reply(409 if code in ("STATE_EXPIRED_OR_REPLAYED","REAUTH_REQUIRED") else 503,
+                              {"error":code})
         except RequestRejected:
             return self.reply(429,{"error":"REPLAY_OR_RATE_LIMIT"})
         except TradeInputError:

@@ -108,8 +108,11 @@ def _provider_request(url, *, form=None, access_token=None):
     if access_token is not None:
         headers["Authorization"] = "Bearer " + access_token
     req = urllib.request.Request(url, headers=headers, data=data, method="POST" if data is not None else "GET")
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, request, fp, code, msg, headers, newurl):
+            raise TigerError("PROVIDER_REDIRECT_DENIED")
     try:
-        with urllib.request.urlopen(req, timeout=8) as response:
+        with urllib.request.build_opener(NoRedirect).open(req, timeout=8) as response:
             content = response.read(100000)
             if response.read(1):
                 raise TigerError("PROVIDER_RESPONSE_TOO_LARGE")
@@ -136,7 +139,7 @@ def _token(form, cfg):
     if not isinstance(value.get("access_token"), str) or len(value["access_token"]) < 20:
         raise TigerError("INVALID_TOKEN_RESPONSE")
     granted = value.get("scope")
-    if not isinstance(granted, str) or not set(cfg["scopes"]).issubset(set(granted.split())):
+    if not isinstance(granted, str) or set(cfg["scopes"]) != set(granted.split()):
         raise TigerError("UNSAFE_OR_MISSING_SCOPES")
     if _FORBIDDEN.search(granted) or any(not _SCOPE.fullmatch(x) for x in granted.split()):
         raise TigerError("UNSAFE_OR_MISSING_SCOPES")

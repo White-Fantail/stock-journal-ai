@@ -34,7 +34,7 @@ class ProjectionTests(unittest.TestCase):
         p=result.positions[0]
         self.assertEqual(p.quantity,D("3"))
         self.assertEqual(p.cost_basis,D("363"))  # 3 * (120 + 5/5)
-        self.assertEqual(p.realized_pnl,D("508"))  # 10*(150-1-101)+2*(150-1-121)
+        self.assertEqual(p.realized_pnl,D("536"))  # 10*(150-1-101)+2*(150-1-121)
 
     def test_replay_same_fill_is_idempotent(self):
         f=fill("b1","BUY","2","10",0,"0")

@@ -217,6 +217,8 @@ jobs:
         run: python scripts/verify_saas_identity.py
       - name: Verify workspace A/B broker metadata RLS and composite account FKs
         run: python scripts/verify_saas_broker_isolation.py
+      - name: Verify Tiger encrypted grant and source-evidence vault A/B tenant RLS
+        run: python scripts/verify_tiger_vault_isolation.py
       - name: Verify manual trade A/B RLS, append-only and revoked-membership denial
         run: python scripts/verify_saas_trade_isolation.py
       - name: A/B authenticated service HTTP, replay, note export and account deletion

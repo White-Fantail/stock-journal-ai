@@ -1,5 +1,7 @@
 # Stock Journal AI
 
+> **P0–P2 technical baseline (2026-10-25):** The active Git branches have been rewritten onto a parentless clean root with no historical customer finance files. GitHub retains old SHA objects/caches pending upstream cleanup. P1/P2 Google identity, HMAC nonce/rate protection, tenant journal, export, account removal and dedicated runtime DB login have CI coverage. **Production P2 activation remains off pending real two-user Google sign-in, production DB-role and backup/restore evidence.** See [P3 readiness gates](docs/P3-READINESS.md).
+
 > **Current direction (2026-10-25):** A multi-user, Google-first, privacy-first investment journal and analysis SaaS. **Tiger Trade / Tiger Brokers is the first broker adapter.** The broker is authoritative for broker-provided facts; each authenticated workspace owns its own derived journals, annotations and projections. This public GitHub repository is **source code and documentation only**, never a customer portfolio datastore.
 
 ## Product
@@ -13,7 +15,7 @@
 | Area | Repository state | Remaining gate |
 | --- | --- | --- |
 | Google/Workspace | Auth.js Google flow, backend provision/resolve and membership checks exist | Verify live signed-in two-user isolation, backend roles and operational safeguards |
-| Multi-tenant SaaS DB | Versioned schema 001–005, FORCE RLS and contract tests exist | Verify actual hosted schema, least-privilege runtime role, backup/restore |
+| Multi-tenant SaaS DB | Versioned schema 001–007, FORCE RLS and contract tests exist | Verify actual hosted schema, least-privilege runtime role, backup/restore |
 | Manual trade log | Tenant event and compensating-VOID code, feature-gated UI | Enable only after negative HTTP isolation and deployment tests |
 | Tiger | Closed registry, typed read-only offline fixture adapter | Verify third-party consent/auth permissions and implement a real secured worker |
 | Portfolio, review and AI | Architecture/planning | Build projections, reconciliation, insight UI and opt-in AI |
@@ -26,7 +28,7 @@ The existing Vercel and Railway service configuration is not evidence that every
 - `services/saas_api/` — Python internal HMAC API and guarded hosted schema runner
 - `services/broker_connectors/` — provider-neutral read-only contract, registry and initial Tiger adapter
 - `services/tiger_sync/` — reusable **offline-only** bounded Tiger normalization/collection utilities
-- `db/saas/migrations/` — immutable applied-migration chain (including historical 004/005)
+- `db/saas/migrations/` — immutable SaaS schema chain (001–007; 004/005 retained solely for history)
 - `tests/`, `scripts/verify_saas_*.py` — synthetic data and isolation tests
 - `docs/` — current product, design, operating and milestone documents
 

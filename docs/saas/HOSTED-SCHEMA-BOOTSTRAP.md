@@ -11,8 +11,13 @@ Current versions:
 - 003 manual trade event ledger
 - 004 **historical discontinued CSV staging migration**, immutable even when feature removed
 - 005 **approved guarded retirement** of empty CSV staging, refusing deletion when rows exist
+- 006 tenant-authored append-only investment journal, nonce/replay prevention and rate-limit tables
+- 007 least-privilege trade runtime LOGIN (password omitted from SQL and applied at deploy from private environment)
 
 Never remove or edit migration 004 simply because the CSV product has been discontinued. The version ledger is operational DB history, **not customer CSV-upload functionality**. New reviewed forward migrations (006+) must include same-change manifest approval and CI on disposable PostgreSQL. Never automatically allow destructive/nontransactional SQL without a separate reviewed plan.
+
+## Dedicated financial DB runtime role
+For the reviewed 007 rollout, Railway API private `SAAS_TRADE_RUNTIME_PASSWORD` must be a randomly generated 64-hex-character secret. The pre-deploy runner configures the login password inside the guarded migration transaction; `SAAS_TRADE_DATABASE_URL` must connect as `saas_trade_app`, not the identity/owner/admin role. Never log or commit these secrets. Real A/B Google-user HTTP negative testing, distinct DB role verification and restore rehearsal precede setting `SAAS_S2_ENABLED=1`.
 
 ## Inspection
 In the Railway **API container**, using the correct `SAAS_DATABASE_URL`:

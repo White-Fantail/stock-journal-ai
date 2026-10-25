@@ -16,11 +16,13 @@
 - `003_trade_events.sql`: `saas_trade_events`, `EXECUTION/VOID` immutable user assertions, idempotency and integrity checks.
 - `004_csv_imports.sql`: **immutable historical migration**, not a current customer feature.
 - `005_remove_csv_imports.sql`: guarded removal of empty CSV staging; does not remove the applied-migration version ledger.
+- `006_journal_security.sql`: tenant-scoped immutable strategy/thesis/review/watchlist events plus shared HMAC nonce and rate-limit tables.
+- `007_trade_runtime_login.sql`: dedicated least-privilege `saas_trade_app` database role; password set through guarded deployment secrets, not stored in Git.
 
 These migration names and checksums must remain stable on all deployed DBs. This is not a production-status assertion.
 
 ## Required next relational families (future forward migrations)
-`saas_broker_source_events`, `saas_broker_executions`, `saas_broker_cash_events`, `saas_broker_corporate_actions`, `saas_sync_checkpoints`, `saas_reconciliation_issues`, `saas_projection_versions`, `saas_position_snapshots`, `saas_investment_theses`, `saas_strategy_revisions`, `saas_trade_notes`, `saas_ai_consents`, `saas_ai_analyses`, `saas_audit_events`, and retention/deletion state. Final table definitions follow reviewed migrations, not this proposal.
+`saas_broker_source_events`, `saas_broker_executions`, `saas_broker_cash_events`, `saas_broker_corporate_actions`, `saas_sync_checkpoints`, `saas_reconciliation_issues`, `saas_projection_versions`, `saas_position_snapshots`, typed, versioned `saas_journal_records` (already implemented), `saas_ai_consents`, `saas_ai_analyses`, `saas_audit_events`, and retention/deletion state. Final table definitions follow reviewed migrations, not this proposal.
 
 Every private table includes `workspace_id` and scope-aware primary/foreign keys. Money/quantities use `NUMERIC`/Decimal; timestamps store UTC and raw provider time/offset evidence; fees can be NULL. Credential vault secrets and plaintext brokerage account numbers are **not** table fields.
 

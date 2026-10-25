@@ -204,6 +204,29 @@ jobs:
         run: python scripts/verify_saas_trade_isolation.py
       - name: A/B authenticated service HTTP, replay, note export and account deletion
         run: python scripts/verify_saas_http_isolation.py
+      - name: Synthetic database backup and restore drill (PostgreSQL 18)
+        run: |
+          set -eu
+          trap 'rm -f /tmp/saas-ci-restore.dump' EXIT
+          docker run --rm --network host -e PGPASSWORD=synthetic_only postgres:18 \
+            pg_dump -h 127.0.0.1 -U saas_ci -d journal_saas_test -Fc \
+            > /tmp/saas-ci-restore.dump
+          python - <<'PY'
+          import os,psycopg
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"],autocommit=True) as c:
+              c.execute("CREATE DATABASE journal_saas_restore")
+          PY
+          docker run --rm --network host -i -e PGPASSWORD=synthetic_only postgres:18 \
+            pg_restore -h 127.0.0.1 -U saas_ci -d journal_saas_restore \
+            --no-owner --no-acl < /tmp/saas-ci-restore.dump
+          python - <<'PY'
+          import psycopg
+          with psycopg.connect("postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_restore") as c:
+              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 7
+              assert c.execute("SELECT to_regclass('public.saas_journal_records')").fetchone()[0]
+              assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0]
+          print("Synthetic PostgreSQL 18 backup/restore PASS (not production backup proof)")
+          PY
       - name: Reject hosted or unacknowledged DB migrations
         run: |
           if env -u SAAS_TEST_DB_ACK python db/saas/migrate.py --apply; then

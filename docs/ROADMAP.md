@@ -33,7 +33,8 @@
 - [ ] Verify whether read-only query grants exclude all trading privileges. If not, **do not connect**.
 - [x] Implement provider-approval-gated enterprise OAuth2 code flow, tenant-bound AES-GCM grants, one-time state/replay defence, static provider hosts, SDK cache exclusion, refresh and local disconnect (offline code; live behavior not yet verified).
 - [x] Add signed Vercel-to-Railway Tiger endpoints, tenant RLS account binding, encrypted asset/position source snapshots and explicit SNAPSHOT_ONLY coverage.
-- [ ] Build durable worker job orchestration, transactional fills/orders pagination/backfill, idempotent checkpoints and retry limits.
+- [x] Implement bounded backfill planning, durable tenant-scoped staging schema/checkpoints and synthetic A/B RLS regression coverage (offline foundation; no worker execution).
+- [ ] Implement trusted worker lease claims, transactional cursor pagination, grant-bound account authorization, idempotent staging/publishing and retries; persist complete/partial coverage only after evidence verification.
 - [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 

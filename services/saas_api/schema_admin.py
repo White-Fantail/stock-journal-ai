@@ -21,6 +21,7 @@ REQUIRED_TABLES = (
     "saas_trade_events", "saas_journal_records",
     "saas_internal_request_nonces", "saas_internal_rate_limits",
     "saas_tiger_oauth_attempts","saas_tiger_grants","saas_tiger_account_secrets","saas_tiger_source_snapshots",
+    "saas_broker_backfill_jobs","saas_broker_backfill_windows","saas_broker_source_stage",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -38,6 +39,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "007_trade_runtime_login.sql", # restricted login with no inline password
     "008_tiger_oauth.sql", # AEAD grant vault, one-use state, tenant RLS, source snapshots
     "009_tiger_runtime_login.sql", # separate non-BYPASSRLS Tiger runtime login
+    "010_broker_backfill_staging.sql", # tenant checkpoints and encrypted provider staging
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

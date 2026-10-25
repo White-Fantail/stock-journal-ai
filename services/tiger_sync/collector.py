@@ -165,21 +165,11 @@ def collect(adapter, start: datetime, end: datetime):
         for key, record in values:
             if record.get("time_confidence") == "UNVERIFIED":
                 issues.append(("UNVERIFIED_TIMEZONE", key, {"kind": kind}))
-    # Broker positions today must not be compared unconditionally with the
-    # frozen Oct 23 ledger as if they were same-time snapshots.
-    reconciliations = []
-    for key, record in output["POSITION"]:
-        reconciliations.append((key, "REFERENCE_ONLY",
-                                "Live/snapshot time differs from frozen 2026-10-23 ledger; no automatic delta claimed"))
-    for key, record in output["ORDER"]:
-        if record["ticker"] == "RKLB" and record["side"] == "BUY":
-            if (Decimal(record["filled_quantity"]) == Decimal("35")
-                    and record["avg_fill_price"] is not None
-                    and Decimal(record["avg_fill_price"]) == Decimal("51.90")):
-                reconciliations.append((f"RKLB:{key}", "CANDIDATE_MATCH",
-                    "Candidate for one 35-share Oct 23 legacy event; broker ID and total USD 2.10 fee require review"))
-                issues.append(("RKLB_ORDER_NEEDS_REVIEW", key,
-                               {"reason": "source order ID and all charges must be verified before matching"}))
+    # Position snapshots are reference only; never infer historical fills.
+    reconciliations = [
+        (key, "REFERENCE_ONLY", "Snapshot only; historical execution coverage unverified")
+        for key, _ in output["POSITION"]
+    ]
     complete = not any(code in {
         "ORDERS_INCOMPLETE", "TRANSACTIONS_INCOMPLETE", "TRANSACTIONS_UNAVAILABLE",
         "FILL_QUANTITY_MISMATCH", "POSITIONS_UNAVAILABLE", "CONFLICTING_SOURCE_VERSION"

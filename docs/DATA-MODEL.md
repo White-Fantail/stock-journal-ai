@@ -18,6 +18,8 @@
 - `005_remove_csv_imports.sql`: guarded removal of empty CSV staging; does not remove the applied-migration version ledger.
 - `006_journal_security.sql`: tenant-scoped immutable strategy/thesis/review/watchlist events plus shared HMAC nonce and rate-limit tables.
 - `007_trade_runtime_login.sql`: dedicated least-privilege `saas_trade_app` database role; password set through guarded deployment secrets, not stored in Git.
+- `008_tiger_oauth.sql` / `009_tiger_runtime_login.sql`: Tiger encrypted grants and restricted broker login.
+- `010_broker_backfill_staging.sql`: durable backfill jobs, bounded windows, HMAC-keyed encrypted evidence (staging only, not ledger publication).
 
 These migration names and checksums must remain stable on all deployed DBs. This is not a production-status assertion.
 

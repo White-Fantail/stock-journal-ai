@@ -31,8 +31,9 @@
 - [x] Provider registry, broker-neutral read-only contract, Tiger offline fixture normalization and bounded-window collector.
 - [ ] Obtain official Tiger approval for hosted third-party NZ customer authorization, app enrollment, exact consent scopes and eligible account types.
 - [ ] Verify whether read-only query grants exclude all trading privileges. If not, **do not connect**.
-- [ ] Design/implement per-tenant encrypted grant vault, OAuth callback/state/replay defense, SDK token-cache isolation, reauthorization and disconnect.
-- [ ] Build signed tenant-bound Railway sync job orchestration, source event tables, checkpoints/pagination/backfill and retry boundaries.
+- [x] Implement provider-approval-gated enterprise OAuth2 code flow, tenant-bound AES-GCM grants, one-time state/replay defence, static provider hosts, SDK cache exclusion, refresh and local disconnect (offline code; live behavior not yet verified).
+- [x] Add signed Vercel-to-Railway Tiger endpoints, tenant RLS account binding, encrypted asset/position source snapshots and explicit SNAPSHOT_ONLY coverage.
+- [ ] Build durable worker job orchestration, transactional fills/orders pagination/backfill, idempotent checkpoints and retry limits.
 - [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 

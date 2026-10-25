@@ -42,3 +42,6 @@ Never claim a commit deletion by itself erases old public history or third-party
 - Time-bounded consent, revocation, personal data export and deletion policy before general signup.
 - Real restore rehearsal, monitoring, user-separation checks and rollback plan prior to changing hosted private schema.
 - AI outputs are separate derived observations, not broker confirmations, not trades.
+
+
+See [Tiger P3 operator runbook](saas/TIGER-P3-OAUTH.md) for hosted OAuth authorization, vault setup and verified blockers.

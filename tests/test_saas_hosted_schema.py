@@ -17,7 +17,8 @@ class HostedSchemaPolicyTests(unittest.TestCase):
         self.assertEqual([m[0] for m in planned],
                          ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql",
                           "004_csv_imports.sql", "005_remove_csv_imports.sql",
-                          "006_journal_security.sql", "007_trade_runtime_login.sql"])
+                          "006_journal_security.sql", "007_trade_runtime_login.sql",
+                          "008_tiger_oauth.sql", "009_tiger_runtime_login.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_trade_migration_contains_exactly_one_valid_schema(self):

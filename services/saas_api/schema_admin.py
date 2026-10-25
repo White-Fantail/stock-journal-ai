@@ -20,6 +20,7 @@ REQUIRED_TABLES = (
     "saas_broker_connections", "saas_broker_accounts", "saas_broker_sync_runs",
     "saas_trade_events", "saas_journal_records",
     "saas_internal_request_nonces", "saas_internal_rate_limits",
+    "saas_tiger_oauth_attempts","saas_tiger_grants","saas_tiger_account_secrets","saas_tiger_source_snapshots",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -35,6 +36,8 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "005_remove_csv_imports.sql", # forward-only removal of unused staging
     "006_journal_security.sql", # reviewed tenant journal + HMAC nonce/rate tables
     "007_trade_runtime_login.sql", # restricted login with no inline password
+    "008_tiger_oauth.sql", # AEAD grant vault, one-use state, tenant RLS, source snapshots
+    "009_tiger_runtime_login.sql", # separate non-BYPASSRLS Tiger runtime login
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.
@@ -139,6 +142,11 @@ def main() -> int:
         validate_auto_deploy(dict(os.environ), planned)
         if not re.fullmatch(r"[0-9a-f]{64}", os.environ.get("SAAS_TRADE_RUNTIME_PASSWORD", "")):
             raise SchemaRefused("Missing strong runtime DB login secret")
+        broker_password = os.environ.get("SAAS_BROKER_RUNTIME_PASSWORD", "")
+        if broker_password and not re.fullmatch(r"[0-9a-f]{64}", broker_password):
+            raise SchemaRefused("Malformed dedicated broker runtime secret")
+        if os.environ.get("TIGER_PARTNER_OAUTH_APPROVED") == "1" and not broker_password:
+            raise SchemaRefused("Tiger approved but broker runtime login is not configured")
 
     # Import lazily so pure, dependency-free validation tests can run in CI.
     import psycopg
@@ -197,6 +205,17 @@ def main() -> int:
                         END
                         $set_login$""")
                     c.execute("SELECT set_config('saas.trade_login_secret','',true)")
+                if args.deploy and "009_tiger_runtime_login.sql" in final_versions:
+                    broker_secret = os.environ.get("SAAS_BROKER_RUNTIME_PASSWORD", "")
+                    if broker_secret:
+                        c.execute("SELECT set_config('saas.broker_login_secret',%s,true)", (broker_secret,))
+                        c.execute("""DO $set_tiger_login$
+                            BEGIN
+                              EXECUTE format('ALTER ROLE saas_broker_app PASSWORD %L',
+                                current_setting('saas.broker_login_secret'));
+                            END
+                            $set_tiger_login$""")
+                        c.execute("SELECT set_config('saas.broker_login_secret','',true)")
                 if "005_remove_csv_imports.sql" in final_versions:
                     if {"saas_csv_import_batches", "saas_csv_import_rows"} & tables:
                         raise SchemaRefused("Removed CSV tables unexpectedly remain")

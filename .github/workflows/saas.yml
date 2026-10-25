@@ -90,6 +90,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_broker_worker_contract.py' -v
       - name: Validate offline bounded page contract and cursor validation
         run: python -m unittest discover -s tests -p 'test_broker_paged_contract.py' -v
+      - name: Validate offline dispatcher disabled by default
+        run: python -m unittest discover -s tests -p 'test_saas_dispatcher.py' -v
       - name: Validate hosted schema bootstrap policy (no live connection)
         run: python -m unittest discover -s tests -p 'test_saas_hosted_schema.py' -v
       - name: Exercise hosted bootstrap against separate disposable CI database
@@ -240,6 +242,8 @@ jobs:
         run: python -m scripts.verify_saas_backfill_worker
       - name: Verify P3 encrypted page checkpoints, replay and tenant fences
         run: python -m scripts.verify_saas_paged_backfill
+      - name: Verify dispatch-only DB role, due queue and replay fence
+        run: python -m scripts.verify_saas_dispatcher
       - name: Verify manual trade A/B RLS, append-only and revoked-membership denial
         run: python scripts/verify_saas_trade_isolation.py
       - name: A/B authenticated service HTTP, replay, note export and account deletion

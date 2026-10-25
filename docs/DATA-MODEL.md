@@ -46,5 +46,8 @@ Every private table includes `workspace_id` and scope-aware primary/foreign keys
 ## P3 paginated recovery (offline)
 Version 012 adds a 50-page window counter. Encrypted continuation cursors use window+tenant+account-bound AEAD and commit transactionally with encrypted staged fills. Dedupe keys are per-account HMACs; successful pages reset consecutive-failure attempts and release the fencing token for another explicit bounded invocation. A terminal page remains partial until provider history, fee and timezone semantics are independently verified. No live Tiger SDK, autonomous dispatcher or portfolio publication is enabled.
 
+## P3 dispatch queue (migration 013)
+The metadata-only `saas_broker_dispatch_queue` has composite workspace/job FK, due timestamp and a short fenced claim. `saas_dispatch_app` inherits only `saas_broker_dispatch_runtime`, cannot read grant ciphertext, account secrets, staged evidence or trade events; the broker runtime writes queue entries under FORCE RLS. Each dispatched job is checked again against ACTIVE workspace owner and current read-only grant before an offline-injected page reader is invoked. No production polling service exists and the queue cannot itself authorize an account.
+
 ## Privacy and deletion
 Provider data exists in the user-specific private DB, never in Git, CI fixtures, S3 public buckets, error telemetry or model prompts without explicit scope. Document retention/backups/revocation and user export/delete. Deleting a Git file does not retroactively purge public Git commit history.

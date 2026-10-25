@@ -36,7 +36,8 @@
 - [x] Implement bounded backfill planning, durable tenant-scoped staging schema/checkpoints and synthetic A/B RLS regression coverage (offline foundation; no worker execution).
 - [x] Implement offline-injected, owner/member-resolved one-window worker: locked lease claims, fencing tokens, resumable bounded windows, encrypted HMAC-keyed idempotent staging, bounded retries and A/B PostgreSQL tests. Source always staged PARTIAL until independent provider coverage verification.
 - [x] Implement offline provider-neutral paginated read contract and an explicitly invoked, bounded page runner with encrypted continuation cursors, transactional checkpoint/staging, duplicate-page idempotency, page-count and lease fencing (does not certify complete history).
-- [ ] Build provider-approved live Tiger pagination adapter, secure background dispatcher using opaque tenant-bound job lookups, independent coverage certification, account verification and reconciled publishing. Live API/scheduler remain disabled.
+- [x] Build dispatch-only database role, opaque tenant job queue, SKIP LOCKED claim with token fencing, fresh-owner authorization and bounded scheduler ticks (offline/injected reader only).
+- [ ] Activate a separately deployed background runner only after Tiger read-only historical endpoint, cursor rules, consent scopes, tenant auditing and operational monitoring are independently verified. Publication/reconciliation remains outstanding.
 - [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 

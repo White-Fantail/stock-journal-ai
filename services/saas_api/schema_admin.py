@@ -148,6 +148,9 @@ def main() -> int:
         validate_auto_deploy(dict(os.environ), planned)
         if not re.fullmatch(r"[0-9a-f]{64}", os.environ.get("SAAS_TRADE_RUNTIME_PASSWORD", "")):
             raise SchemaRefused("Missing strong runtime DB login secret")
+        dispatch_password = os.environ.get("SAAS_DISPATCH_RUNTIME_PASSWORD", "")
+        if dispatch_password and not re.fullmatch(r"[0-9a-f]{64}", dispatch_password):
+            raise SchemaRefused("Malformed dispatch runtime secret")
         broker_password = os.environ.get("SAAS_BROKER_RUNTIME_PASSWORD", "")
         if broker_password and not re.fullmatch(r"[0-9a-f]{64}", broker_password):
             raise SchemaRefused("Malformed dedicated broker runtime secret")
@@ -222,6 +225,17 @@ def main() -> int:
                             END
                             $set_tiger_login$""")
                         c.execute("SELECT set_config('saas.broker_login_secret','',true)")
+                if args.deploy and "013_broker_dispatch_queue.sql" in final_versions:
+                    secret = os.environ.get("SAAS_DISPATCH_RUNTIME_PASSWORD", "")
+                    if secret:
+                        c.execute("SELECT set_config('saas.dispatch_login_secret',%s,true)",(secret,))
+                        c.execute("""DO $login$
+                          BEGIN
+                            EXECUTE format('ALTER ROLE saas_dispatch_app PASSWORD %L',
+                              current_setting('saas.dispatch_login_secret'));
+                          END
+                          $login$""")
+                        c.execute("SELECT set_config('saas.dispatch_login_secret','',true)")
                 if "005_remove_csv_imports.sql" in final_versions:
                     if {"saas_csv_import_batches", "saas_csv_import_rows"} & tables:
                         raise SchemaRefused("Removed CSV tables unexpectedly remain")

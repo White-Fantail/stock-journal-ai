@@ -18,7 +18,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
+export type TigerAction = "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -88,4 +88,26 @@ export async function tigerSyncStatus():Promise<TigerSyncStatus> {
         Array.isArray(j.issueCodes)))
     throw new Error("INVALID_TIGER_SYNC_STATUS");
   return value;
+}
+
+/** Latest immutable reconciliation status; never exposes staged money or fills. */
+export type TigerReviewAccount = {
+  accountId:string; alias:string; version:number;
+  state:"BLOCKED"|"STAGED"; createdAt:string; issues:string[];
+};
+export type TigerReviewStatus = {
+  provider:"TIGER"; published:false; accounts:TigerReviewAccount[];
+};
+export async function tigerReviewStatus():Promise<TigerReviewStatus> {
+  const data=await tigerCall("review-status") as TigerReviewStatus;
+  if(!data || data.provider!=="TIGER" || data.published!==false ||
+     !Array.isArray(data.accounts) || data.accounts.length>50 ||
+     !data.accounts.every(a=>a && typeof a.accountId==="string" &&
+       typeof a.alias==="string" && Number.isInteger(a.version) && a.version>0 &&
+       (a.state==="BLOCKED" || a.state==="STAGED") &&
+       typeof a.createdAt==="string" && Array.isArray(a.issues) &&
+       a.issues.length<=64 &&
+       a.issues.every(code=>typeof code==="string" && /^[A-Z][A-Z0-9_]{1,63}$/.test(code))))
+    throw new Error("INVALID_TIGER_REVIEW_STATUS");
+  return data;
 }

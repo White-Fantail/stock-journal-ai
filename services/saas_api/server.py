@@ -19,6 +19,7 @@ from services.saas_api.request_security import valid_nonce, consume_signed_reque
 from services.saas_api.account import delete_account
 from services.saas_api.trade_detail import trade_detail
 from services.saas_api.sync_status import sync_status
+from services.saas_api.reconciliation_store import review_status
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
     list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
     disconnect as tiger_disconnect)
@@ -30,7 +31,7 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
             "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect",
-            "/internal/v1/tiger/sync-status"}
+            "/internal/v1/tiger/sync-status", "/internal/v1/tiger/review-status"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -101,6 +102,7 @@ class Handler(BaseHTTPRequestHandler):
                 permitted = {
                     "/internal/v1/tiger/status": {"subject"},
                     "/internal/v1/tiger/sync-status": {"subject"},
+                    "/internal/v1/tiger/review-status": {"subject"},
                     "/internal/v1/tiger/start": {"subject"},
                     "/internal/v1/tiger/callback": {"subject","state","code","scope"},
                     "/internal/v1/tiger/bind": {"subject","connectionId","accountNumber"},
@@ -112,7 +114,9 @@ class Handler(BaseHTTPRequestHandler):
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
-                        if path.endswith("/sync-status"):
+                        if path.endswith("/review-status"):
+                            out=review_status(identity_conn,broker_conn,data["subject"])
+                        elif path.endswith("/sync-status"):
                             out=sync_status(identity_conn,broker_conn,data["subject"])
                         elif path.endswith("/status"):
                             out=tiger_list(identity_conn,broker_conn,data["subject"])

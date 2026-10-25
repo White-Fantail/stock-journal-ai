@@ -96,7 +96,7 @@ def _scope(identity, broker, subject):
     return user["workspaceId"]
 
 
-def _provider_request(url, *, form=None, access_token=None):
+def _provider_request(url, *, form=None, access_token=None, empty_success=False):
     if not url.startswith(_BASE + "/"):
         raise TigerError("PROVIDER_HOST_DENIED")
     if form is None and access_token is None:
@@ -113,6 +113,10 @@ def _provider_request(url, *, form=None, access_token=None):
             raise TigerError("PROVIDER_REDIRECT_DENIED")
     try:
         with urllib.request.build_opener(NoRedirect).open(req, timeout=8) as response:
+            if empty_success:
+                if response.read(1):
+                    raise TigerError("PROVIDER_RESPONSE_INVALID")
+                return {}
             content = response.read(100000)
             if response.read(1):
                 raise TigerError("PROVIDER_RESPONSE_TOO_LARGE")
@@ -358,8 +362,23 @@ def disconnect(identity, broker, subject, connection_id):
             (wid,conn)).fetchone()
         if not row:
             raise TigerError("CONNECTION_NOT_FOUND")
-        # Delete locally held bearer tokens and account identifiers. Preserve only
-        # non-reversible tenant-scoped metadata and encrypted observation history.
+        # Best-effort provider-side RFC7009 revoke, then ALWAYS remove local
+        # credentials. If Tiger cannot be reached, explicitly tell the user to
+        # revoke the app in Developer Center (do not falsely claim remote revoke).
+        remotely_revoked = False
+        try:
+            cfg = config()
+            grant = _get_grant(broker, wid, conn)
+            token = grant.get("refresh") or grant.get("access")
+            hint = "refresh_token" if grant.get("refresh") else "access_token"
+            if token:
+                _provider_request(_OAUTH + "/revoke", form={
+                    "token": token, "token_type_hint": hint,
+                    "client_id": cfg["client_id"], "client_secret": cfg["client_secret"],
+                }, empty_success=True)
+                remotely_revoked = True
+        except TigerError:
+            pass
         broker.execute("DELETE FROM saas_tiger_grants WHERE workspace_id=%s AND connection_id=%s",(wid,conn))
         broker.execute("""DELETE FROM saas_tiger_account_secrets WHERE workspace_id=%s
            AND account_id IN (SELECT id FROM saas_broker_accounts WHERE workspace_id=%s AND connection_id=%s)""",
@@ -369,4 +388,4 @@ def disconnect(identity, broker, subject, connection_id):
             WHERE workspace_id=%s AND id=%s""",(wid,conn))
     # Remote revocation is separate: Tiger Developer Center owns it until a
     # provider-approved, tested revocation endpoint is supported.
-    return {"disconnected": True, "remoteRevocationRequired": True}
+    return {"disconnected": True, "remoteRevocationRequired": not remotely_revoked}

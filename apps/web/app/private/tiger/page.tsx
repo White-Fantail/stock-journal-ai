@@ -61,7 +61,7 @@ export default async function TigerConnections() {
           </form>
         </section>
       ))}
-      <p>사이트에서 연결을 해제하면 저장된 토큰이 제거됩니다. Tiger 측 접근 권한도 Developer Center에서 별도 철회해야 합니다.</p>
+      <p>연결을 해제하면 암호화된 토큰을 삭제하고 Tiger에 원격 철회를 요청합니다. 철회가 실패한 경우 Tiger Developer Center에서 직접 철회하세요.</p>
       <p><Link href="/private/brokers">증권사 목록으로</Link></p>
     </main>
   );

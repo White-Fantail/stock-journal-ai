@@ -15,7 +15,7 @@ Tiger **retail** OpenAPI OAuth2 (Python SDK >=3.8.0) is designed around an SDK-m
 - Tiger calls back to same host after user consent. Auth.js session must still exist. Railway checks verified Google membership + one-use hashed state + exact requested scopes before exchanging auth code.
 - Token+refresh token live AES-256-GCM encrypted in Railway DB, scoped with tenant+connection authenticated associated data. No SDK token files and no client-side tokens.
 - User enters an account ID from Tiger Developer Center, and server tests actual asset **GET** under that user's token before storing only a keyed fingerprint, masked alias and encrypted identifier. \`GET\` asset and position snapshots are encrypted with evidence SHA-256; historical fills/fees are **not** claimed from snapshots.
-- Disconnect deletes local tokens and encrypted account IDs, but this version requires provider-side grant revocation in the Tiger Developer Center too. Remote revocation and refresh/expiry must be validated against the enrolled provider before production rollout.
+- Disconnect attempts an RFC7009 /oauth2/v1/revoke call for a refresh token (or access token). Local tokens and encrypted account IDs are removed even if this fails; the response flags remoteRevocationRequired when Tiger rejects or times out. Users should revoke directly in Developer Center if remote success is unconfirmed. Refresh/expiry must be validated against the enrolled provider before production rollout.
 - All JSON endpoints are signed, nonce-protected and rate-limited; any broker API error fails closed. No order POST/PUT/DELETE route in the read-only provider module.
 
 ## Remaining explicit P3 validation

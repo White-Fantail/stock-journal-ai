@@ -27,6 +27,9 @@ with psycopg.connect(dsn) as admin:
         VALUES (%s,%s,%s,%s,%s) RETURNING id""",
         (workspace,account,"c"*64,datetime(2026,1,1,tzinfo=timezone.utc),
          datetime(2026,1,2,tzinfo=timezone.utc))).fetchone()[0]
+    # Other disposable integration suites create their own synthetic jobs.
+    # Park those fixtures so this deterministic claim test only sees its job.
+    admin.execute("UPDATE saas_broker_dispatch_queue SET ready_after='infinity'")
     admin.execute("""INSERT INTO saas_broker_dispatch_queue(workspace_id,job_id)
         VALUES (%s,%s)""",(workspace,job))
     admin.commit()
@@ -36,7 +39,7 @@ with psycopg.connect(dsn) as admin:
         broker.execute("SET ROLE saas_broker_app")
         verify_role(dispatch)
         with dispatch.transaction():
-            assert dispatch.execute("SELECT count(*) FROM saas_broker_dispatch_queue").fetchone()[0]==1
+            assert dispatch.execute("SELECT count(*) FROM saas_broker_dispatch_queue WHERE job_id=%s",(job,)).fetchone()[0]==1
             flags=dispatch.execute("""SELECT
                 has_table_privilege(current_user,'saas_tiger_grants','SELECT'),
                 has_table_privilege(current_user,'saas_broker_source_stage','SELECT'),

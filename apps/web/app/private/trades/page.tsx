@@ -132,7 +132,7 @@ export default async function ManualTradesPage({
                     <tr key={e.id}>
                       <td>{e.kind === "VOID" ? "취소 기록" : voidedIds.has(e.id) ? "취소됨" : "사용자 입력"}</td>
                       <td><Link href={`/private/trades/${e.id}`}>{e.ticker ?? "정정 이벤트"} (상세)</Link></td>
-                      <td>{e.side ?? "—"}</td>
+                      <td>{e.side === "BUY" ? "매수" : e.side === "SELL" ? "매도" : "—"}</td>
                       <td>{e.quantity ?? "—"}</td>
                       <td>{e.price && e.currency ? `${e.price} ${e.currency}` : "—"}</td>
                       <td>{e.fee ?? "미확인"}</td>
@@ -149,7 +149,7 @@ export default async function ManualTradesPage({
                 <p>실제로 잘못 기록한 거래만 취소하세요. 원본 및 정정 이력은 남고, 잘못된 값을 직접 수정할 수 없습니다.</p>
                 {events.filter(e => e.kind === "EXECUTION" && !voidedIds.has(e.id)).map(e => (
                   <details key={e.id} style={{marginBottom:12}}>
-                    <summary>{e.ticker} {e.side} {e.quantity}주 — {e.executedAt ?? "체결시각 미확인"}</summary>
+                    <summary>{e.ticker} {e.side === "BUY" ? "매수" : "매도"} {e.quantity}주 — {e.executedAt ?? "체결시각 미확인"}</summary>
                     <form action={correctManualExecution} style={{display:"grid",gap:8,maxWidth:480,padding:"0.75rem 0"}}>
                       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
                       <input type="hidden" name="voidsEventId" value={e.id}/>

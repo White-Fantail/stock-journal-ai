@@ -5,6 +5,11 @@ import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { fetchJournal, submitJournal, manualTradeEnabled, type JournalKind } from "../../../lib/saas-trades-api";
 
+const journalKindLabel: Record<JournalKind, string> = {
+  THESIS: "투자 논리", STRATEGY: "전략 변경", REVIEW: "매매 복기",
+  TRADE_NOTE: "체결 설명", WATCHLIST_ADD: "관심종목 추가",
+  WATCHLIST_REMOVE: "관심종목 제외",
+};
 export const dynamic = "force-dynamic";
 
 async function addJournal(form: FormData) {
@@ -62,8 +67,12 @@ export default async function JournalPage({
           </select></label>
           <label>내용 (관심종목 추가/제외에서는 비워두기)
             <textarea name="content" rows={5} maxLength={6000}/></label>
-          <label>체결 ID (체결 설명에만 사용, 선택사항)
-            <input name="tradeEventId" placeholder="연결할 내 체결 이벤트 UUID"/></label>
+          <details><summary>관련 거래 연결 (선택사항)</summary>
+            <label>연결할 거래 기록 ID
+              <input name="tradeEventId" placeholder="거래 상세 화면의 기록 ID" />
+            </label>
+            <small>체결 설명을 특정 거래에 연결할 때만 입력하세요.</small>
+          </details>
           <label><input name="confirmation" value="yes" type="checkbox" required/> 내가 작성한 정보임을 확인합니다.</label>
           <button type="submit">일지 이력 저장</button>
         </form>
@@ -71,9 +80,9 @@ export default async function JournalPage({
       <section><h2>최근 작성 기록 (최대 200건)</h2>
       {entries.length===0 ? <p>등록된 기록이 없습니다.</p> :
         entries.map(e=><article key={e.id} style={{borderBottom:"1px solid #aaa",padding:"0.75rem 0"}}>
-          <strong>{e.ticker} · {e.kind}</strong> <small>{e.createdAt}</small>
+          <strong>{e.ticker} · {journalKindLabel[e.kind] ?? e.kind}</strong> <small>{e.createdAt}</small>
           {e.content && <p style={{whiteSpace:"pre-wrap"}}>{e.content}</p>}
-          <small>출처: 직접 작성 · {e.tradeEventId ? `연결 체결: ${e.tradeEventId}`:"독립 기록"}</small>
+          <small>직접 작성 · {e.tradeEventId ? <Link href={"/private/trades/" + e.tradeEventId}>관련 거래 보기</Link> : "독립 기록"}</small>
         </article>)}
       </section>
      </>}

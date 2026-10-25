@@ -1,5 +1,9 @@
 """Disposable PostgreSQL dispatch metadata isolation checks."""
 import os
+import base64
+from decimal import Decimal
+from services.broker_connectors.contracts import BrokerFill
+from services.broker_connectors.paged_contract import ReadPage
 from datetime import datetime, timedelta, timezone
 import psycopg
 from services.saas_api.sync_dispatcher import DispatchRefused,claim,release,tick,verify_role
@@ -7,6 +11,8 @@ from services.saas_api.sync_dispatcher import DispatchRefused,claim,release,tick
 dsn=os.environ.get("SAAS_DATABASE_URL","")
 assert os.environ.get("SAAS_TEST_DB_ACK")=="YES_DISPOSABLE_SAAS_DB"
 assert "journal_saas_test" in dsn
+os.environ["SAAS_SOURCE_HMAC_KEY"]="e"*64
+os.environ["TIGER_VAULT_KEY_B64"]=base64.b64encode(b"q"*32).decode()
 
 with psycopg.connect(dsn) as admin:
     owner=admin.execute("""INSERT INTO saas_users(google_subject,email)
@@ -61,4 +67,53 @@ with psycopg.connect(dsn) as admin:
         assert claim(dispatch) is None
         assert release(dispatch,task,datetime.now(timezone.utc)+timedelta(seconds=10))
         assert claim(dispatch) is None
+        # A freshly authorized owner + read-only grant may process one
+        # injected synthetic page without exposing credentials to dispatch.
+        grant=admin.execute("""INSERT INTO saas_tiger_grants
+           (workspace_id,connection_id,ciphertext)
+           VALUES (%s,%s,%s) RETURNING id""",(workspace,link,b"g"*40)).fetchone()[0]
+        admin.execute("""UPDATE saas_broker_connections SET status='CONNECTED',
+           credential_handle=%s,granted_scopes=ARRAY['portfolio.read'],
+           authorization_expires_at=now()+interval '1 day'
+           WHERE workspace_id=%s AND id=%s""",(grant,workspace,link))
+        admin.execute("""INSERT INTO saas_tiger_account_secrets
+           (workspace_id,account_id,ciphertext)
+           VALUES (%s,%s,%s)""",(workspace,account,b"k"*40))
+        admin.execute("""INSERT INTO saas_broker_backfill_windows
+           (workspace_id,job_id,account_id,ordinal,start_utc,end_utc)
+           VALUES (%s,%s,%s,0,%s,%s)""",
+           (workspace,job,account,datetime(2026,1,1,tzinfo=timezone.utc),
+            datetime(2026,1,2,tzinfo=timezone.utc)))
+        admin.commit()
+        with dispatch.transaction():
+            dispatch.execute("""UPDATE saas_broker_dispatch_queue
+               SET ready_after=now()-interval '1 second'
+               WHERE workspace_id=%s AND job_id=%s""",(workspace,job))
+        called=[]
+        def synthetic_reader(request,cursor):
+            called.append(1)
+            assert cursor is None
+            fact=BrokerFill("fake-fill-verified-window","fake-order","TEST","BUY",
+                Decimal("1"),Decimal("3"),"USD",
+                datetime(2026,1,1,tzinfo=timezone.utc),"VERIFIED_OFFSET",None,
+                "2026-01-01T00:00:00+00:00")
+            return ReadPage(request,(fact,),None,True)
+        result=tick(admin,broker,dispatch,synthetic_reader,enabled=True)
+        assert result=={"status":"PROCESSED","state":"PARTIAL"},result
+        assert len(called)==1
+        with dispatch.transaction():
+            assert dispatch.execute("""SELECT extract(year from ready_after)
+                 FROM saas_broker_dispatch_queue WHERE job_id=%s""",(job,)).fetchone()[0]==9999
+        # Revoke the active workspace owner; even if metadata is due
+        # again, no subsequent provider read can occur.
+        admin.execute("""UPDATE saas_workspace_memberships
+           SET status='REVOKED' WHERE workspace_id=%s AND user_id=%s""",
+           (workspace,owner))
+        admin.commit()
+        with dispatch.transaction():
+            dispatch.execute("""UPDATE saas_broker_dispatch_queue
+               SET ready_after=now()-interval '1 second'
+               WHERE job_id=%s""",(job,))
+        paused=tick(admin,broker,dispatch,synthetic_reader,enabled=True)
+        assert paused["status"]=="SUSPENDED" and len(called)==1,paused
 print("P3 dispatch queue metadata-only access, claim fencing and default gate PASS")

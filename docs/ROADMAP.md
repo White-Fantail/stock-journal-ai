@@ -40,7 +40,8 @@
 
 ## P4 — Reconciliation, holdings and performance (**planned**)
 - [ ] Deduplicate and normalize broker facts, map split fills and fees, detect gaps, handle corporate actions/cash activity.
-- [ ] Versioned holdings and cost-basis projections, realized/unrealized returns, FX/timezone provenance, broker snapshot checks.
+- [x] Build an offline, account-scoped Decimal FIFO native-currency cost-basis/realized-P&L core with adversarial tests (strict verified-history/corporate-action prerequisite; no production data input).
+- [ ] Version and persist authorized projections; reconcile position snapshots at matching as-of time, add verified FX/unrealized returns, user-facing portfolio views and audit provenance.
 - [ ] Reconciliation exception UI, sync-health indicators, filters, per-account and consolidated portfolios.
 - **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
 

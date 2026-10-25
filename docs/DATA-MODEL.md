@@ -37,5 +37,8 @@ Every private table includes `workspace_id` and scope-aware primary/foreign keys
 6. Project positions and P/L in a declared accounting method; compare to broker snapshots without using snapshots to manufacture past executions. Surface exception details to that user.
 7. Keep user notes and derived AI work independently versioned so resync cannot erase original annotations. All exports/deletions are tenant-bounded and audited.
 
+## Offline FIFO accounting foundation (P4 source-only)
+`services/broker_connectors/fifo_projection.py` accepts only caller-certified time-, currency-, history- and corporate-action-complete synthetic-style verified executions. It uses Decimal FIFO in native currency, prohibits short selling and ambiguous same-time fills, treats missing acquisition/disposal fees as UNKNOWN (not zero), and never converts a point-in-time snapshot into missing execution history. FX, dividends, tax, unrealized P&L and broker-statement reconciliation are not yet available; the result is not a verified customer portfolio or a persisted projection.
+
 ## Privacy and deletion
 Provider data exists in the user-specific private DB, never in Git, CI fixtures, S3 public buckets, error telemetry or model prompts without explicit scope. Document retention/backups/revocation and user export/delete. Deleting a Git file does not retroactively purge public Git commit history.

@@ -40,6 +40,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "008_tiger_oauth.sql", # AEAD grant vault, one-use state, tenant RLS, source snapshots
     "009_tiger_runtime_login.sql", # separate non-BYPASSRLS Tiger runtime login
     "010_broker_backfill_staging.sql", # tenant checkpoints and encrypted provider staging
+    "011_backfill_worker_fencing.sql", # per-claim lease fencing token
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

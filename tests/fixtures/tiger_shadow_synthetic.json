@@ -1,0 +1,85 @@
+{
+  "orders": {
+    "": {
+      "result": [
+        {
+          "id": "314159",
+          "contract": {
+            "symbol": "RKLB",
+            "currency": "USD"
+          },
+          "action": "BUY",
+          "filled": 35,
+          "avg_fill_price": 51.9,
+          "commission": 2,
+          "gst": 0.1,
+          "status": "FILLED",
+          "trade_time": 1792738381000
+        }
+      ],
+      "next_page_token": null
+    }
+  },
+  "transactions": {
+    "314159": {
+      "": {
+        "result": [
+          {
+            "id": "2718281",
+            "order_id": "314159",
+            "contract": {
+              "symbol": "RKLB"
+            },
+            "action": "BUY",
+            "filled_quantity": 21,
+            "filled_price": 51.9,
+            "transacted_at": "2026-10-23 19:53:01"
+          },
+          {
+            "id": "2718282",
+            "order_id": "314159",
+            "contract": {
+              "symbol": "RKLB"
+            },
+            "action": "BUY",
+            "filled_quantity": 14,
+            "filled_price": 51.9,
+            "transacted_at": "2026-10-23 19:53:01"
+          }
+        ],
+        "next_page_token": null
+      }
+    }
+  },
+  "positions": [
+    {
+      "contract": {
+        "symbol": "RKLB",
+        "currency": "USD"
+      },
+      "position_qty": 35
+    },
+    {
+      "contract": {
+        "symbol": "TSLA",
+        "currency": "USD"
+      },
+      "position_qty": 200
+    },
+    {
+      "contract": {
+        "symbol": "SPCX",
+        "currency": "USD"
+      },
+      "position_qty": 480
+    },
+    {
+      "contract": {
+        "symbol": "SKHY",
+        "currency": "USD"
+      },
+      "position_qty": 22
+    }
+  ],
+  "transactions_available": true
+}

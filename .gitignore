@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+.DS_Store
+.pytest_cache/
+*.log
+# Never track personal brokerage exports, statements, portfolios or screenshots.
+stocks/
+portfolio/
+alerts/
+reports/
+data/
+*.csv
+*.xlsx
+*.xls
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.heic
+*.mp4
+# Tiger SDK and general broker keys/tokens.
+.tiger/
+.tigeropen/
+**/.tiger/
+**/.tigeropen/
+**/tiger_openapi_config.properties
+**/tiger_openapi_token.properties
+**/oauth_tokens*.json
+**/token_cache*.json
+*.pem
+*.p12
+*.pfx

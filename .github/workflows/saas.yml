@@ -1,0 +1,207 @@
+name: SaaS tenant isolation and financial ledger contracts
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - 'services/saas_api/**'
+      - 'tests/test_saas_hosted_schema.py'
+      - 'tests/test_saas_trade_policy.py'
+      - 'scripts/verify_saas_trade_isolation.py'
+      - 'scripts/verify_saas_http_isolation.py'
+      - 'db/saas/**'
+      - 'scripts/verify_saas_identity.py'
+      - 'tests/test_saas_identity.py'
+      - 'tests/test_saas_journal.py'
+      - 'tests/test_broker_connectors.py'
+      - 'services/broker_connectors/**'
+      - 'scripts/verify_saas_broker_isolation.py'
+      - 'apps/web/**'
+      - 'docs/**'
+      - 'scripts/check_public_repo.py'
+      - 'README.md'
+      - 'AGENTS.md'
+      - '.gitignore'
+      - '.github/workflows/saas.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  saas-postgres-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: saas_ci
+          POSTGRES_PASSWORD: synthetic_only
+          POSTGRES_DB: journal_saas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U saas_ci -d journal_saas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      SAAS_DATABASE_URL: postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_test
+      SAAS_TEST_DB_ACK: YES_DISPOSABLE_SAAS_DB
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install only pinned psycopg
+        run: pip install -r services/saas_api/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install web dependencies and check Next.js TypeScript
+        working-directory: apps/web
+        run: |
+          npm ci --ignore-scripts --no-audit
+          npm run typecheck
+          npm run test:security
+      - name: Fail if personal portfolio or broker files are tracked
+        run: python scripts/check_public_repo.py
+      - name: Validate offline Google claims and HMAC request checks
+        run: python -m unittest discover -s tests -p 'test_saas_identity.py' -v
+      - name: Check Python modules compile
+        run: python -m compileall -q services/saas_api
+      - name: Validate journal and nonce input contracts
+        run: python -m unittest discover -s tests -p 'test_saas_journal.py' -v
+      - name: Validate broker adapter registry and offline Tiger fixtures
+        run: python -m unittest discover -s tests -p 'test_broker_connectors.py' -v
+      - name: Validate hosted schema bootstrap policy (no live connection)
+        run: python -m unittest discover -s tests -p 'test_saas_hosted_schema.py' -v
+      - name: Exercise hosted bootstrap against separate disposable CI database
+        run: |
+          python - <<'PY'
+          import os, psycopg
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
+              c.execute("CREATE DATABASE journal_hosted_saas_test")
+          PY
+          export SAAS_DATABASE_URL=postgresql://saas_ci:synthetic_only@localhost:5432/journal_hosted_saas_test
+          python -m services.saas_api.schema_admin --apply --approve-schema-change --backup-verified
+          python -m services.saas_api.schema_admin --status
+          python -m services.saas_api.schema_admin --apply --approve-schema-change --backup-verified
+      - name: Exercise production-gated deploy on disposable PostgreSQL 18
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys, psycopg
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
+              c.execute("CREATE DATABASE journal_hosted_deploy_ci")
+          env = os.environ.copy()
+          env.pop("SAAS_TEST_DB_ACK", None)
+          env.update({
+            "SAAS_DATABASE_URL": "postgresql://saas_ci:synthetic_only@localhost:5432/journal_hosted_deploy_ci",
+            "SAAS_AUTO_MIGRATE": "1",
+            "SAAS_MIGRATION_BACKUP_VERIFIED": "1", # CI simulation, not production backup proof
+            "RAILWAY_PROJECT_ID": "881e854d-86a2-436f-86a5-b17e5f92e912",
+            "RAILWAY_SERVICE_ID": "350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
+            "RAILWAY_ENVIRONMENT_ID": "1a79e220-c75e-40be-a608-2d1f21a3ebb8",
+            "RAILWAY_ENVIRONMENT_NAME": "production",
+            "RAILWAY_GIT_BRANCH": "main",
+            "RAILWAY_GIT_REPO_OWNER": "White-Fantail",
+            "RAILWAY_GIT_REPO_NAME": "stock-journal-ai",
+          })
+          for _ in range(2):
+              subprocess.run([sys.executable, "-m", "services.saas_api.schema_admin", "--deploy"],
+                             env=env, check=True)
+          with psycopg.connect(env["SAAS_DATABASE_URL"]) as c:
+              versions = [r[0] for r in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
+              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql"]
+              assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
+              assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
+              assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
+          PY
+      - name: Verify 004-to-005 live upgrade and nonempty-data rollback on disposable PostgreSQL 18
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          import psycopg
+          from services.saas_api.schema_admin import manifest
+          suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
+          sources = manifest()
+          assert len(sources) == 6
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
+              for name, _ in suites:
+                  c.execute("CREATE DATABASE " + name)
+          for name, occupied in suites:
+              dsn = "postgresql://saas_ci:synthetic_only@localhost:5432/" + name
+              with psycopg.connect(dsn) as c:
+                  with c.transaction():
+                      c.execute("CREATE TABLE saas_schema_versions (name text PRIMARY KEY, sha256 char(64) NOT NULL)")
+                      for version, digest, source in sources[:4]:
+                          c.execute(source)
+                          c.execute("INSERT INTO saas_schema_versions VALUES (%s,%s)", (version, digest))
+                      if occupied:
+                          u = c.execute(
+                              "INSERT INTO saas_users(google_subject,email) VALUES ('synthetic-google-subject','ci@example.invalid') RETURNING id"
+                          ).fetchone()[0]
+                          w = c.execute(
+                              "INSERT INTO saas_workspaces(owner_user_id) VALUES (%s) RETURNING id", (u,)
+                          ).fetchone()[0]
+                          c.execute("INSERT INTO saas_workspace_memberships(workspace_id,user_id) VALUES (%s,%s)", (w,u))
+                          c.execute(
+                              """INSERT INTO saas_csv_import_batches
+                                 (workspace_id,author_user_id,file_fingerprint,row_count)
+                                 VALUES (%s,%s,%s,1)""",
+                              (w,u,"a"*64))
+              env = os.environ.copy()
+              env.pop("SAAS_TEST_DB_ACK", None)
+              env.update({
+                  "SAAS_DATABASE_URL":dsn,
+                  "SAAS_AUTO_MIGRATE":"1",
+                  "SAAS_MIGRATION_BACKUP_VERIFIED":"1", # synthetic CI test only
+                  "RAILWAY_PROJECT_ID":"881e854d-86a2-436f-86a5-b17e5f92e912",
+                  "RAILWAY_SERVICE_ID":"350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
+                  "RAILWAY_ENVIRONMENT_ID":"1a79e220-c75e-40be-a608-2d1f21a3ebb8",
+                  "RAILWAY_ENVIRONMENT_NAME":"production",
+                  "RAILWAY_GIT_BRANCH":"main",
+                  "RAILWAY_GIT_REPO_OWNER":"White-Fantail",
+                  "RAILWAY_GIT_REPO_NAME":"stock-journal-ai",
+              })
+              result = subprocess.run([sys.executable,"-m","services.saas_api.schema_admin","--deploy"],env=env)
+              assert (result.returncode != 0) if occupied else (result.returncode == 0)
+              with psycopg.connect(dsn) as c:
+                  names = [v[0] for v in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
+                  assert len(names) == (4 if occupied else 6), names
+                  assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
+                  if occupied:
+                      assert c.execute("SELECT count(*) FROM saas_csv_import_batches").fetchone()[0] == 1
+                      assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is not None
+                  else:
+                      assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
+                      assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
+          PY
+      - name: Validate manual trade input and invariants (no database)
+        run: python -m unittest discover -s tests -p 'test_saas_trade_policy.py' -v
+      - name: Apply and verify fresh SaaS schema, with no CSV import tables (NOT legacy migrations)
+        run: |
+          python db/saas/migrate.py --apply
+          python db/saas/migrate.py --apply
+          python db/saas/migrate.py --verify
+          python - <<'PY'
+          import os, psycopg
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"]) as c:
+              assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
+              assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
+              assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
+          PY
+      - name: Verify atomic account provisioning, tenant A/B RLS and revocation
+        run: python scripts/verify_saas_identity.py
+      - name: Verify workspace A/B broker metadata RLS and composite account FKs
+        run: python scripts/verify_saas_broker_isolation.py
+      - name: Verify manual trade A/B RLS, append-only and revoked-membership denial
+        run: python scripts/verify_saas_trade_isolation.py
+      - name: A/B authenticated service HTTP, replay, note export and account deletion
+        run: python scripts/verify_saas_http_isolation.py
+      - name: Reject hosted or unacknowledged DB migrations
+        run: |
+          if env -u SAAS_TEST_DB_ACK python db/saas/migrate.py --apply; then
+            echo "Unacknowledged migration unexpectedly succeeded" >&2; exit 1
+          fi
+          if SAAS_DATABASE_URL=postgresql://saas_ci:synthetic_only@remote.invalid:5432/journal_saas_test python db/saas/migrate.py --apply; then
+            echo "Remote migration unexpectedly succeeded" >&2; exit 1
+          fi

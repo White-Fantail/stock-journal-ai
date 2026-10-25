@@ -33,7 +33,7 @@ export default function Home() {
         <div className="feature-grid">
           <article className="feature-card"><span className="feature-card__icon" aria-hidden="true">◎</span><h3>거래 사실은 명확하게</h3><p>증권사에서 조회한 데이터와 직접 입력한 내용을 구분합니다. Tiger 계좌 자동 조회는 공식 승인 후 단계적으로 제공합니다.</p></article>
           <article className="feature-card"><span className="feature-card__icon" aria-hidden="true">✎</span><h3>투자 판단은 나답게</h3><p>매수 이유, 전략 변경, 리스크 판단과 매매 복기를 나만의 기록으로 남깁니다. 기록은 체결 사실과 별도로 관리됩니다.</p></article>
-          <article className="feature-card"><span className="feature-card__icon" aria-hidden="true">⌁</span><h3>내 계정 중심의 비공개 공간</h3><p>Google 계정으로 개인 워크스페이스를 만들고, 데이터 내보내기와 계정 삭제 기능을 제공합니다. 일부 기록 기능은 운영 검증 중입니다.</p></article>
+          <article className="feature-card"><span className="feature-card__icon" aria-hidden="true">⌁</span><h3>내 계정 중심의 비공개 공간</h3><p>Google 계정으로 개인 워크스페이스를 만들고, 데이터 내보내기와 계정 삭제 흐름도 준비 중이며, 운영 검증 후 활성화합니다.</p></article>
         </div>
       </div></section>
       <section className="section section-soft" id="how-it-works"><div className="container">

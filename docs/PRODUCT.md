@@ -1,5 +1,7 @@
-# Product specification — Stock Journal AI
+# Product specification — Positionary (formerly Stock Journal AI)
 **Version:** 3.0 · **Date:** 2026-10-25 · **Status:** Approved product direction, not a claim of released features.
+
+**User experience:** The public-facing service name is Positionary. The pre-approval UI must distinguish available actions from provider-approval-gated features; it must not simulate portfolio balances or imply that Tiger has approved the hosted OAuth integration.
 
 ## Mission
 Give individual investors a trustworthy, low-friction account of **what actually happened**, why they made each trade, how their strategies are performing and what evidence should prompt a review. Replace GitHub-file-based private ledgers with a tenant-isolated SaaS. Brokerage-reported facts arrive from the connected broker; AI augments reflection rather than making trading decisions.

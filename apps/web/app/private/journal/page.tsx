@@ -40,10 +40,10 @@ export default async function JournalPage({
     try { entries=await fetchJournal(session.user.id); } catch { unavailable=true; }
   }
   return <main style={{maxWidth:880,margin:"2rem auto",padding:"0 1rem"}}>
-    <p><Link href="/private">← 워크스페이스</Link> · <Link href="/private/trades">체결 기록</Link></p>
+    <p><Link href="/private">← 대시보드</Link> · <Link href="/private/trades">체결 기록</Link></p>
     <h1>투자 일지</h1>
-    <p>투자 이유·분석·전략·복기와 관심종목은 사용자 작성 기록이며, 브로커 체결 사실이나 AI 추론과 구분됩니다. 수정은 새 이력으로 남깁니다.</p>
-    {!enabled ? <p role="status">투자 일지 기능은 운영 검증 후 활성화됩니다.</p> :
+    <p>매수 근거, 전략의 변화, 매매 후 복기와 관심종목을 기록하세요. 직접 작성한 내용은 증권사의 거래 정보와 구분되며, 변경 내용도 이력으로 남습니다.</p>
+    {!enabled ? <p role="status">투자 일지 작성은 현재 준비 중입니다. 사용자 데이터 보호와 운영 검증이 완료되면 이용할 수 있습니다.</p> :
      unavailable ? <p role="alert">투자 일지 서버를 사용할 수 없습니다.</p> :
      <>
       {params.saved && <p role="status">새로운 일지 이력이 저장됐습니다.</p>}

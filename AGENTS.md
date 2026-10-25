@@ -1,4 +1,6 @@
-# Stock Journal AI — Agent Operating Rules
+# Positionary — Agent Operating Rules
+
+**Public product name:** Positionary. The GitHub repository remains `stock-journal-ai`; internal protocol identifiers are not automatically renamed. All user-facing text, metadata, and support materials should use Positionary.
 
 ## Authoritative product definition
 The active product is a **Google-first, multi-tenant investment-journal SaaS** deployed using Next.js/Vercel and Python/Railway/PostgreSQL. Its first broker integration is Tiger Brokers / Tiger Trade through an adapter abstraction. GitHub stores **code, tests using synthetic fixtures and public documentation only**. No customer financial data, private theses, execution evidence, personal screenshots or broker statements may be committed, including temporarily.

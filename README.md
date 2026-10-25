@@ -1,4 +1,6 @@
-# Stock Journal AI
+# Positionary
+
+> **Brand:** Positionary is the public product name. The technical repository and deployment identifiers may remain `stock-journal-ai` until a separately reviewed rename.
 
 > **P0–P3 source baseline (2026-10-26):** The active Git branches have been rewritten onto a parentless clean root with no historical customer finance files. GitHub retains old SHA objects/caches pending upstream cleanup. P1/P2 Google identity, HMAC nonce/rate protection, tenant journal, export, account removal and dedicated runtime DB login have CI coverage. **Production P2 activation remains off pending real two-user Google sign-in, production DB-role and backup/restore evidence.** See [P3 readiness gates](docs/P3-READINESS.md).
 

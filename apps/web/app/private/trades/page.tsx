@@ -92,11 +92,11 @@ export default async function ManualTradesPage({
     .map(e => e.voidsEventId));
   return (
     <main style={{maxWidth:900,margin:"2rem auto",padding:"0 1rem"}}>
-      <p><Link href="/private">← 내 워크스페이스</Link></p>
-      <h1>내 거래 원장</h1>
-      <p>모든 기록은 로그인한 Workspace에만 속합니다. 거래 체결은 사용자가 직접 확인한 내용으로 저장되며 증권사 검증 완료로 표시하지 않습니다.</p>
+      <p><Link href="/private">← 대시보드</Link></p>
+      <h1>내 거래 기록</h1>
+      <p>내가 직접 확인해 입력한 거래는 증권사에서 제공한 거래 사실과 구분됩니다. 모든 기록은 내 계정의 비공개 공간에 속합니다.</p>
       {!active ? (
-        <p role="status">수동 거래 기능은 아직 테스트 모드입니다. 전용 데이터베이스 권한과 사용자별 격리 검증을 완료한 뒤 활성화됩니다.</p>
+        <p role="status">직접 거래 기록 입력은 현재 준비 중입니다. 사용자별 데이터 보호와 운영 보안 검증이 완료되면 사용할 수 있습니다.</p>
       ) : unavailable ? (
         <p role="alert">거래 원장 서비스를 사용할 수 없습니다. 기존 기록은 변경하지 않았습니다.</p>
       ) : (

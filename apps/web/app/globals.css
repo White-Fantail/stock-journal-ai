@@ -64,3 +64,20 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 @media(max-width:900px){.hero-inner{gap:35px}.dashboard-grid{grid-template-columns:repeat(2,1fr)}.site-header__links{gap:12px}.app-header .container{flex-wrap:wrap;padding-block:12px}.app-nav{order:3;width:100%;overflow:auto;flex-wrap:nowrap}.app-nav a{white-space:nowrap}.broker-list{grid-template-columns:1fr}}
 @media(max-width:700px){.container{width:min(100% - 30px,1120px)}.hero-inner{grid-template-columns:1fr;padding:72px 0 75px}.hero-description{font-size:1rem}.preview{transform:none}.section{padding:64px 0}.feature-grid,.steps,.dashboard-grid,.connection-steps{grid-template-columns:1fr}.feature-card{padding:24px}.site-header__links>a:not(.btn){display:none}.site-header__inner{min-height:66px}.cta-panel{padding:35px 25px;display:block}.cta-panel .btn{margin-top:20px}.dashboard-hero{padding:30px;display:block}.dashboard-graphic{display:none}.auth-card{padding:31px 25px}.app-shell{padding-top:28px}.footer-inner{align-items:flex-start;flex-direction:column}.broker-card{padding:24px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* P3 read-only sync health: never equate page processing with verified coverage. */
+.sync-jobs{display:grid;gap:18px;margin:24px 0 32px}
+.sync-job{padding:26px}
+.sync-head,.sync-progress-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sync-head h2{margin:0}.sync-subtle{font-size:.86rem;color:var(--muted);margin:12px 0}
+.sync-progress-title{margin-top:23px;margin-bottom:9px;font-size:.94rem}
+.sync-progress-track{width:100%;height:10px;border-radius:30px;background:#e3ebe7;overflow:hidden}
+.sync-progress-fill{height:100%;border-radius:30px;background:#159e81;transition:width .2s}
+.sync-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:23px 0}
+.sync-metrics span{border:1px solid var(--line);border-radius:14px;padding:14px;background:#f9fcfa}
+.sync-metrics strong{display:block;font-size:1.28rem}
+.sync-metrics small{display:block;font-size:.75rem;color:var(--muted)}
+.sync-issues{border-top:1px solid var(--line);padding-top:15px}
+.sync-issues h3{font-size:1rem}.sync-issues ul{margin:8px 0 20px;padding-left:20px}
+@media(max-width:620px){.sync-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}

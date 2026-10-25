@@ -18,7 +18,7 @@ def verify_role(dispatch):
     """Dispatch principal must NOT inherit broker vault/ledger permissions."""
     row=dispatch.execute("""SELECT rolsuper,rolbypassrls,
       pg_has_role(current_user,'saas_broker_dispatch_runtime','USAGE'),
-      has_table_privilege(current_user,'saas_broker_dispatch_queue','UPDATE'),
+      has_any_column_privilege(current_user,'saas_broker_dispatch_queue','UPDATE'),
       has_table_privilege(current_user,'saas_tiger_grants','SELECT'),
       has_table_privilege(current_user,'saas_tiger_account_secrets','SELECT'),
       has_table_privilege(current_user,'saas_broker_source_stage','SELECT')

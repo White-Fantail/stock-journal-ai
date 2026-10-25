@@ -47,6 +47,12 @@ class AuditContractTests(unittest.TestCase):
                     _number(value)
         self.assertEqual(_number(D("123.000000000001")),D("123.000000000001"))
         self.assertEqual(_number(D("-5.25"),signed=True),D("-5.25"))
+        # PostgreSQL NUMERIC(36,12) supports 36 significant digits.
+        # Default Decimal context precision is too small for this value.
+        near_limit=D("999999999999999999999999.123456789012")
+        self.assertEqual(_number(near_limit),near_limit)
+        with self.assertRaises(AuditRefused):
+            _number(D("999999999999999999999999.1234567890123"))
 
 if __name__=="__main__":
     unittest.main()

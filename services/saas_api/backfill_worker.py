@@ -80,6 +80,8 @@ def enqueue(identity, broker, subject, account_id, start, end, *, days=30):
               WHERE workspace_id=%s AND account_id=%s AND idempotency_key=%s""",
               (wid,account_id,plan.idempotency_key)).fetchone()
         job_id=row[0]
+        broker.execute("""INSERT INTO saas_broker_dispatch_queue(workspace_id,job_id)
+          VALUES (%s,%s) ON CONFLICT (workspace_id,job_id) DO NOTHING""",(wid,job_id))
         # A retry cannot overwrite any existing window's state or evidence.
         for win in plan.windows:
             broker.execute("""INSERT INTO saas_broker_backfill_windows

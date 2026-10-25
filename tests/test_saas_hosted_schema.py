@@ -20,7 +20,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "006_journal_security.sql", "007_trade_runtime_login.sql",
                           "008_tiger_oauth.sql", "009_tiger_runtime_login.sql",
                           "010_broker_backfill_staging.sql",
-                          "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql"])
+                          "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_paged_checkpoint_migration_is_additive_and_tenant_scoped(self):

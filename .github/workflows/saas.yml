@@ -16,6 +16,7 @@ on:
       - 'tests/test_broker_connectors.py'
       - 'tests/test_broker_backfill.py'
       - 'tests/test_broker_fifo_projection.py'
+      - 'tests/test_broker_worker_contract.py'
       - 'scripts/verify_saas_broker_sync_isolation.py'
       - 'scripts/verify_saas_backfill_worker.py'
       - 'services/broker_connectors/**'
@@ -83,6 +84,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_broker_fifo_projection.py' -v
       - name: Validate Tiger hosted OAuth policy and AEAD vault
         run: python -m unittest discover -s tests -p 'test_tiger_oauth_policy.py' -v
+      - name: Validate offline worker source contract is fail closed
+        run: python -m unittest discover -s tests -p 'test_broker_worker_contract.py' -v
       - name: Validate hosted schema bootstrap policy (no live connection)
         run: python -m unittest discover -s tests -p 'test_saas_hosted_schema.py' -v
       - name: Exercise hosted bootstrap against separate disposable CI database

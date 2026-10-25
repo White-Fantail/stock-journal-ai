@@ -239,7 +239,7 @@ jobs:
           python - <<'PY'
           import psycopg
           with psycopg.connect("postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_restore") as c:
-              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 7
+              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 9
               assert c.execute("SELECT to_regclass('public.saas_journal_records')").fetchone()[0]
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0]
           print("Synthetic PostgreSQL 18 backup/restore PASS (not production backup proof)")

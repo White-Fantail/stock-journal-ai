@@ -13,6 +13,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
       <Brand />
       <nav className="app-nav" aria-label="내 공간 메뉴">
         <Link href="/private">대시보드</Link>
+        <Link href="/private/portfolio">포트폴리오</Link>
         <Link href="/private/trades">거래 기록</Link>
         <Link href="/private/journal">투자 일지</Link>
         <Link href="/private/brokers">증권사 연결</Link>

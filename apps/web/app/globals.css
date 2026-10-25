@@ -81,3 +81,13 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .sync-issues{border-top:1px solid var(--line);padding-top:15px}
 .sync-issues h3{font-size:1rem}.sync-issues ul{margin:8px 0 20px;padding-left:20px}
 @media(max-width:620px){.sync-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Account-scoped P4 portfolio readiness; no invented financial balances. */
+.portfolio-unknown-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.portfolio-unknown-grid>div{padding:16px;background:#f7faf8;border:1px solid var(--line);border-radius:14px}
+.portfolio-unknown-grid small{display:block;color:var(--muted)}
+.portfolio-unknown-grid strong{display:block;font-size:1.3rem;color:var(--ink);margin-top:6px}
+.portfolio-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}
+.portfolio-checks span{display:flex;justify-content:space-between;gap:10px;font-size:.85rem;padding:9px 12px;border:1px solid var(--line);border-radius:10px}
+.portfolio-checks b{color:#896314;white-space:nowrap}
+@media(max-width:620px){.portfolio-unknown-grid{grid-template-columns:1fr}.portfolio-checks{grid-template-columns:1fr}}

@@ -32,6 +32,13 @@ export default async function WorkspaceHome() {
         <Link href="/private/brokers">연결 상태 확인 →</Link>
       </article>
       <article className="dashboard-card">
+        <div className="icon-square" aria-hidden="true">◈</div>
+        <h3>내 포트폴리오</h3>
+        <span className="pill pill-warning">검증 대기</span>
+        <p style={{marginTop:14}}>연결 계좌별 거래이력·수수료·보유수량 검증 상태를 확인합니다. 미확인 금액은 표시하지 않습니다.</p>
+        <Link href="/private/portfolio">포트폴리오 상태 보기 →</Link>
+      </article>
+      <article className="dashboard-card">
         <div className="icon-square" aria-hidden="true">≡</div>
         <h3>거래 기록</h3>
         <span className={manualTradeEnabled() ? "pill" : "pill pill-neutral"}>{manualTradeEnabled() ? "직접 입력 이용 가능" : "운영 검증 중"}</span>

@@ -35,7 +35,8 @@
 - [x] Add signed Vercel-to-Railway Tiger endpoints, tenant RLS account binding, encrypted asset/position source snapshots and explicit SNAPSHOT_ONLY coverage.
 - [x] Implement bounded backfill planning, durable tenant-scoped staging schema/checkpoints and synthetic A/B RLS regression coverage (offline foundation; no worker execution).
 - [x] Implement offline-injected, owner/member-resolved one-window worker: locked lease claims, fencing tokens, resumable bounded windows, encrypted HMAC-keyed idempotent staging, bounded retries and A/B PostgreSQL tests. Source always staged PARTIAL until independent provider coverage verification.
-- [ ] Implement production dispatcher with opaque job lookup and broker-approved API paging, extend checkpoints to provider cursors, independently certify capability/coverage and reconcile/publish staged fills (no automatic dispatch/live Tiger reads yet).
+- [x] Implement offline provider-neutral paginated read contract and an explicitly invoked, bounded page runner with encrypted continuation cursors, transactional checkpoint/staging, duplicate-page idempotency, page-count and lease fencing (does not certify complete history).
+- [ ] Build provider-approved live Tiger pagination adapter, secure background dispatcher using opaque tenant-bound job lookups, independent coverage certification, account verification and reconciled publishing. Live API/scheduler remain disabled.
 - [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 

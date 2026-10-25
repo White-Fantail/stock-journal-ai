@@ -44,10 +44,12 @@
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 
 ## P4 — Reconciliation, holdings and performance (**planned**)
-- [ ] Deduplicate and normalize broker facts, map split fills and fees, detect gaps, handle corporate actions/cash activity.
+- [x] Build an offline deterministic P4 reconciliation gate for duplicate/replayed source IDs, conflicting versions, suspected economic duplicates, certified contiguous window coverage, fee/currency/time validation, same-as-of broker snapshot quantity matching and independent cash/order/corporate-action checks; never publish uncertain data.
+- [ ] Integrate verified Tiger order/fill/fee/cash/corporate-action source adapters with durable review/publish ledger; real provider evidence is not yet certified.
 - [x] Build an offline, account-scoped Decimal FIFO native-currency cost-basis/realized-P&L core with adversarial tests (strict verified-history/corporate-action prerequisite; no production data input).
 - [ ] Version and persist authorized projections; reconcile position snapshots at matching as-of time, add verified FX/unrealized returns, user-facing portfolio views and audit provenance.
-- [ ] Reconciliation exception UI, sync-health indicators, filters, per-account and consolidated portfolios.
+- [x] Add account-scoped portfolio readiness UI using freshly authenticated Tiger connection and sync metadata. Unknown cost basis, holdings and performance display as unverified, never zero/dummy values.
+- [ ] Persist reconciled, versioned projections and exception records; provide verified financial position/return tables and source-linked correction workflows once provider history is certified.
 - **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
 
 ## P5 — AI analysis and notifications (**planned**)

@@ -233,7 +233,7 @@ jobs:
       - name: Verify P3 durable staging A/B RLS and immutability
         run: python scripts/verify_saas_broker_sync_isolation.py
       - name: Verify P3 lease-fenced worker, grant revocation and encrypted replay
-        run: python scripts/verify_saas_backfill_worker.py
+        run: python -m scripts.verify_saas_backfill_worker
       - name: Verify manual trade A/B RLS, append-only and revoked-membership denial
         run: python scripts/verify_saas_trade_isolation.py
       - name: A/B authenticated service HTTP, replay, note export and account deletion

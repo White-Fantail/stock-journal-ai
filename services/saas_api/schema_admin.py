@@ -23,6 +23,8 @@ REQUIRED_TABLES = (
     "saas_tiger_oauth_attempts","saas_tiger_grants","saas_tiger_account_secrets","saas_tiger_source_snapshots",
     "saas_broker_backfill_jobs","saas_broker_backfill_windows","saas_broker_source_stage",
     "saas_broker_dispatch_queue",
+    "saas_reconciliation_versions","saas_reconciliation_issues",
+    "saas_verified_execution_stage","saas_projection_position_stage",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -44,6 +46,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "011_backfill_worker_fencing.sql", # per-claim lease fencing token
     "012_backfill_page_resume.sql", # encrypted cursor + durable bounded page count
     "013_broker_dispatch_queue.sql", # restricted cross-tenant queue metadata role
+    "014_reconciliation_audit.sql", # immutable tenant review versions and staged accounting
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

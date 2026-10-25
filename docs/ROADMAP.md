@@ -38,6 +38,8 @@
 - [x] Implement offline provider-neutral paginated read contract and an explicitly invoked, bounded page runner with encrypted continuation cursors, transactional checkpoint/staging, duplicate-page idempotency, page-count and lease fencing (does not certify complete history).
 - [x] Build dispatch-only database role, opaque tenant job queue, SKIP LOCKED claim with token fencing, fresh-owner authorization and bounded scheduler ticks (offline/injected reader only).
 - [ ] Activate a separately deployed background runner only after Tiger read-only historical endpoint, cursor rules, consent scopes, tenant auditing and operational monitoring are independently verified. Publication/reconciliation remains outstanding.
+- [x] Implement a signed, tenant-scoped sync-health read endpoint and private Tiger status UI for window/page progress, known issues, retry/reauth flags, and explicit UNVERIFIED historical coverage. Verify A/B negative queries and session revocation on disposable PG.
+- [x] Add an offline official-doc-based enterprise transaction inquiry probe with strictly documented request parameters, rejected malformed provider envelopes and absolutely no undocumented fill mapping or false full-history claims.
 - [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
 - **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
 

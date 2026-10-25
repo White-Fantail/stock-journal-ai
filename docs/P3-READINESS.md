@@ -29,3 +29,6 @@ Do not enable Tiger production connections until all financial tenant data safet
 - `docs/ROADMAP.md` is the authoritative checked/unchecked status list.
 - `docs/saas/HOSTED-SCHEMA-BOOTSTRAP.md` documents production migration and role bootstrap.
 - `docs/OPERATIONS.md` records remaining public-history remediation and runtime gates.
+
+## Status UI and historical transaction schema probe (2026-10-26)
+The source includes a private `/private/tiger/sync` progress/diagnostic screen backed by a signed, freshly authenticated, tenant RLS-scoped `/internal/v1/tiger/sync-status` endpoint. It returns job metadata but cannot create broker jobs. No history records or projections are shown as verified. An offline Tiger transaction inquiry probe follows the official endpoint's documented request limits, but the provider response mapping and complete historical pagination remain unverified. No live history imports are activated.

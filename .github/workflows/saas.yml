@@ -21,6 +21,8 @@ on:
       - 'scripts/verify_saas_paged_backfill.py'
       - 'scripts/verify_saas_broker_sync_isolation.py'
       - 'scripts/verify_saas_backfill_worker.py'
+      - 'scripts/verify_saas_dispatcher.py'
+      - 'tests/test_saas_dispatcher.py'
       - 'services/broker_connectors/**'
       - 'scripts/verify_saas_broker_isolation.py'
       - 'apps/web/**'

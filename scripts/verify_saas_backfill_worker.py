@@ -94,7 +94,7 @@ with psycopg.connect(dsn) as identity:
         assert "HISTORY_COVERAGE_UNVERIFIED" in first["issues"]
         # No retry of terminal partial without a new explicit sync plan.
         second=run_one(identity,broker,a[0],job,mock_batch)
-        assert second["state"]=="PARTIAL" and second["written"]==1,second
+        assert second["state"]=="PARTIAL" and second["written"]==0,second
         empty=run_one(identity,broker,a[0],job,mock_batch)
         assert empty["state"]=="NO_ELIGIBLE_WINDOW",empty
         with broker.transaction():
@@ -128,7 +128,7 @@ with psycopg.connect(dsn) as identity:
         assert stale=={"state":"LEASE_LOST","written":0},stale
         valid=_finish(identity,broker,a[0],UUID(lease_job["jobId"]),
                      current,[],("HISTORY_COVERAGE_UNVERIFIED",),None)
-        assert valid["state"]=="RUNNING",valid
+        assert valid["state"]=="PARTIAL",valid
 
         # A retryable timeout never discloses the provider exception body.
         transient_job=schedule(a[0],a[3],start+timedelta(days=210),days=60)
@@ -149,9 +149,9 @@ with psycopg.connect(dsn) as identity:
         assert run_one(identity,broker,a[0],transient_job["jobId"],timeout)["state"]=="NO_ELIGIBLE_WINDOW"
 
         # Revoked grant blocks queued work without touching other tenants.
-        with identity.transaction():
-            identity.execute("""UPDATE saas_broker_connections SET status='DISCONNECTED'
+        identity.execute("""UPDATE saas_broker_connections SET status='DISCONNECTED'
                WHERE workspace_id=%s AND id=%s""",(b[1],b[2]))
+        identity.commit()
         try:
             run_one(identity,broker,b[0],private["jobId"],mock_batch)
         except WorkerRefused as exc:

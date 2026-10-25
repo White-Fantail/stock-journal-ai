@@ -67,10 +67,13 @@ def enqueue(identity, broker, subject, account_id, start, end, *, days=30):
           (workspace_id,account_id,idempotency_key,start_utc,end_utc)
           VALUES (%s,%s,%s,%s,%s)
           ON CONFLICT (workspace_id,account_id,idempotency_key)
-          DO UPDATE SET idempotency_key=EXCLUDED.idempotency_key
-          RETURNING id""",
+          DO NOTHING RETURNING id""",
           (wid,account_id,plan.idempotency_key,plan.windows[0].start_utc,
            plan.windows[-1].end_utc)).fetchone()
+        if row is None:
+            row=broker.execute("""SELECT id FROM saas_broker_backfill_jobs
+              WHERE workspace_id=%s AND account_id=%s AND idempotency_key=%s""",
+              (wid,account_id,plan.idempotency_key)).fetchone()
         job_id=row[0]
         # A retry cannot overwrite any existing window's state or evidence.
         for win in plan.windows:

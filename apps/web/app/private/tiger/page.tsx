@@ -49,6 +49,12 @@ export default async function TigerConnections() {
         <button type="submit" className="btn btn-outline">이 연결 해제</button>
       </form>
     </section>)}
+    <div className="state-panel" style={{marginTop:22}}>
+      <span className="pill pill-neutral">조회 전용 · 검증 전</span>
+      <h2 style={{marginTop:12}}>동기화 현황</h2>
+      <p>계좌별 거래 이력 수집 작업의 진행 상황과 오류를 확인할 수 있습니다. 작업 처리가 끝나도 거래이력의 완전성이 확인되었다는 뜻은 아닙니다.</p>
+      <Link href="/private/tiger/sync" className="btn btn-outline">동기화 상태 보기 →</Link>
+    </div>
     {!!state?.accounts.length && <div className="dashboard-heading"><h2>계좌 조회</h2></div>}
     {state?.accounts.filter(a=>state!.connections.some(c=>c.id===a.connectionId && c.status==="CONNECTED")).map(account=><section className="state-panel" key={account.id}>
       <h2>{account.alias}</h2>

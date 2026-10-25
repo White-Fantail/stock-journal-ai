@@ -7,7 +7,18 @@ import { saasAuthConfigured } from "./saas-auth-policy";
 export type TigerConnection = { id: string; status: string; expiresAt: string | null; lastSuccessAt: string | null };
 export type TigerAccount = { id: string; connectionId: string; alias: string };
 export type TigerStatus = { provider: "TIGER"; enabled: boolean; connections: TigerConnection[]; accounts: TigerAccount[] };
-export type TigerAction = "status" | "start" | "callback" | "bind" | "read" | "disconnect";
+export type TigerSyncJob = {
+  id:string; accountId:string; accountAlias:string; connectionStatus:string;
+  state:string; startUtc:string | null; endUtc:string | null;
+  updatedAt:string | null; totalWindows:number; processedWindows:number;
+  certifiedWindows:number; pendingWindows:number; runningWindows:number;
+  blockedWindows:number; pagesStaged:number; nextRetryAt:string | null;
+  issueCodes:string[]; historyVerified:false; coverage:"UNVERIFIED";
+};
+export type TigerSyncStatus = {
+  provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
+};
+export type TigerAction = "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -59,4 +70,22 @@ export function safeTigerRedirect(path: string): URL {
   const base = process.env.AUTH_URL;
   if (!base || new URL(base).protocol !== "https:") throw new Error("AUTH_URL_REQUIRED");
   return new URL(path, base);
+}
+
+/** Signed internal read only. Actual broker history is NOT published. */
+export async function tigerSyncStatus():Promise<TigerSyncStatus> {
+  const value=await tigerCall("sync-status") as TigerSyncStatus;
+  if (!value || value.provider!=="TIGER" || !Array.isArray(value.jobs) ||
+      value.coverage!=="UNVERIFIED" || value.syncEnabled!==false ||
+      value.jobs.length>25 ||
+      !value.jobs.every(j=>j && typeof j.accountAlias==="string" &&
+        typeof j.id==="string" && typeof j.pagesStaged==="number" &&
+        Number.isInteger(j.pagesStaged) && j.pagesStaged>=0 &&
+        typeof j.totalWindows==="number" && j.totalWindows>=0 &&
+        typeof j.processedWindows==="number" && j.processedWindows>=0 &&
+        j.processedWindows<=j.totalWindows &&
+        j.historyVerified===false && j.coverage==="UNVERIFIED" &&
+        Array.isArray(j.issueCodes)))
+    throw new Error("INVALID_TIGER_SYNC_STATUS");
+  return value;
 }

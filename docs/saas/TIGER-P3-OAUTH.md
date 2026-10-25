@@ -22,3 +22,11 @@ Tiger **retail** OpenAPI OAuth2 (Python SDK >=3.8.0) is designed around an SDK-m
 No real Tiger partner app, read-only scope names, callback test, remote revoke confirmation, production broker RLS identity or end-to-end test account has been supplied/verified. Sync now stores real point-in-time assets and positions **only if Tiger account access is separately authorized**. Historical transactions/backfill/pagination + idempotent fill staging and bounded worker scheduling remain necessary for P3 full exit.
 
 Official docs: https://enterprise-docs.itigerup.com/reference/user-authorization ; https://enterprise-docs.itigerup.com/reference/post-v1-token ; https://docs-en.itigerup.com/docs/authentication
+
+
+## P3 offline worker readiness (2026-10-26)
+The pure tenant-bound backfill engine and staging migration 010/lease-fencing migration 011 are implemented and tested with synthetic data. They are **not** an approved live Tiger integration. No API job endpoint, production queue/worker service, automatic polling, or broker import publication is active. The current adapter lacks independently verified provider pagination/history guarantees and leaves coverage PARTIAL.
+
+A future separately reviewed worker deployment needs a dedicated restricted `saas_broker_app` DB login, `SAAS_BROKER_DATABASE_URL`, private 32-byte AES-GCM vault key in `TIGER_VAULT_KEY_B64`, and a separate private `SAAS_SOURCE_HMAC_KEY` containing 64 lowercase hexadecimal characters (32 random bytes). Never reuse another key. Stable source HMAC IDs depend on this key; planned rotation must preserve dedupe identity or migrate identifiers. Worker code checks current connection/grant, strict non-trading scopes and user-bound ownership before work. Production dispatcher must resolve opaque job IDs without exposing a cross-workspace queue or bypassing FORCE RLS.
+
+Before enabling live execution, independently verify hosted read-only consent, supported Tiger historical endpoints/cursors/fees/currency/timezone, account-specific coverage and capability. Stage, reconcile and publish only proven records; do not promote snapshots or failed/partial windows into positions or performance.

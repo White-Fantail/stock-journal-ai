@@ -48,6 +48,7 @@ with psycopg.connect(dsn) as identity:
             (wid,conn,b"g"*40)).fetchone()[0]
         identity.execute("""UPDATE saas_broker_connections
             SET status='CONNECTED',credential_handle=%s,
+                granted_scopes=ARRAY['portfolio.read'],
                 authorization_expires_at=now()+interval '1 day'
             WHERE workspace_id=%s AND id=%s""",(grant,wid,conn))
         acc=identity.execute("""INSERT INTO saas_broker_accounts
@@ -148,6 +149,17 @@ with psycopg.connect(dsn) as identity:
         assert attempts==["PARTIAL","PARTIAL","PARTIAL","PARTIAL","FAILED"],attempts
         assert run_one(identity,broker,a[0],transient_job["jobId"],timeout)["state"]=="NO_ELIGIBLE_WINDOW"
 
+        # Read-only scope is rechecked, even for an already-connected grant.
+        identity.execute("""UPDATE saas_broker_connections
+               SET granted_scopes=ARRAY['trade.execute']
+               WHERE workspace_id=%s AND id=%s""",(b[1],b[2]))
+        identity.commit()
+        try:
+            run_one(identity,broker,b[0],private["jobId"],mock_batch)
+        except WorkerRefused as exc:
+            assert str(exc)=="ACCOUNT_NOT_AUTHORIZED"
+        else:
+            raise AssertionError("Trade-capable scope was accepted")
         # Revoked grant blocks queued work without touching other tenants.
         identity.execute("""UPDATE saas_broker_connections SET status='DISCONNECTED'
                WHERE workspace_id=%s AND id=%s""",(b[1],b[2]))

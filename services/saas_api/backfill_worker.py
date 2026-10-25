@@ -49,7 +49,12 @@ def _account_authorized(broker, wid, account_id):
         ON s.workspace_id=a.workspace_id AND s.account_id=a.id
       WHERE a.workspace_id=%s AND a.id=%s
         AND c.provider_code='TIGER' AND c.status='CONNECTED'
-        AND c.authorization_expires_at > now() + interval '60 seconds'""",
+        AND c.authorization_expires_at > now() + interval '60 seconds'
+        AND cardinality(c.granted_scopes) > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM unnest(c.granted_scopes) AS permission(scope)
+          WHERE permission.scope ~* '(trade|order|write|place|cancel|transfer|withdraw|modify|execute|admin)'
+        )""",
         (wid,account_id)).fetchone()
 
 
@@ -160,7 +165,9 @@ def _validate_batch(request, result):
                 or not _decimal(fill.quantity,positive=True)
                 or not _decimal(fill.price,positive=True)
                 or not isinstance(fill.currency,str)
-                or not isinstance(fill.time_confidence,str)):
+                or not isinstance(fill.time_confidence,str)
+                or (fill.source_time_raw is not None and
+                    (not isinstance(fill.source_time_raw,str) or len(fill.source_time_raw)>512))):
             raise WorkerRefused("SOURCE_FACT_INVALID")
         if not _CURRENCY.fullmatch(fill.currency):
             issues.add("CURRENCY_UNVERIFIED")
@@ -238,10 +245,10 @@ def _finish(identity,broker,subject,job_id,claim,prepared,issues,problem):
             return {"state":"LEASE_LOST","written":0}
         written=0
         secret=os.environ.get("SAAS_SOURCE_HMAC_KEY","")
-        if prepared and (len(secret)<64 or not re.fullmatch("[0-9a-f]{64,}",secret)):
+        if prepared and not re.fullmatch(r"[0-9a-f]{64}",secret):
             raise WorkerRefused("SOURCE_KEY_NOT_CONFIGURED")
         for provider_id,payload in prepared:
-            key=source_key(bytes.fromhex(secret[:64]),"TIGER",account_id,"FILL",provider_id)
+            key=source_key(bytes.fromhex(secret),"TIGER",account_id,"FILL",provider_id)
             canonical=json.dumps(payload,sort_keys=True,separators=(",",":"),allow_nan=False).encode("utf-8")
             digest=hashlib.sha256(canonical).hexdigest()
             cipher=seal(payload,actual+":"+str(account_id)+":FILL:"+key+":"+digest)

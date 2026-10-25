@@ -60,3 +60,7 @@
 
 ## Sequencing and release guardrails
 Priority order: **P0 public data cleanup → P1 secure tenant foundations → P2 private journal → P3 Tiger → P4 accounting → P5 AI → P6 commercial expansion**. P2 and Tiger adapter research may proceed in parallel, but live Tiger auth must not precede provider approval and tenant isolation. After a successful `dev` validation and explicit release request, promote by fast-forward to `main`. Non-breaking reviewed SQL goes with its automatic migration manifest; never reset or delete hosted customer data to make tests pass.
+
+
+## Future execution track — gated independently from P3–P6
+A later optional Tiger order flow needs **separate customer trading authorization and Tiger provider/regulatory clearance**, a disjoint trade-capable credential vault/service/DB principal, explicit human preview and confirmation, broker-native idempotency/order reconciliation, audit, rate limits and a stop switch. Existing read-only grants cannot be upgraded implicitly. No order placement/cancel route or trade-capable token is present in P3.

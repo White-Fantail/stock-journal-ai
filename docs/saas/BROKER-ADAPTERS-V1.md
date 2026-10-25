@@ -1,5 +1,5 @@
 # Multi-broker read-only adapter design — Tiger first
-**Version:** 2.0 · **Date:** 2026-10-25 · **Current provider:** TIGER (`REQUIRES_REVIEW`)
+**Version:** 2.1 · **Date:** 2026-10-26 · **Current provider:** TIGER (`REQUIRES_REVIEW`)
 
 ## Purpose and provider registry
 A SaaS customer may link zero or more authorized brokers/accounts to their workspace. `services/broker_connectors/contracts.py` defines `BrokerAdapter`, `BrokerDescriptor`, `BrokerSyncRequest`, `BrokerSyncBatch`, `BrokerFill`, `BrokerPosition` and bounded `SyncWindow`; `registry.py` allowlists Tiger first. A second broker registers independently and cannot bypass authorization or replace Tiger normalization internals.
@@ -24,7 +24,7 @@ Trusted tenant job -> Registry -> TIGER adapter -> Tiger approved read-only API
 - Output includes tenant/account scoped source identity, ingest observed-time, normalized provider-time/zone confidence, native currency, commission/fee known-or-null, raw evidence hash/version, completeness and issue codes. Data precision uses `Decimal`, never binary floating money.
 
 ## Tiger-specific first release
-The repository currently contains a fixture-only Tiger adapter reusing `services/tiger_sync/collector.py` and `normalization.py`, with no external SDK instantiation or credential loading. The preview connection screen is **not** an active Connect button.
+The broker-neutral `TigerAdapter` remains fixture-only until a signed worker is qualified. Separately, `services/saas_api/tiger_oauth.py` and the Next.js Tiger connector implement a **provider-approval-gated** partner OAuth2 code flow and tenant-scoped, encrypted account/positions snapshots. These sources are not proof of production Tiger authorization: the connection UI is disabled without approved partner app configuration and a restricted broker DB role. End users must enter their Tiger account identifier after authorization; the backend verifies read entitlement against Tiger before encrypting it. Account auto-discovery, historical fills and durable sync jobs remain to be built.
 
 Official developer references: [Tiger authentication](https://docs-en.itigerup.com/docs/authentication), [Python preparation](https://docs-en.itigerup.com/docs/prepare) and [Tiger enterprise OAuth2](https://enterprise-docs.itigerup.com/reference/oauth-2). Provider documentation is not approval for commercial third-party use.
 
@@ -49,3 +49,7 @@ For retries, transient timeouts/rate limits get bounded exponential backoff with
 
 ## Delivery order
 Finish tenant isolation and manual ledger gate -> obtain Tiger eligibility and scope confirmation -> secure OAuth/vault -> bounded source-event model and job worker -> Tiger read-only real-account staging -> reconciliation and portfolio views -> add later brokers. No CSV uploader, no import of historical personal GitHub files, no brokerage trade operations.
+
+
+## Order capability expansion — separate future service, not part of P3
+The read-only adapter and its encryption/RLS permissions must remain query-only. If ordering is added later, use a separately authorized **trade-capable** Tiger connection with independently granted scopes, a dedicated high-trust execution service and a disjoint runtime principal. Require a per-order human confirmation of ticker, direction, quantity, type, limit/stop prices, account, fees and risk; immutable intent IDs and idempotency; preflight balances/market eligibility; broker reconciliation of order status/partial fills; rate limits, audit, emergency shutoff and revocation. Never silently upgrade an existing read-only grant to a trading grant, place orders as a side effect of analysis/sync, or infer broker execution from an HTTP timeout. The external provider and regulatory approval for order operations will be assessed independently.

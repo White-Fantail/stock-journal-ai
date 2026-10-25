@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { tigerStatus, tigerSyncStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus } from "../../../lib/tiger-api";
+import { tigerStatus, tigerSyncStatus, tigerReviewStatus, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus } from "../../../lib/tiger-api";
 
 export const metadata:Metadata={title:"포트폴리오 · Positionary"};
 export const dynamic="force-dynamic";
@@ -17,6 +17,14 @@ const issueText:Record<string,string>={
   REAUTH_REQUIRED:"재인증 필요",
   CURSOR_LOOP:"페이지 반복 오류",
   PAGE_LIMIT:"페이지 처리 제한",
+  INDEPENDENT_ATTESTATION_REQUIRED:"독립적인 이력 검증 증명이 필요합니다.",
+  HISTORY_GAP:"거래이력 수집 구간 누락",
+  SOURCE_VERSION_CONFLICT:"원본 거래 버전 충돌",
+  POTENTIAL_DUPLICATE_FILL:"중복 체결 가능성",
+  POSITION_QUANTITY_MISMATCH:"증권사 보유수량과 원장이 일치하지 않음",
+  ORDERS_UNVERIFIED:"주문 내역 검증 필요",
+  CASH_ACTIVITY_UNVERIFIED:"현금거래 내역 검증 필요",
+  CORPORATE_ACTIONS_UNVERIFIED:"기업행동 검증 필요",
 };
 
 function timeLabel(raw:string|null):string {
@@ -26,8 +34,8 @@ function timeLabel(raw:string|null):string {
   return new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(t);
 }
 
-function AccountReadiness({account,connection,job}:{
-  account:TigerAccount;connection:string;job:TigerSyncJob|null
+function AccountReadiness({account,connection,job,review}:{
+  account:TigerAccount;connection:string;job:TigerSyncJob|null;review:TigerReviewAccount|null
 }) {
   const connected=connection==="CONNECTED";
   const issues=job?.issueCodes.filter(c=>c in issueText) ?? [];
@@ -52,18 +60,26 @@ function AccountReadiness({account,connection,job}:{
       <p className="sync-subtle">최근 수집 작업: {timeLabel(job.updatedAt)} · {job.processedWindows}/{job.totalWindows}구간 처리 · 이력 완전성 미검증</p>
       {issues.length>0 && <p className="sync-subtle">확인할 내용: {issues.slice(0,3).map(c=>issueText[c]).join(" · ")}</p>}
     </> : <p className="sync-subtle">이 계좌에서 시작된 과거 거래내역 수집 작업이 확인되지 않았습니다.</p>}
+    {review && <div className="sync-issues">
+      <h3>최근 검증 이력 · v{review.version}</h3>
+      <p className="sync-subtle">{review.state==="STAGED"?"수집원장 비공개 준비 완료 · 사용자 포트폴리오 미공개":"검증 문제 발견 · 수정 후 재검증 필요"} · {timeLabel(review.createdAt)}</p>
+      {review.issues.length>0 && <ul>{review.issues.map(code=>
+        <li key={code}>{issueText[code]??"추가로 확인해야 할 거래내역 검증 항목이 있습니다."}</li>)}</ul>}
+    </div>}
     <Link href="/private/tiger/sync" className="btn btn-outline">수집 및 오류 상태 확인 →</Link>
   </section>;
 }
 
 export default async function PortfolioPage() {
   if(!await currentWorkspace()) redirect("/login");
-  const [links,history]=await Promise.allSettled([tigerStatus(),tigerSyncStatus()]);
+  const [links,history,reviews]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
   const historyState:TigerSyncStatus|null=history.status==="fulfilled"?history.value:null;
+  const reviewState:TigerReviewStatus|null=reviews.status==="fulfilled"?reviews.value:null;
   const accounts=accountState?.accounts ?? [];
   const connectionById=new Map(accountState?.connections.map(c=>[c.id,c.status])??[]);
   const latestJob=new Map<string,TigerSyncJob>();
+  const latestReview=new Map((reviewState?.accounts??[]).map(r=>[r.accountId,r]));
   for(const job of historyState?.jobs ?? []) {
     if(!latestJob.has(job.accountId)) latestJob.set(job.accountId,job);
   }
@@ -76,7 +92,7 @@ export default async function PortfolioPage() {
       <strong>현재 포트폴리오 수익률을 산출할 수 없습니다.</strong>
       <p>검증된 과거 거래, 수수료 및 동일 기준 시각의 증권사 보유현황이 없으면 결과는 미확인으로 유지합니다. 이 화면에 예시 거래나 테스트 잔고를 표시하지 않습니다.</p>
     </div></div>
-    {accountState===null || historyState===null ? <section className="state-panel" role="alert">
+    {accountState===null || historyState===null || reviewState===null ? <section className="state-panel" role="alert">
       <span className="pill pill-warning">조회 불가</span>
       <h2>포트폴리오 준비 상태를 확인할 수 없습니다.</h2>
       <p>계좌 연결 또는 동기화 서버에 접근하지 못했습니다. 연결되지 않았다고 단정하거나 포트폴리오를 0으로 표시하지 않습니다.</p>
@@ -91,7 +107,7 @@ export default async function PortfolioPage() {
       <div className="sync-jobs">{accounts.map(account=><AccountReadiness
         key={account.id} account={account}
         connection={connectionById.get(account.connectionId)??"UNKNOWN"}
-        job={latestJob.get(account.id)??null}/>)}</div>
+        job={latestJob.get(account.id)??null} review={latestReview.get(account.id)??null}/>)}</div>
     </>}
     <section className="state-panel">
       <h2>포트폴리오 검증 절차</h2>

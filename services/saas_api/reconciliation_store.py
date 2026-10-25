@@ -8,7 +8,7 @@ authorize staging. No holdings or P/L is published by this module.
 from __future__ import annotations
 
 from datetime import timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation, localcontext
 import hashlib
 import hmac
 import json
@@ -47,8 +47,13 @@ def _number(value, *, signed=False):
     if value.copy_abs() >= Decimal("1e24"):
         raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
     # Accept only exact numeric(36,12); no monetary rounding on write.
-    if value != value.quantize(Decimal("0.000000000001")):
-        raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
+    try:
+        with localcontext() as ctx:
+            ctx.prec = 64
+            if value != value.quantize(Decimal("0.000000000001")):
+                raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
+    except InvalidOperation:
+        raise AuditRefused("NUMERIC_NOT_REPRESENTABLE") from None
     return value
 
 

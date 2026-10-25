@@ -44,9 +44,10 @@ def _number(value, *, signed=False):
         not signed and value<0):
         raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
     # Compare before formatting: avoid huge exponent/integer expansion.
-    if value != value.quantize(Decimal("0.000000000001")):
-        raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
     if value.copy_abs() >= Decimal("1e24"):
+        raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
+    # Accept only exact numeric(36,12); no monetary rounding on write.
+    if value != value.quantize(Decimal("0.000000000001")):
         raise AuditRefused("NUMERIC_NOT_REPRESENTABLE")
     return value
 

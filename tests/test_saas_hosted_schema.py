@@ -105,7 +105,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
 
     def test_reject_changed_or_unknown_history_and_nonprefix(self):
         planned = manifest()
-        first, second, third, fourth, fifth, sixth, seventh = planned
+        first, second, third, fourth, fifth, sixth, seventh = planned[:7]
         bad_cases = [
             {first[0]: "0" * 64},
             {second[0]: second[1]},

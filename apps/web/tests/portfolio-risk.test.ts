@@ -26,7 +26,9 @@ test("no made-up value when price, currency, count, or timestamp is unreliable",
  assert.equal(assessConcentration({...input,positions:[
   {symbol:"A",currency:"USD",quantity:"1",marketValue:"2"},
   {symbol:"B",currency:"NZD",quantity:"1",marketValue:"3"}]},now).status,"UNAVAILABLE");
- assert.equal(assessConcentration({...input,partial:true},now).status,"UNAVAILABLE");
+ // Historical order pagination does not change an independently observed position snapshot.
+ const partial=account([{symbol:"A",currency:"USD",quantity:"1",marketValue:"100"}]);
+ assert.equal(assessConcentration({...partial,partial:true},now).status,"READY");
  assert.equal(assessConcentration({...input,asOf:null},now).status,"UNAVAILABLE");
  assert.equal(assessConcentration({...input,asOf:"2026-10-01T00:00:00Z"},now).status,"UNAVAILABLE");
  assert.equal(assessConcentration({...input,asOf:"2026-10-30T00:00:00Z"},now).status,"UNAVAILABLE");

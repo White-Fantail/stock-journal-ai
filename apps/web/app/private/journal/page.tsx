@@ -9,7 +9,8 @@ import {
   type JournalKind,
 } from "../../../lib/saas-trades-api";
 import { JournalWorkspace } from "./journal-workspace";
-import { tigerLedgerRead, type TigerLedgerRead } from "../../../lib/tiger-api";
+import { tigerLedgerRead, tigerPersonalRead, type TigerLedgerRead } from "../../../lib/tiger-api";
+import { PersonalOrderHistory } from "../tiger/personal-preview";
 
 export const dynamic="force-dynamic";
 export const metadata={title:"투자 일지 · Positionary"};
@@ -94,6 +95,7 @@ export default async function JournalPage({
     currentWorkspace(),auth(),searchParams,
   ]);
   if(!workspace||!session?.user?.id) redirect("/login");
+  const personal=await tigerPersonalRead();
   let entries:Awaited<ReturnType<typeof fetchJournal>>=[];
   let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
   let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
@@ -136,6 +138,7 @@ export default async function JournalPage({
     {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
+    {personal && personal.accounts.length>0 && <PersonalOrderHistory data={personal} compact/>}
     <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
       entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       brokerNoteAction={addBrokerFillNote}

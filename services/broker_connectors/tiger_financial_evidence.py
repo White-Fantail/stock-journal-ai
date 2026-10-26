@@ -28,7 +28,7 @@ MAX_DAYS=89
 _CURRENCY=re.compile(r"^[A-Z]{3}$")
 _ID=re.compile(r"^[0-9]{1,24}$")
 _DATE=re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
-_NUM=re.compile(r"^-?(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$")
+_NUM=re.compile(r"^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$")
 
 
 class FundEvidenceUnavailable(RuntimeError):

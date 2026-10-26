@@ -52,6 +52,41 @@ def _payload(value):
                 not isinstance(p["commissionCurrency"],str)
                 or p["commissionCurrency"] not in _CURRENCIES):
             raise PilotError("INVALID_PROBE")
+        fee_review=p.get("feeReview")
+        if fee_review is not None:
+            if (not isinstance(fee_review,dict)
+                    or set(fee_review)!={"status","total","currency","details"}
+                    or fee_review["status"] not in
+                       ("MATCHED","CURRENCY_UNKNOWN","UNAVAILABLE","DIFFERENCE")
+                    or not isinstance(fee_review["details"],list)
+                    or len(fee_review["details"])>32):
+                raise PilotError("INVALID_PROBE")
+            state=fee_review["status"]
+            monetary=number(fee_review["total"],True)
+            currency=fee_review["currency"]
+            if currency is not None and (
+                    not isinstance(currency,str) or currency not in _CURRENCIES):
+                raise PilotError("INVALID_PROBE")
+            if state in ("UNAVAILABLE","DIFFERENCE"):
+                if monetary is not None or currency is not None or fee_review["details"]:
+                    raise PilotError("INVALID_PROBE")
+            else:
+                if (monetary is None or not fee_review["details"]
+                        or (state=="MATCHED") != (currency is not None)
+                        or p["orderCommission"] is None
+                        or Decimal(monetary)!=Decimal(p["orderCommission"])):
+                    raise PilotError("INVALID_PROBE")
+                component_total=Decimal(0)
+                for component in fee_review["details"]:
+                    if (not isinstance(component,dict)
+                            or set(component)!={"category","type","amount"}
+                            or component["category"] not in ("TIGER","THIRD_PARTY")
+                            or not isinstance(component["type"],str)
+                            or not re.fullmatch(r"[A-Z_]{2,40}",component["type"])):
+                        raise PilotError("INVALID_PROBE")
+                    component_total+=Decimal(number(component["amount"]))
+                if component_total!=Decimal(monetary):
+                    raise PilotError("INVALID_PROBE")
         if p["status"]=="UNAVAILABLE" and p["fills"]:
             raise PilotError("INVALID_PROBE")
         fill_ids=set()
@@ -126,6 +161,10 @@ def load_probes(broker,wid,aid):
     # These are observed transactions, not validated history, accounting inputs
     # or individual commission allocations.
     return {"fillObservations":fills[:60], "fillProbeCount":len(orders),
+            "feeProbeMatched":sum(p.get("feeReview",{}).get("status")=="MATCHED" for p in orders.values()),
+            "feeProbeCurrencyUnknown":sum(p.get("feeReview",{}).get("status")=="CURRENCY_UNKNOWN" for p in orders.values()),
+            "feeProbeDifference":sum(p.get("feeReview",{}).get("status")=="DIFFERENCE" for p in orders.values()),
+            "feeProbeUnavailable":sum(p.get("feeReview",{}).get("status") in (None,"UNAVAILABLE") for p in orders.values()),
             "fillProbeUnavailable":sum(p["status"]=="UNAVAILABLE" for p in orders.values()),
             "fillProbeDifference":sum(p["status"]=="DIFFERENCE" for p in orders.values()),
             "fillProbePartial":sum(p["status"]=="PARTIAL" for p in orders.values()),

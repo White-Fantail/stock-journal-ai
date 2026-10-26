@@ -150,11 +150,14 @@ def load_quotes(broker,wid,aid,positions,snapshot_at):
     for q in quotes:
         if (not isinstance(q,dict) or set(q)!={"symbol","currency","price","quoteAt","mode"}
                 or not isinstance(q["symbol"],str) or q["symbol"] in seen
-                or q["symbol"] not in mapped or q["currency"]!="USD"
-                or q["mode"] not in MODES or not isinstance(q["quoteAt"],str)
-                or not TIME.fullmatch(q["quoteAt"])):
+                or q["currency"]!="USD" or q["mode"] not in MODES
+                or not isinstance(q["quoteAt"],str) or not TIME.fullmatch(q["quoteAt"])):
             raise PilotError("INVALID_SOURCE")
         seen.add(q["symbol"])
+        if q["symbol"] not in mapped:
+            # A previous snapshot may include a stock already sold. Skip its
+            # historical quotation without hiding still-held positions.
+            continue
         observation=indicative_quote(mapped[q["symbol"]],q,now,snap)
         if observation is not None:
             result.append(observation)

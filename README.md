@@ -20,7 +20,7 @@
 | Multi-tenant SaaS DB | Versioned schema 001–009, FORCE RLS and hostile A/B vault tests exist | Verify actual hosted schema, least-privilege runtime roles, backup/restore |
 | Manual trade log | Tenant event and compensating-VOID code, feature-gated UI | Enable only after negative HTTP isolation and deployment tests |
 | Tiger | Provider picker, guarded OAuth2 callback, AES-GCM grant vault, refresh/revocation, manual account binding after authorized Tiger GET, encrypted asset/position snapshots; CI-tested in `dev` | Obtain Tiger NZ third-party app approval, prove query-only scopes, configure secrets/dedicated RLS DB, test live account and add durable transaction backfill worker |
-| Portfolio, review and AI | Architecture/planning | Build projections, reconciliation, insight UI and opt-in AI |
+| Portfolio, review and AI | Versioned private P4 staging and independently signed **disabled** broker-ledger release gate; user-authored journal UI exists | Verify live Tiger source/coverage, add independent issuer and customer-visible broker ledger/portfolio, then opt-in AI |
 | CSV ingestion | Retired | Keep historic migration 004/005 for checksum continuity, **no uploads** |
 
 The existing Vercel and Railway service configuration is not evidence that every flow is operational. Tiger live authorization, transaction backfill, reconciliation, payments and public launch are **not** certified by this README. The P3 connection UI is not a functioning production login until official Tiger partner authorization is approved.
@@ -36,6 +36,8 @@ The existing Vercel and Railway service configuration is not evidence that every
 - `docs/` — current product, design, operating and milestone documents
 
 **Tiger P3 deployment controls:** [Partner OAuth and vault runbook](docs/saas/TIGER-P3-OAUTH.md). Source-code tests on `dev` do not grant Tiger production approval.
+
+**P4 release gate:** [Private broker-ledger publication contract](docs/saas/P4-PUBLICATION.md). The dedicated publisher login has no password by default; the release flag is off and no production publication endpoint exists.
 
 **Canonical documents:** [Product](docs/PRODUCT.md) · [Architecture](docs/ARCHITECTURE.md) · [Data model](docs/DATA-MODEL.md) · [Tiger / adapter contract](docs/saas/BROKER-ADAPTERS-V1.md) · [Delivery roadmap](docs/ROADMAP.md) · [Operations and privacy](docs/OPERATIONS.md).
 

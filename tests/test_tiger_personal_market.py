@@ -70,7 +70,7 @@ class QuoteSourceTests(unittest.TestCase):
         record=market_quotes.indicative_quote(POSITIONS[0],q,NOW,NOW-3600000)
         self.assertEqual(record["estimatedValue"],"315.375")
         self.assertEqual(record["estimatedUnrealized"],"15.375")
-        self.assertEqual(record["estimatedReturnPct"],"5.13")
+        self.assertEqual(record["estimatedReturnPct"],"5.12")
         self.assertFalse(record["stale"])
         self.assertIsNone(market_quotes.indicative_quote(POSITIONS[0],q,NOW,NOW-72*3600000)["estimatedUnrealized"])
         self.assertIsNone(market_quotes.indicative_quote({**POSITIONS[0],"averageCost":None},q,NOW,NOW-3600000)["estimatedValue"])

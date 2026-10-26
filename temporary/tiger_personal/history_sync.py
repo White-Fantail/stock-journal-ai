@@ -153,13 +153,19 @@ def sync_history(env=None, client_factory=None):
         next_date=min(cursor+timedelta(days=85),now)
         begin=int(cursor.timestamp()*1000)
         end=int(next_date.timestamp()*1000)
-        rows,complete=_pages(client,account,begin,end)
+        try:
+            rows,complete=_pages(client,account,begin,end)
+        except Exception:
+            raise RuntimeError("QUERY") from None
         parts=max(1,(len(rows)+24)//25)
         if parts>40:
             raise ValueError("TOO_MANY_ORDERS")
         for part in range(parts):
-            _send(subject,account,begin,end,part,parts,complete,
-                  rows[part*25:(part+1)*25],env)
+            try:
+                _send(subject,account,begin,end,part,parts,complete,
+                      rows[part*25:(part+1)*25],env)
+            except Exception:
+                raise RuntimeError("UPLOAD") from None
         total+=len(rows)
         partial+=int(not complete)
         windows+=1
@@ -180,9 +186,10 @@ def main():
         print("PERSONAL_ORDER_HISTORY_STAGED windows="+str(value["windows"])+
               " orders="+str(value["orders"])+
               " partial_windows="+str(value["partialWindows"]))
-    except Exception:
-        # Never disclose SDK errors or provider response bodies to logs.
-        print("PERSONAL_ORDER_HISTORY_UNAVAILABLE")
+    except Exception as exc:
+        # Only an allowlisted failure phase, never user/provider exception text.
+        phase = str(exc) if type(exc) is RuntimeError and str(exc) in ("QUERY","UPLOAD") else "CONFIG_OR_SDK"
+        print("PERSONAL_ORDER_HISTORY_UNAVAILABLE step="+phase)
         raise SystemExit(1)
 
 if __name__=="__main__":

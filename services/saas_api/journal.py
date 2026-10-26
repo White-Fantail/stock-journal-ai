@@ -51,10 +51,14 @@ def _entry(row) -> dict:
         "accountId":str(row[6]),"sourceRef":str(row[7]),
         "reviewVersion":int(row[8]),
     })
+    observation_ref=(None if len(row)<12 or row[9] is None else {
+        "accountId":str(row[9]),"sourceRef":str(row[10]),
+        "kind":row[11],"status":"OBSERVED_NOT_VERIFIED",
+    })
     return {"id": str(row[0]), "kind": row[1], "ticker": row[2],
             "content": row[3], "tradeEventId": str(row[4]) if row[4] else None,
             "createdAt": row[5].isoformat(), "provenance": "USER_AUTHORED",
-            "brokerRef":broker_ref}
+            "brokerRef":broker_ref,"observationRef":observation_ref}
 
 
 def list_notes(identity_conn, trade_conn, subject: str) -> dict:
@@ -64,12 +68,15 @@ def list_notes(identity_conn, trade_conn, subject: str) -> dict:
         _tenant_scope(trade_conn, scope)
         rows = trade_conn.execute("""
             SELECT j.id,j.entry_kind,j.ticker,j.text_content,j.trade_event_id,j.created_at,
-                   l.account_id,l.source_key_hmac,v.version_num
+                   l.account_id,l.source_key_hmac,v.version_num,
+                   o.account_id,o.source_ref,o.observation_kind
             FROM saas_journal_records j
             LEFT JOIN saas_journal_broker_fill_links l
               ON l.workspace_id=j.workspace_id AND l.journal_id=j.id
             LEFT JOIN saas_reconciliation_versions v
               ON v.workspace_id=l.workspace_id AND v.id=l.review_version_id
+            LEFT JOIN saas_journal_tiger_observation_links o
+              ON o.workspace_id=j.workspace_id AND o.journal_id=j.id
             ORDER BY j.created_at DESC,j.id DESC LIMIT 200
         """).fetchall()
     return {"entries": [_entry(row) for row in rows], "limit": 200, "source": "USER_AUTHORED_ONLY"}
@@ -123,12 +130,15 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
         ).fetchall()
         notes = trade_conn.execute("""
             SELECT j.id,j.entry_kind,j.ticker,j.text_content,j.trade_event_id,j.created_at,
-                   l.account_id,l.source_key_hmac,v.version_num
+                   l.account_id,l.source_key_hmac,v.version_num,
+                   o.account_id,o.source_ref,o.observation_kind
             FROM saas_journal_records j
             LEFT JOIN saas_journal_broker_fill_links l
               ON l.workspace_id=j.workspace_id AND l.journal_id=j.id
             LEFT JOIN saas_reconciliation_versions v
               ON v.workspace_id=l.workspace_id AND v.id=l.review_version_id
+            LEFT JOIN saas_journal_tiger_observation_links o
+              ON o.workspace_id=j.workspace_id AND o.journal_id=j.id
             ORDER BY j.created_at,j.id LIMIT %s
         """, (_LIMIT + 1,)).fetchall()
         plans = trade_conn.execute("""SELECT id,ticker,target_price,stop_price,

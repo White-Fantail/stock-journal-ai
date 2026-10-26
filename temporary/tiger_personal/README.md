@@ -61,3 +61,10 @@ standard API Dockerfile; no destructive migration or account deletion.
 WARNING: The source RSA key was uploaded in a ChatGPT conversation in an
 earlier step. Replace/revoke that Tiger developer key as soon as practical,
 and update only the isolated Railway environment variable.
+
+## Read-only individual transaction discovery (Step 1, dev)
+The isolated daily worker also makes a **bounded 30-day diagnostic** call to the documented Prime/Paper-only `TradeClient.get_transactions(account=..., order_id=..., limit=40, page_token="")` for at most six recently filled STOCK orders. It never sends an order, modifies an order, or makes transfers. An unsupported SDK/account, ambiguous fractional scale, mismatched transaction owner/order/symbol, or incomplete page is labelled unavailable/partial/different rather than treated as a fill ledger.
+
+New owner-only HMAC endpoint `/internal/v1/tiger/personal-transactions-import` stores the bounded original normalized response as encrypted `PERSONAL_TRANSACTION_OBSERVATION` in the existing tenant-RLS snapshots table, always with `PARTIAL` completeness. No new DB or migration. The private trades screen separates these **observed** individual transactions from `PERSONAL_ORDER_OBSERVATION` and independently certified P4 broker executions. Order `commission` is **not** allocated to its component fills. Missing `commission_currency` and ambiguous source `transacted_at` timezone are shown as unknown rather than substituted.
+
+After main deployment, verify actual SDK support and the safely aggregated diagnostic counters before widening coverage. Do not claim live Prime access or exact individual fee coverage based on the synthetic tests.

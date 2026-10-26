@@ -39,7 +39,8 @@ export default async function WorkspaceHome(){
   const notes=results[2].status==="fulfilled"?results[2].value:null;
   const plans=results[3].status==="fulfilled"?results[3].value:null;
   const accounts=personal?.accounts??[];
-  const allPositions=accounts.flatMap(a=>a.positions.map(p=>({alias:a.alias,...p})));
+  const allPositions=accounts.flatMap(a=>a.positions.map(p=>({alias:a.alias,...p,
+    quote:a.marketObservations.find(q=>q.symbol===p.symbol && q.currency===p.currency)})));
   const orders=accounts.flatMap(a=>a.orders.map(o=>({alias:a.alias,...o})))
     .sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,4);
   const recent=[
@@ -112,7 +113,12 @@ export default async function WorkspaceHome(){
           <div className="user-list">{allPositions.slice(0,6).map((p,i)=>
             <Link className="user-list-row" href={"/private/journal?ticker="+encodeURIComponent(p.symbol)} key={p.alias+":"+p.symbol+":"+p.currency+":"+i}>
               <div><strong>{p.symbol}</strong><small>{p.alias} · {p.currency}</small></div>
-              <div className="user-list-value"><strong>{formatDecimal(p.quantity)}주</strong><small>평가액 {formatDecimal(p.marketValue)} {p.currency}</small></div>
+              <div className="user-list-value"><strong>{formatDecimal(p.quantity)}주</strong>
+                <small>{p.quote?.estimatedValue!==null && p.quote
+                  ? "시세 기준 참고 평가액 "+formatDecimal(p.quote.estimatedValue)+" USD"
+                  : "Tiger 조회 평가액 "+formatDecimal(p.marketValue)+" "+p.currency}</small>
+                {p.quote && <small>{p.quote.mode==="US_DELAYED_15M"?"15분 지연":"시세 권한"}
+                  {p.quote.stale?" · 과거 마지막 가격":""} · {formatDecimal(p.quote.price)} USD</small>}</div>
             </Link>)}</div>}
       </section>
       <section className="user-panel">

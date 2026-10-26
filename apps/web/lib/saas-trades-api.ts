@@ -49,9 +49,9 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
-      "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" |
+      "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -61,6 +61,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :
     path === "/internal/v1/journal/broker-note/create" ? {subject, brokerNote:payload} :
     path === "/internal/v1/journal/observation-note/create" ? {subject, observationNote:payload} :
+    path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
     path === "/internal/v1/journal/plan/create" ? {subject, plan:payload} :
     path === "/internal/v1/account/delete" ? {subject, confirmation:payload} :
     path === "/internal/v1/trades/detail" ? {subject, tradeId:payload} : {subject});
@@ -203,4 +204,18 @@ export async function submitTigerObservationNote(subject:string,note:TigerObserv
      !/^[0-9a-f-]{36}$/i.test(result.id) || result.source!=="USER_AUTHORED")
     throw new Error("Tiger observation note not confirmed");
   return result.id;
+}
+
+/** Atomic, identity-verified, tenant-scoped daily/monthly AI quota.
+ * No private notes or financial data ever go to the quota endpoint.
+ */
+export type AiClaimInput={mode:"STOCK_REVIEW"|"HABITS";consented:true};
+export async function claimAiAnalysis(subject:string,mode:AiClaimInput["mode"]):Promise<{
+  remainingDay:number;remainingMonth:number
+}>{
+  const result=await postS2("/internal/v1/ai/claim",subject,{mode,consented:true})
+    as {claimed?:boolean;remainingDay?:number;remainingMonth?:number};
+  if(result?.claimed!==true || !Number.isInteger(result.remainingDay) ||
+     !Number.isInteger(result.remainingMonth))throw new Error("AI_QUOTA_FAILED");
+  return {remainingDay:result.remainingDay!,remainingMonth:result.remainingMonth!};
 }

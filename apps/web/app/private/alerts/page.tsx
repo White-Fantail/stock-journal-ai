@@ -26,9 +26,9 @@ export default async function NotificationsPage(){
   ]);
   const accountHealth=health.status==="fulfilled"?health.value:null;
   const holdings=personal.status==="fulfilled"?personal.value:null;
-  const myPlans=plans.status==="fulfilled"?plans.value:null;
+  const myPlans=plans.status==="fulfilled"&&plans.value.length<200?plans.value:null;
   const alerts=derivePersonalAlerts(holdings,accountHealth,myPlans);
-  const reviews=myPlans!==null&&notes.status==="fulfilled"
+  const reviews=myPlans!==null&&notes.status==="fulfilled"&&notes.value.length<200
     ?dueInvestmentReviews(myPlans,notes.value):null;
   return <main className="journal-page">
     <div className="page-intro journal-page-heading">
@@ -87,7 +87,7 @@ export default async function NotificationsPage(){
             </div>
           </article>)}
         </div>}
-      {plans.status!=="fulfilled"&&<p role="alert">투자 계획을 가져오지 못해 미작성 계획 점검을 생략했습니다.</p>}
+      {myPlans===null&&<p role="alert">투자 계획을 불러오지 못했거나 조회 상한에 도달해 전략 누락 점검을 생략했습니다.</p>}
       <p className="journal-limit">이 안내는 화면을 열 때 저장된 Tiger 정보와 내 투자 계획만으로 계산합니다.
         주가 조회·가격 도달 감시·매매 알림·자동 주문·휴대폰 푸시를 하지 않습니다.
         투자 계획 미작성 안내는 최근 보유 관측에만 기반하며 매매 권고가 아닙니다.</p>

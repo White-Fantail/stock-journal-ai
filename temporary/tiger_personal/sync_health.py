@@ -62,7 +62,10 @@ def view_health(identity,broker,subject):
              WHERE h.workspace_id=%s AND c.provider_code='TIGER'
                AND c.auth_mode='SIGNATURE' AND c.status='PENDING_AUTH'
              ORDER BY h.reported_at DESC,h.id DESC LIMIT 30""",(wid,)).fetchall()
-        accounts=broker.execute("""SELECT a.alias,c.last_success_at
+        accounts=broker.execute("""SELECT a.alias,
+                (SELECT MAX(x.observed_at) FROM saas_tiger_source_snapshots x
+                 WHERE x.workspace_id=a.workspace_id AND x.account_id=a.id
+                   AND x.kind='ASSETS')
              FROM saas_broker_accounts a JOIN saas_broker_connections c
                ON c.workspace_id=a.workspace_id AND c.id=a.connection_id
              WHERE a.workspace_id=%s AND c.provider_code='TIGER'

@@ -114,7 +114,7 @@ def _number(raw: Any) -> str:
         raise FundEvidenceUnavailable("AMOUNT_INVALID") from None
     # Reject extreme exponent / scale before format("f"): an untrusted
     # Decimal("1e999999999") must never allocate a gigabyte-sized string.
-    if value.copy_abs()>=Decimal("1e24") or value.as_tuple().exponent<-12:
+    if not value.is_finite() or value.copy_abs()>=Decimal("1e24") or value.as_tuple().exponent<-12:
         raise FundEvidenceUnavailable("AMOUNT_INVALID")
     result=format(value,"f")
     if not _NUM.fullmatch(result):

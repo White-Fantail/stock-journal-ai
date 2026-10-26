@@ -16,9 +16,21 @@ from services.saas_api.trades import (
     _confirmed_scope, _runtime_safety, _tenant_scope,
 )
 from services.saas_api.tiger_oauth import _scope
-from temporary.tiger_personal.api import owner_only
-from temporary.tiger_personal.history import load_orders
-from temporary.tiger_personal.fill_probe import load_probes
+# Import the optional owner pilot ONLY when this endpoint is called. The
+# standard SaaS image deliberately excludes temporary/tiger_personal.
+def owner_only(subject):
+    from temporary.tiger_personal.api import owner_only as verify
+    return verify(subject)
+
+
+def load_orders(*args, **kwargs):
+    from temporary.tiger_personal.history import load_orders as read
+    return read(*args, **kwargs)
+
+
+def load_probes(*args, **kwargs):
+    from temporary.tiger_personal.fill_probe import load_probes as read
+    return read(*args, **kwargs)
 
 _TICKER=re.compile(r"^[A-Z0-9.:-]{1,32}$")
 _SOURCE=re.compile(r"^[0-9a-f]{64}$")

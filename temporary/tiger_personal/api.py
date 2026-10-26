@@ -68,9 +68,11 @@ def import_pilot(identity, broker, payload):
     account,assets,positions=verify_payload(payload)
     return save_snapshot(identity,broker,payload["subject"],account,assets,positions)
 
-def view_pilot(identity, broker, subject):
+def view_pilot(identity, broker, subject, page=0):
     from temporary.tiger_personal.history import load_orders
     owner_only(subject)
+    if type(page)!=int or not 0<=page<=20:
+        raise PilotError("INVALID_PAGE")
     with broker.transaction():
         wid=_scope(identity,broker,subject)
         rows=broker.execute("""SELECT a.id,a.alias,c.last_success_at
@@ -92,6 +94,6 @@ def view_pilot(identity, broker, subject):
                     if not isinstance(snap,dict) or snap.get("source")!="PERSONAL_SNAPSHOT_ONLY":
                         raise PilotError("INVALID_SOURCE")
                     item[key]=snap["data"]
-            item.update(load_orders(broker,wid,aid))
+            item.update(load_orders(broker,wid,aid,page=page))
             result.append(item)
     return {"coverage":"SNAPSHOT_ONLY","verified":False,"accounts":result}

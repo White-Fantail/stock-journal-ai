@@ -105,6 +105,9 @@ def _pages(client,account,begin,end):
                 raise ValueError("UNEXPECTED_PAGE")
         if len(page)>100:
             raise ValueError("PAGE_LIMIT")
+        if len(page)>=100 and not token:
+            # A full page without a continuation token is NOT proof of terminal coverage.
+            complete=False
         for raw in page:
             item=_order(raw,account)
             orders[item["id"]]=item

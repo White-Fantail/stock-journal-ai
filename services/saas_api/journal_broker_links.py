@@ -115,6 +115,17 @@ def create_broker_note(identity, broker, trade, subject, raw):
             JOIN saas_reconciliation_versions v
               ON v.workspace_id=p.workspace_id AND v.id=p.review_version_id
              AND v.account_id=p.account_id AND v.version_num=p.review_version_num
+            JOIN saas_broker_accounts a
+              ON a.workspace_id=p.workspace_id AND a.id=p.account_id
+            JOIN saas_broker_connections c
+              ON c.workspace_id=a.workspace_id AND c.id=a.connection_id
+             AND c.provider_code='TIGER' AND c.status='CONNECTED'
+             AND c.authorization_expires_at > now() + interval '60 seconds'
+             AND cardinality(c.granted_scopes)>0
+             AND NOT EXISTS (
+               SELECT 1 FROM unnest(c.granted_scopes) scope(value)
+               WHERE scope.value ~* '(trade|order|write|place|cancel|transfer|withdraw|modify|execute|admin)'
+             )
             JOIN saas_verified_execution_stage f
               ON f.workspace_id=s.workspace_id AND f.version_id=s.review_version_id
              AND f.source_key_hmac=s.source_key_hmac

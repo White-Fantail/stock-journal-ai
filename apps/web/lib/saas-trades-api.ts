@@ -198,8 +198,7 @@ export type TigerObservationNoteInput={
   sourceRef:string;observationKind:"ORDER"|"FILL";page:number;
 };
 export async function submitTigerObservationNote(subject:string,note:TigerObservationNoteInput):Promise<string>{
-  const result=(await postS2("/internal/v1/journal/observation-note/create",subject,note))
-    as {id?:string;source?:string};
+  const result=await postS2("/internal/v1/journal/observation-note/create",subject,note) as {id?:string;source?:string};
   if(!result || typeof result.id!=="string" ||
      !/^[0-9a-f-]{36}$/i.test(result.id) || result.source!=="USER_AUTHORED")
     throw new Error("Tiger observation note not confirmed");

@@ -27,6 +27,10 @@ test("monthly report only uses per-session journal and never treats observed ord
   assert.ok(ui.includes("Pacific/Auckland")||model.includes("Pacific/Auckland"));
   assert.ok(ui.includes("월간 투자 복기"));
   assert.ok(model.includes("USER_AUTHORED_PROCESS_ONLY"));
+  assert.ok(ui.includes("assessPerformanceReadiness("));
+  assert.ok(ui.includes("검증된 투자 성과 계산 준비 상태"));
+  assert.ok(ui.includes("readiness.gates.map("));
+  assert.ok(ui.includes("월간 장기 투자 수익률")||ui.includes("readiness.label"));
   for(const forbidden of ["tigerPersonalRead","marketObservations","PLACE_ORDER","sendNotification","fetch("])
     assert.ok(!ui.includes(forbidden)&&!model.includes(forbidden),forbidden);
 });

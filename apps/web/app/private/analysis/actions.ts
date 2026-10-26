@@ -4,6 +4,7 @@ import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis} from "../../../lib/saas-trades-api";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
+import {aiConfigured} from "../../../lib/ai-configuration";
 import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
   type AiResult,type AnalysisEvidence,type AnalysisMode} from "../../../lib/ai-analysis";
 
@@ -12,16 +13,10 @@ export type AiState={
   evidence:AnalysisEvidence[];asOf:string|null;model:string|null;
   remainingDay:number|null;
 };
-export const initialAiState:AiState={
+const initialAiState:AiState={
   status:"idle",message:"",result:null,evidence:[],asOf:null,
   model:null,remainingDay:null,
 };
-export function aiReady(env:NodeJS.ProcessEnv=process.env):boolean{
-  return env.POSITIONARY_AI_ENABLED==="1" &&
-    typeof env.OPENROUTER_API_KEY==="string" && env.OPENROUTER_API_KEY.length>=20 &&
-    typeof env.OPENROUTER_MODEL==="string" &&
-    /^[a-zA-Z0-9][a-zA-Z0-9./:_-]{2,100}$/.test(env.OPENROUTER_MODEL);
-}
 
 const error=(message:string):AiState=>({...initialAiState,status:"error",message});
 export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiState>{
@@ -35,7 +30,7 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     return error("분석 종류를 선택해 주세요.");
   if(mode==="STOCK_REVIEW" && !safeAnalysisSymbol(symbol))
     return error("분석할 종목을 선택해 주세요.");
-  if(!aiReady())return error("AI 분석 API가 아직 운영 설정되지 않았습니다.");
+  if(!aiConfigured())return error("AI 분석 API가 아직 운영 설정되지 않았습니다.");
   const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
   const subject=session?.user?.id;
   if(!workspace || !subject || !/^[0-9]{3,255}$/.test(subject))

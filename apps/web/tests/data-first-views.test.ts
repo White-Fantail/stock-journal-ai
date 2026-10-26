@@ -21,7 +21,12 @@ test("trade and journal editing use independent pages, no forms in list workspac
   assert.ok(create.includes("currentWorkspace()"));
   assert.ok(create.includes("tigerLedgerRead()"));
   assert.ok(!ui.includes("&accountId="));
-  assert.ok(!ui.includes("&sourceRef="));
+  // Opaque observed broker sourceRef is permitted only for a dedicated
+  // authenticated note form; source must be revalidated server-side.
+  assert.ok(ui.includes("&sourceRef="));
+  assert.ok(create.includes("submitTigerObservationNote("));
+  assert.ok(create.includes("tigerPersonalRead("));
+  assert.ok(!ui.includes("brokerGrant="));
 });
 test("account currency comes from Tiger summary rather than stock currencies",()=>{
   const home=read("../app/private/page.tsx");
@@ -61,7 +66,7 @@ test("a selected stock displays actionable target and stop controls",()=>{
 
 test("journal shows investment notes and target-stop plan revisions in one chronological timeline",()=>{
   const ui=read("../app/private/journal/journal-workspace.tsx");
-  assert.ok(ui.includes('type View="activity"|"trades"|"broker"'));
+  assert.ok(ui.includes('type View="activity"|"trades"|"observed"|"broker"'));
   assert.ok(ui.includes("투자 판단 · 계획"));
   assert.ok(!ui.includes('setView("plans")'));
   assert.ok(!ui.includes('view==="plans"'));

@@ -27,6 +27,7 @@ REQUIRED_TABLES = (
     "saas_verified_execution_stage","saas_projection_position_stage",
     "saas_reconciliation_source_links",
     "saas_journal_plan_revisions",
+    "saas_broker_ledger_publications","saas_broker_ledger_sources",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -51,6 +52,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "014_reconciliation_audit.sql", # immutable tenant review versions and staged accounting
     "015_reconciliation_lineage.sql", # typed issues and account-scoped source stage FKs
     "016_journal_plan_revisions.sql", # append-only personal target/stop revisions
+    "017_broker_ledger_publication.sql", # sealed review-to-ledger release manifest
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

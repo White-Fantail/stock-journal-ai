@@ -31,3 +31,23 @@ test("navigation includes the private portfolio readiness page",()=>{
   assert.ok(source("../app/private/layout.tsx").includes('href="/private/portfolio"'));
   assert.ok(source("../app/private/page.tsx").includes('href="/private/portfolio"'));
 });
+
+test("verified native-currency FIFO uses only independently released account-scoped evidence",()=>{
+  const page=source("../app/private/portfolio/page.tsx");
+  const gateway=source("../lib/tiger-api.ts");
+  assert.ok(page.includes("tigerLedgerRead()"));
+  assert.ok(page.includes('a.state==="VERIFIED"'));
+  assert.ok(page.includes("ledgerState?.readEnabled"));
+  assert.ok(page.includes('==="CONNECTED"'));
+  assert.ok(page.includes("p.accountId===account.id"));
+  assert.ok(page.includes("p.costBasis"));
+  assert.ok(page.includes("p.realizedPnl"));
+  assert.ok(page.includes("proof.asOf"));
+  assert.ok(page.includes("미실현손익"));
+  assert.ok(page.includes("미확인"));
+  assert.ok(page.includes("truncated"));
+  assert.ok(gateway.includes("INVALID_TIGER_LEDGER_READ"));
+  for(const forbidden of ("Math.random(","parseFloat(","mockPosition","fakeHoldings","marketValue.toFixed")) {
+    assert.ok(!page.includes(forbidden),forbidden);
+  }
+});

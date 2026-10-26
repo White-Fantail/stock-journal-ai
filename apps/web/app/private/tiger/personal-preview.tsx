@@ -68,7 +68,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
       .sort((a,b)=>Number(b.at??0)-Number(a.at??0));
   return <section className="state-panel">
     <h2>Tiger 주문 및 부분체결 관측 이력</h2>
-    {!!data.readWarnings?.length && <p role="status">Tiger 원본 응답의 일부 항목 형식이 맞지 않아 해당 항목만 제외했습니다. 표시된 자료는 부분 조회 결과이며 전체 주문 이력으로 사용하지 마세요.</p>
+    {!!data.readWarnings?.length && <p role="status">Tiger 원본 응답의 일부 항목 형식이 맞지 않아 해당 항목만 제외했습니다. 표시된 자료는 부분 조회 결과이며 전체 주문 이력으로 사용하지 마세요.</p>}
     <p>증권사 API에서 수집한 실제 <strong>주문 단위</strong> 자료야. 주문 한 건은 여러 번 나누어 체결될 수 있으며, 수수료·시간·현금 거래의 완전성은 검증 전이야.
     거래 원장으로 확정하거나 자동 손익 계산에 사용하지 않아.</p>
     {data.accounts.some(a=>a.partial || a.truncated) && <p role="status">조회 누락 가능성이 있는 구간이 존재해. 표시된 자료를 전체 거래 이력으로 사용하지 마.</p>}

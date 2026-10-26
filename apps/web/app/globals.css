@@ -410,3 +410,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .mobile-data-card-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
   .app-shell .home-actions .btn{font-size:.78rem}
 }
+
+/* Top pagination helps navigate long observed order histories on phones. */
+.record-pagination-top{display:none}
+@media(max-width:760px){
+  .record-pagination-top{display:grid;margin:10px 0 15px}
+  .record-pagination-top a{background:#f5faf7}
+  .app-shell .mobile-data-card-head{align-items:flex-start}
+  .app-shell .mobile-data-card-head>small{flex:0 1 49%;text-align:right;overflow-wrap:anywhere}
+  .app-shell .mobile-data-card-head>div{min-width:0;flex:1}
+  .app-shell .mobile-data-card-action{margin-bottom:-4px}
+  .app-shell .journal-history{overflow-wrap:anywhere}
+  .app-shell .site-footer{padding:22px 0}
+  .app-shell .page-intro>div{min-width:0}
+}

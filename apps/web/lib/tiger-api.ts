@@ -210,10 +210,16 @@ export type TigerPersonalFee = Readonly<{
   total:string;currency:string|null;
   details:ReadonlyArray<{category:"TIGER"|"THIRD_PARTY";type:string;amount:string}>
 }>;
+export type TigerMarketObservation = Readonly<{
+  symbol:string;currency:"USD";price:string;quoteAt:string;
+  mode:"US_DELAYED_15M"|"REALTIME_PERMISSIONED";stale:boolean;
+  estimatedValue:string|null;estimatedUnrealized:string|null;estimatedReturnPct:string|null;
+}>;
 export type TigerPersonalAccount = Readonly<{
   alias:string;asOf:string|null;
   assets:{netLiquidation:string|null;cashBalance:string|null;currency:string|null}|null;
   positions:TigerPersonalPosition[];
+  marketObservations:TigerMarketObservation[];
   orders:TigerPersonalOrder[];
   fillObservations:TigerPersonalFill[];
   feeObservations:TigerPersonalFee[];
@@ -248,6 +254,18 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
            typeof p.currency==="string" && /^[A-Z]{3}$/.test(p.currency) &&
            typeof p.quantity==="string" && personalDecimal.test(p.quantity) &&
            nullableNumber(p.averageCost) && nullableNumber(p.marketValue) && nullableNumber(p.unrealizedPnl)) &&
+         Array.isArray(a.marketObservations) && a.marketObservations.length<=40 &&
+         a.marketObservations.every(q=>q && typeof q.symbol==="string" &&
+           /^[A-Z][A-Z0-9.]{0,13}$/.test(q.symbol) && q.currency==="USD" &&
+           typeof q.price==="string" && personalDecimal.test(q.price) &&
+           q.price!=="0" && typeof q.quoteAt==="string" && /^[0-9]{13}$/.test(q.quoteAt) &&
+           (q.mode==="US_DELAYED_15M" || q.mode==="REALTIME_PERMISSIONED") &&
+           typeof q.stale==="boolean" &&
+           nullableNumber(q.estimatedValue) &&
+           (q.estimatedUnrealized===null || (typeof q.estimatedUnrealized==="string" &&
+             /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(q.estimatedUnrealized))) &&
+           (q.estimatedReturnPct===null || (typeof q.estimatedReturnPct==="string" &&
+             /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(q.estimatedReturnPct)))) &&
          Array.isArray(a.orders) && a.orders.length<=120 &&
          a.orders.every(o=>o && /^[a-f0-9]{64}$/.test(o.sourceRef) &&
            typeof o.symbol==="string" && personalSymbol.test(o.symbol) &&

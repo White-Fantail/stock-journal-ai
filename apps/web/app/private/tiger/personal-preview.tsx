@@ -76,7 +76,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%"}}>
-          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th></tr></thead>
+          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>투자 기록</th></tr></thead>
           <tbody>{rows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
@@ -84,6 +84,8 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
             <td>{viewNumber(o.fee)} {o.feeCurrency??"통화 미확인"}</td>
+            <td><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
+              "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
           </tr>)}</tbody>
         </table>
       </div>}
@@ -116,12 +118,14 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
       {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
       {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
         <div style={{overflowX:"auto"}}><table style={{width:"100%"}}>
-          <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th></tr></thead>
+          <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th><th>투자 기록</th></tr></thead>
           <tbody>{data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><tr key={f.sourceRef}>
             <td>{f.timeRaw??"미확인"}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(f.symbol)}>{f.symbol}</Link></td>
             <td>{f.side==="BUY"?"매수":"매도"}</td><td>{viewNumber(f.quantity)}</td>
             <td>{viewNumber(f.price)} {f.currency}</td><td>개별 배분 미확인</td>
+            <td><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
+              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 복기 작성 →</Link></td>
           </tr>)}</tbody>
         </table></div>}
     </div>}

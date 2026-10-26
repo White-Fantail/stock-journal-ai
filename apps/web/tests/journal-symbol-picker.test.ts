@@ -10,7 +10,7 @@ test("journal uses per-user symbol dropdown including holdings, previous orders 
   assert.ok(form.includes("fetchManualTrades(session.user.id)"));
   assert.ok(form.includes("fetchJournal(session.user.id)"));
   assert.ok(form.includes("fetchJournalPlans(session.user.id)"));
-  assert.ok(form.includes("tigerPersonalRead()"));
+  assert.ok(form.includes("tigerPersonalRead(mode==="));
   assert.ok(form.includes("JournalSymbolPicker"));
   assert.ok(picker.includes("<select"));
   assert.ok(picker.includes("name=\"ticker\""));
@@ -19,6 +19,7 @@ test("journal uses per-user symbol dropdown including holdings, previous orders 
   assert.ok(form.includes("submitJournal("));
   assert.ok(form.includes("submitJournalPlan("));
   assert.ok(form.includes("submitBrokerFillNote("));
+  assert.ok(form.includes("submitTigerObservationNote("));
 });
 
 test("client source selector changes related trade choices with selected ticker",()=>{

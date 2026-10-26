@@ -30,6 +30,7 @@ REQUIRED_TABLES = (
     "saas_broker_ledger_publications","saas_broker_ledger_sources",
     "saas_journal_broker_fill_links",
     "saas_journal_tiger_observation_links",
+    "saas_ai_request_quotas",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -58,6 +59,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "018_journal_broker_fill_links.sql", # immutable per-execution user-authored rationale
     "019_tiger_market_quotes.sql", # separate owner-only encrypted quote observations
     "020_journal_tiger_observation_links.sql", # private unverified broker observations to authored memo
+    "021_ai_request_quotas.sql", # tenant quota, does not store prompts/responses
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

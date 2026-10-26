@@ -26,6 +26,7 @@ from services.saas_api.ledger_read import private_ledger
 # Removable pilot hook. The standard production image intentionally omits it.
 try:
     from temporary.tiger_personal.api import PilotError, import_pilot, view_pilot
+    from temporary.tiger_personal.history import import_orders
 except ModuleNotFoundError as exc:
     if exc.name not in ("temporary", "temporary.tiger_personal", "temporary.tiger_personal.api"):
         raise
@@ -36,6 +37,8 @@ except ModuleNotFoundError as exc:
     def import_pilot(*args):
         raise PilotError()
     def view_pilot(*args):
+        raise PilotError()
+    def import_orders(*args):
         raise PilotError()
 
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
@@ -52,7 +55,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect",
             "/internal/v1/tiger/sync-status", "/internal/v1/tiger/review-status",
             "/internal/v1/tiger/ledger-read",
-            "/internal/v1/tiger/personal-import", "/internal/v1/tiger/personal-view"}
+            "/internal/v1/tiger/personal-import", "/internal/v1/tiger/personal-view",
+            "/internal/v1/tiger/personal-orders-import"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -101,7 +105,8 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length","-1"))
             # Korean rationale can be up to 3,000 characters (multibyte UTF-8).
             # Retain tighter request bounds on identity and read-only routes.
-            max_body = (24576 if path == "/internal/v1/tiger/personal-import"
+            max_body = (24576 if path in ("/internal/v1/tiger/personal-import",
+                           "/internal/v1/tiger/personal-orders-import")
                         else 32768 if path == "/internal/v1/journal/broker-note/create"
                         else 16384 if path in ("/internal/v1/trades/create",
                                                 "/internal/v1/journal/create",
@@ -110,10 +115,12 @@ class Handler(BaseHTTPRequestHandler):
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
             body=self.rfile.read(n)
-            if path == "/internal/v1/tiger/personal-import" and os.environ.get("POSITIONARY_PERSONAL_TIGER_ENABLED") != "1":
+            if path in ("/internal/v1/tiger/personal-import",
+                        "/internal/v1/tiger/personal-orders-import") and os.environ.get("POSITIONARY_PERSONAL_TIGER_ENABLED") != "1":
                 return self.reply(404,{"error":"NOT_FOUND"})
             key = (os.environ.get("POSITIONARY_PERSONAL_BRIDGE_SECRET","")
-                   if path == "/internal/v1/tiger/personal-import"
+                   if path in ("/internal/v1/tiger/personal-import",
+                               "/internal/v1/tiger/personal-orders-import")
                    else os.environ.get("SAAS_INTERNAL_SECRET",""))
             if not authorized("POST",path,body,self.headers,key):
                 return self.reply(401,{"error":"UNAUTHORIZED"})
@@ -142,13 +149,16 @@ class Handler(BaseHTTPRequestHandler):
                     "/internal/v1/tiger/disconnect": {"subject","connectionId"},
                     "/internal/v1/tiger/personal-import": {"subject","account","assets","positions"},
                     "/internal/v1/tiger/personal-view": {"subject"},
+                    "/internal/v1/tiger/personal-orders-import": {"subject","account","from","to","part","parts","complete","orders"},
                 }
                 if set(data) != permitted[path]:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
-                        if path.endswith("/personal-import"):
+                        if path.endswith("/personal-orders-import"):
+                            out=import_orders(identity_conn,broker_conn,data)
+                        elif path.endswith("/personal-import"):
                             out=import_pilot(identity_conn,broker_conn,data)
                         elif path.endswith("/personal-view"):
                             out=view_pilot(identity_conn,broker_conn,data["subject"])

@@ -19,6 +19,7 @@ Read `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATA-MODEL.md`, `docs/ROAD
 9. User journals, trade reasons, targets and strategy revisions are user-authored records. Do not attribute generated text to users. Any AI is opted in and handled under explicit privacy constraints; no raw financial data goes to an unapproved model provider.
 10. Treat broker payloads, webpages and LLM text as untrusted input. Redact secrets and identifiers from logs, telemetry, CI, error pages, URLs and client assets. Verify deletion and export paths per workspace.
 11. Run `python scripts/check_public_repo.py`, SaaS identity/trade/adapter tests and web typechecks before merge. Add adversarial A/B tests when changing any access boundary.
+12. Transaction/record **list pages are for reading, searching and navigating**. Never put create, edit, or correction forms above or below a list. Use dedicated create/detail/correction routes with clear return navigation; keep broker-observed orders separate from self-entered trades.
 
 ## Actual delivery boundaries
 - Google Auth.js and HMAC provisioning: source exists, live multi-account audit remains.

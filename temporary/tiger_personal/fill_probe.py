@@ -41,13 +41,16 @@ def _payload(value):
         if (not isinstance(p["orderId"],str) or not _ID.fullmatch(p["orderId"])
                 or p["orderId"] in ids or not isinstance(p["symbol"],str)
                 or not _SYMBOL.fullmatch(p["symbol"])
-                or p["currency"] not in _CURRENCIES
-                or p["side"] not in ("BUY","SELL") or p["status"] not in _STATES
+                or not isinstance(p["currency"],str) or p["currency"] not in _CURRENCIES
+                or p["side"] not in ("BUY","SELL")
+                or not isinstance(p["status"],str) or p["status"] not in _STATES
                 or not isinstance(p["fills"],list) or len(p["fills"])>24):
             raise PilotError("INVALID_PROBE")
         ids.add(p["orderId"])
         number(p["orderCommission"],True)
-        if p["commissionCurrency"] is not None and p["commissionCurrency"] not in _CURRENCIES:
+        if p["commissionCurrency"] is not None and (
+                not isinstance(p["commissionCurrency"],str)
+                or p["commissionCurrency"] not in _CURRENCIES):
             raise PilotError("INVALID_PROBE")
         if p["status"]=="UNAVAILABLE" and p["fills"]:
             raise PilotError("INVALID_PROBE")

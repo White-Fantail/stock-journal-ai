@@ -59,7 +59,21 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
       <div><small>미실현손익</small><strong>미확인</strong></div>
       <div><small>계좌 총수익률</small><strong>미확인</strong></div>
     </div>
-    {positions.length>0 ? <div className="portfolio-verified-scroll">
+    {positions.length>0 ? <>
+      <div className="mobile-data-cards" aria-label="검증된 포트폴리오 모바일 목록">
+        {positions.map(p=><article className="mobile-data-card" key={p.symbol+":"+p.currency}>
+          <div className="mobile-data-card-head">
+            <strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></strong>
+            <small>{p.currency} · 검증 v{proof.version}</small>
+          </div>
+          <dl className="mobile-data-card-fields">
+            <div><dt>검증 수량</dt><dd>{formatDecimal(p.quantity)}주</dd></div>
+            <div><dt>남은 FIFO 원가</dt><dd>{formatDecimal(p.costBasis)} {p.currency}</dd></div>
+            <div><dt>누적 실현손익</dt><dd>{formatDecimal(p.realizedPnl)} {p.currency}</dd></div>
+          </dl>
+        </article>)}
+      </div>
+      <div className="portfolio-verified-scroll desktop-data-table">
       <table className="portfolio-verified-table">
         <thead><tr><th scope="col">종목</th><th scope="col">검증된 수량</th>
           <th scope="col">남은 취득원가</th><th scope="col">누적 실현손익</th></tr></thead>
@@ -70,7 +84,7 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
           <td>{formatDecimal(p.realizedPnl)} {p.currency}</td>
         </tr>)}</tbody>
       </table>
-    </div> : <p className="sync-subtle">현재 표시 가능한 검증 포지션이 없습니다. 계좌 자산이 0이라는 의미는 아닙니다.</p>}
+    </div></> : <p className="sync-subtle">현재 표시 가능한 검증 포지션이 없습니다. 계좌 자산이 0이라는 의미는 아닙니다.</p>}
     {truncated && <p role="status" className="sync-subtle">
       조회 상한으로 일부 종목이나 체결이 생략되었을 수 있습니다. 이 표를 전체 계좌 합계로 사용하지 마세요.
     </p>}

@@ -88,6 +88,17 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         금액 또는 증거 불일치 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
         조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
       <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. 수수료 금액·통화 모두 확인된 경우만 별도로 구분해.</p>
+      {data.accounts.some(a=>a.feeObservations.length>0) && <div style={{overflowX:"auto"}}>
+        <table style={{width:"100%"}}>
+          <thead><tr><th>주문 종목</th><th>수수료 합계</th><th>검증 수준</th><th>수수료 구성</th></tr></thead>
+          <tbody>{data.accounts.flatMap(a=>a.feeObservations).map(f=><tr key={f.sourceRef}>
+            <td>{f.symbol}</td>
+            <td>{viewNumber(f.total)} {f.currency??"통화 미확인"}</td>
+            <td>{f.status==="MATCHED"?"주문 수수료 합계·통화 확인":"주문 수수료 합계 확인 · 통화 미확인"}</td>
+            <td>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>}
       {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
       {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
         <div style={{overflowX:"auto"}}><table style={{width:"100%"}}>

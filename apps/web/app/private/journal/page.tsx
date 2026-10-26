@@ -5,7 +5,7 @@ import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import {
   fetchJournal, fetchJournalPlans, fetchManualTrades,
-  submitJournal, submitJournalPlan,
+  submitJournal, submitJournalPlan, submitBrokerFillNote,
   type JournalKind,
 } from "../../../lib/saas-trades-api";
 import { JournalWorkspace } from "./journal-workspace";
@@ -42,6 +42,26 @@ async function addJournal(form:FormData) {
     redirect("/private/journal?error=unavailable");
   }
   redirect("/private/journal?saved=journal");
+}
+
+async function addBrokerFillNote(form:FormData){
+  "use server";
+  const [session,workspace]=await Promise.all([auth(),currentWorkspace()]);
+  const subject=session?.user?.id;
+  if(!workspace||!subject) redirect("/login");
+  const ticker=field(form,"ticker").toUpperCase();
+  if(field(form,"confirmation")!=="yes" || !TICKER.test(ticker))
+    redirect("/private/journal?error=invalid");
+  try{
+    await submitBrokerFillNote(subject,{
+      idempotencyKey:field(form,"idempotencyKey"),
+      ticker,content:field(form,"content"),
+      accountId:field(form,"accountId"),sourceRef:field(form,"sourceRef"),
+    });
+  }catch{
+    redirect("/private/journal?error=unavailable");
+  }
+  redirect("/private/journal?saved=broker-note");
 }
 
 async function addPlan(form:FormData) {
@@ -110,13 +130,18 @@ export default async function JournalPage({
       <Link href="/private/journal" className="btn btn-outline">다시 확인</Link>
     </div>}
     {!unavailable && params.saved && <p role="status">
-      {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
+      {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":
+       params.saved==="broker-note"?"검증 체결에 연결한 투자일지 메모를 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
     </p>}
     {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
     <JournalWorkspace enabled={!unavailable}
       entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
+      brokerNoteAction={addBrokerFillNote}
+      brokerNoteKeys={Object.fromEntries((brokerRead?.executions??[]).map(f=>[
+        f.accountId+":"+f.sourceRef,randomUUID(),
+      ]))}
       noteAction={addJournal} planAction={addPlan}
       noteKey={randomUUID()} planKey={randomUUID()}/>
     <div className="journal-disclaimer">

@@ -42,6 +42,8 @@ class FakeBroker:
         return nullcontext()
     def execute(self, statement, params=()):
         self.calls.append(statement)
+        if "pg_advisory_xact_lock" in statement:
+            return FakeResult((None,))
         if "SELECT v.id,v.version_num,v.state" in statement:
             return FakeResult((self.version,4,self.state,
                 self.revision if self.published else None,

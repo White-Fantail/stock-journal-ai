@@ -51,7 +51,8 @@
 - [x] Add account-scoped portfolio readiness UI using freshly authenticated Tiger connection and sync metadata. Unknown cost basis, holdings and performance display as unverified, never zero/dummy values.
 - [x] Implement append-only tenant reconciliation decisions and issue codes (migration 014), versioned *private staging* of execution identities/Decimal FIFO positions only behind independent attestation. Retry idempotency and repaired-input versions verified on disposable PostgreSQL; never publish these as account holdings.
 - [x] Add signed owner-scoped reconciliation review status API and portfolio screen showing latest version/issue codes without raw broker IDs or money.
-- [ ] Build independently verified provider attestation issuer (Tiger approval required), immutable source evidence-to-ledger reconciliation, customer-visible publication gates, verified FX/market pricing, audited correction workflows.
+- [x] Add immutable P4 source-lineage links (migration 015) to tenant-scoped encrypted staged provider evidence, typed issue categories and strict missing/conflicting source rejection. Attestation signatures now bind both the accounting input and the exact original staged source version; raw evidence is never returned to the browser.
+- [ ] Build independently verified Tiger attestation issuer (provider approval required), expand complete source evidence for cash/FX/corporate-action validation, customer-visible publication gates and source-linked audited correction workflows.
 - **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
 
 ## P5 — AI analysis and notifications (**planned**)

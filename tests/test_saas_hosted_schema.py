@@ -24,6 +24,15 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
+    def test_lineage_migration_is_additive_and_enforces_source_account(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="015_reconciliation_lineage.sql")
+        self.assertIn("CREATE TABLE saas_reconciliation_source_links",source)
+        self.assertIn("FOREIGN KEY (workspace_id,source_stage_id,account_id,source_key_hmac,evidence_sha256)",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertNotIn("DROP TABLE",source)
+        self.assertNotIn("GRANT UPDATE",source)
+
     def test_reconciliation_schema_enforces_immutable_tenant_staging(self):
         source = next(sql for name, _, sql in manifest()
                       if name == "014_reconciliation_audit.sql")

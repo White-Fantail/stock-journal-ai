@@ -23,6 +23,7 @@ from services.saas_api.trade_detail import trade_detail
 from services.saas_api.sync_status import sync_status
 from services.saas_api.reconciliation_store import review_status
 from services.saas_api.ledger_read import private_ledger
+from temporary.tiger_personal.api import PilotError, import_pilot, view_pilot
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
     list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
     disconnect as tiger_disconnect)
@@ -36,7 +37,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
             "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect",
             "/internal/v1/tiger/sync-status", "/internal/v1/tiger/review-status",
-            "/internal/v1/tiger/ledger-read"}
+            "/internal/v1/tiger/ledger-read",
+            "/internal/v1/tiger/personal-import", "/internal/v1/tiger/personal-view"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -85,7 +87,8 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length","-1"))
             # Korean rationale can be up to 3,000 characters (multibyte UTF-8).
             # Retain tighter request bounds on identity and read-only routes.
-            max_body = (32768 if path == "/internal/v1/journal/broker-note/create"
+            max_body = (24576 if path == "/internal/v1/tiger/personal-import"
+                        else 32768 if path == "/internal/v1/journal/broker-note/create"
                         else 16384 if path in ("/internal/v1/trades/create",
                                                 "/internal/v1/journal/create",
                                                 "/internal/v1/journal/plan/create")
@@ -93,7 +96,12 @@ class Handler(BaseHTTPRequestHandler):
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
             body=self.rfile.read(n)
-            if not authorized("POST",path,body,self.headers,os.environ.get("SAAS_INTERNAL_SECRET","")):
+            if path == "/internal/v1/tiger/personal-import" and os.environ.get("POSITIONARY_PERSONAL_TIGER_ENABLED") != "1":
+                return self.reply(404,{"error":"NOT_FOUND"})
+            key = (os.environ.get("POSITIONARY_PERSONAL_BRIDGE_SECRET","")
+                   if path == "/internal/v1/tiger/personal-import"
+                   else os.environ.get("SAAS_INTERNAL_SECRET",""))
+            if not authorized("POST",path,body,self.headers,key):
                 return self.reply(401,{"error":"UNAUTHORIZED"})
             data=json.loads(body)
             if not isinstance(data,dict):
@@ -118,13 +126,19 @@ class Handler(BaseHTTPRequestHandler):
                     "/internal/v1/tiger/bind": {"subject","connectionId","accountNumber"},
                     "/internal/v1/tiger/read": {"subject","accountId"},
                     "/internal/v1/tiger/disconnect": {"subject","connectionId"},
+                    "/internal/v1/tiger/personal-import": {"subject","account","assets","positions"},
+                    "/internal/v1/tiger/personal-view": {"subject"},
                 }
                 if set(data) != permitted[path]:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
-                        if path.endswith("/ledger-read"):
+                        if path.endswith("/personal-import"):
+                            out=import_pilot(identity_conn,broker_conn,data)
+                        elif path.endswith("/personal-view"):
+                            out=view_pilot(identity_conn,broker_conn,data["subject"])
+                        elif path.endswith("/ledger-read"):
                             out=private_ledger(identity_conn,broker_conn,data["subject"])
                         elif path.endswith("/review-status"):
                             out=review_status(identity_conn,broker_conn,data["subject"])
@@ -203,6 +217,8 @@ class Handler(BaseHTTPRequestHandler):
                     if not out:
                         return self.reply(404,{"error":"ACCOUNT_NOT_FOUND"})
             return self.reply(200,out)
+        except PilotError as error:
+            return self.reply(403 if error.code in ("NOT_AUTHORIZED","DISABLED") else 400,{"error":error.code})
         except TigerError as error:
             code = error.code
             return self.reply(409 if code in ("STATE_EXPIRED_OR_REPLAYED","REAUTH_REQUIRED") else 503,

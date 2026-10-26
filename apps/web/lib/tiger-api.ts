@@ -198,13 +198,21 @@ export type TigerPersonalPosition = Readonly<{
 }>;
 export type TigerPersonalOrder = Readonly<{
   sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
-  status:string;filled:string|null;price:string|null;fee:string|null;at:string|null
+  status:string;filled:string|null;price:string|null;fee:string|null;
+  feeCurrency:string|null;at:string|null
+}>;
+export type TigerPersonalFill = Readonly<{
+  sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
+  quantity:string;price:string;timeRaw:string|null
 }>;
 export type TigerPersonalAccount = Readonly<{
   alias:string;asOf:string|null;
   assets:{netLiquidation:string|null;cashBalance:string|null;currency:string|null}|null;
   positions:TigerPersonalPosition[];
   orders:TigerPersonalOrder[];
+  fillObservations:TigerPersonalFill[];
+  fillProbeCount:number;fillProbeUnavailable:number;fillProbeDifference:number;
+  fillProbePartial:number;fillProbeTruncated:boolean;
   windowCount:number;partial:boolean;truncated:boolean;hasMore:boolean;totalOrders:number
 }>;
 export type TigerPersonalRead = Readonly<{
@@ -240,7 +248,19 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
            typeof o.status==="string" && /^[A-Z_]{3,32}$/.test(o.status) &&
            nullableNumber(o.filled) &&
            nullableNumber(o.price) && nullableNumber(o.fee) &&
+           (o.feeCurrency===null || (typeof o.feeCurrency==="string" && /^[A-Z]{3}$/.test(o.feeCurrency))) &&
            (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
+         Array.isArray(a.fillObservations) && a.fillObservations.length<=60 &&
+         a.fillObservations.every(f=>f && /^[0-9a-f]{64}$/.test(f.sourceRef) &&
+           typeof f.symbol==="string" && personalSymbol.test(f.symbol) &&
+           typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency) &&
+           (f.side==="BUY" || f.side==="SELL") &&
+           typeof f.quantity==="string" && personalDecimal.test(f.quantity) &&
+           typeof f.price==="string" && personalDecimal.test(f.price) &&
+           (f.timeRaw===null || (typeof f.timeRaw==="string" &&
+             /^(?:[0-9]{13}|[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})$/.test(f.timeRaw)))) &&
+         [a.fillProbeCount,a.fillProbeUnavailable,a.fillProbeDifference,a.fillProbePartial].every(
+           v=>Number.isInteger(v) && v>=0) && typeof a.fillProbeTruncated==="boolean" &&
          Number.isInteger(a.windowCount) && a.windowCount>=0 &&
          Number.isInteger(a.totalOrders) && a.totalOrders>=0 &&
          typeof a.hasMore==="boolean" &&

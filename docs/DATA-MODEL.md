@@ -22,6 +22,10 @@
 - `010_broker_backfill_staging.sql`: durable backfill jobs, bounded windows, HMAC-keyed encrypted evidence (staging only, not ledger publication).
 
 - `016_journal_plan_revisions.sql`: new user-authored target/stop snapshots stored as append-only, tenant-isolated `saas_journal_plan_revisions`. Both prices nullable for explicit cancellation; currency required iff at least one price is provided. Decimal(36,12), no rounding from untrusted inputs; indexed per ticker/date and excluded from broker-order execution. Existing journal and broker schemas remain immutable.
+- `023_investment_strategy_plan.sql`: additive, nullable five-column extension of the **same immutable user-authored plan revision**. Strategy `LONG_TERM/TECHNICAL/EVENT_DRIVEN/OTHER`, horizon, user-written thesis invalidation, `numeric(5,2)` maximum allocation percentage, and periodic review cadence are allowed. Existing revisions retain NULL strategy values (no migration rewrite); new revisions contain a full selected plan snapshot, append-only. No trader order, price-trigger or external quote ingestion is introduced. Existing FORCE RLS, foreign keys, scope, and SELECT/INSERT-only trade runtime grants are unchanged.
+- The exact six-field legacy create payload remains accepted and its normalized digest unchanged; full eleven-field strategy payloads are strictly validated with all five new keys (nullable). Mixed or unknown keys are refused. Every plan read/export includes the new fields, and source author remains `USER_AUTHORED`.
+- `max_allocation_pct` is the investor's **personal policy** for a single stock as a share of the relevant total portfolio. It must **not** be compared to share-of-invested-equity percentages from an incomplete/mixed-currency Tiger snapshot. The snapshot-only concentration UI retains its narrower denominator and its independent provenance.
+
 
 These migration names and checksums must remain stable on all deployed DBs. This is not a production-status assertion.
 

@@ -3,88 +3,124 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { fetchJournal, submitJournal, manualTradeEnabled, type JournalKind } from "../../../lib/saas-trades-api";
+import {
+  fetchJournal, fetchJournalPlans, fetchManualTrades,
+  submitJournal, submitJournalPlan, manualTradeEnabled,
+  type JournalKind,
+} from "../../../lib/saas-trades-api";
+import { JournalWorkspace } from "./journal-workspace";
 
-const journalKindLabel: Record<JournalKind, string> = {
-  THESIS: "투자 논리", STRATEGY: "전략 변경", REVIEW: "매매 복기",
-  TRADE_NOTE: "체결 설명", WATCHLIST_ADD: "관심종목 추가",
-  WATCHLIST_REMOVE: "관심종목 제외",
+export const dynamic="force-dynamic";
+export const metadata={title:"투자 일지 · Positionary"};
+const TICKER=/^[A-Z0-9.:-]{1,32}$/;
+const KINDS=new Set<JournalKind>([
+  "THESIS","STRATEGY","REVIEW","TRADE_NOTE","WATCHLIST_ADD","WATCHLIST_REMOVE",
+]);
+const field=(form:FormData,name:string)=>{
+  const value=form.get(name);
+  return typeof value==="string"?value.trim():"";
 };
-export const dynamic = "force-dynamic";
 
-async function addJournal(form: FormData) {
+/** CSRF, membership, provider access and tenant writes are checked server-side. */
+async function addJournal(form:FormData) {
   "use server";
-  if (!manualTradeEnabled()) redirect("/private/journal?error=disabled");
-  const [session, workspace] = await Promise.all([auth(),currentWorkspace()]);
-  const subject = session?.user?.id;
-  if (!workspace || !subject) redirect("/login");
-  const field = (name: string) => typeof form.get(name) === "string" ? String(form.get(name)).trim() : "";
-  if (field("confirmation") !== "yes") redirect("/private/journal?error=confirmation");
-  const kind = field("kind") as JournalKind;
+  if(!manualTradeEnabled()) redirect("/private/journal?error=disabled");
+  const [session,workspace]=await Promise.all([auth(),currentWorkspace()]);
+  const subject=session?.user?.id;
+  if(!workspace||!subject) redirect("/login");
+  const kind=field(form,"kind") as JournalKind;
+  const ticker=field(form,"ticker").toUpperCase();
+  if(field(form,"confirmation")!=="yes" || !KINDS.has(kind) || !TICKER.test(ticker))
+    redirect("/private/journal?error=invalid");
   try {
     await submitJournal(subject,{
-      idempotencyKey: field("idempotencyKey"), kind,
-      ticker: field("ticker").toUpperCase(), content: field("content"),
-      tradeEventId: field("tradeEventId") || null,
+      idempotencyKey:field(form,"idempotencyKey"),kind,ticker,
+      content:field(form,"content"),
+      tradeEventId:kind==="TRADE_NOTE" ? field(form,"tradeEventId")||null : null,
     });
-  } catch {
+  }catch{
     redirect("/private/journal?error=unavailable");
   }
-  redirect("/private/journal?saved=1");
+  redirect("/private/journal?saved=journal");
+}
+
+async function addPlan(form:FormData) {
+  "use server";
+  if(!manualTradeEnabled()) redirect("/private/journal?error=disabled");
+  const [session,workspace]=await Promise.all([auth(),currentWorkspace()]);
+  const subject=session?.user?.id;
+  if(!workspace||!subject) redirect("/login");
+  const ticker=field(form,"ticker").toUpperCase();
+  if(field(form,"confirmation")!=="yes" || !TICKER.test(ticker))
+    redirect("/private/journal?error=invalid");
+  const target=field(form,"targetPrice")||null;
+  const stop=field(form,"stopPrice")||null;
+  try{
+    await submitJournalPlan(subject,{
+      idempotencyKey:field(form,"idempotencyKey"),ticker,
+      targetPrice:target,stopPrice:stop,
+      priceCurrency:target||stop?field(form,"priceCurrency").toUpperCase():null,
+      rationale:field(form,"rationale"),
+    });
+  }catch{
+    redirect("/private/journal?error=unavailable");
+  }
+  redirect("/private/journal?saved=plan");
 }
 
 export default async function JournalPage({
   searchParams,
-}: {searchParams:Promise<{saved?:string;error?:string}>}) {
-  const [workspace,session,params] = await Promise.all([currentWorkspace(),auth(),searchParams]);
-  if (!workspace || !session?.user?.id) redirect("/login");
+}:{searchParams:Promise<{saved?:string;error?:string}>}) {
+  const [workspace,session,params]=await Promise.all([
+    currentWorkspace(),auth(),searchParams,
+  ]);
+  if(!workspace||!session?.user?.id) redirect("/login");
   const enabled=manualTradeEnabled();
-  let entries: Awaited<ReturnType<typeof fetchJournal>> = [];
+  let entries:Awaited<ReturnType<typeof fetchJournal>>=[];
+  let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
+  let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
   let unavailable=false;
-  if(enabled) {
-    try { entries=await fetchJournal(session.user.id); } catch { unavailable=true; }
+  if(enabled){
+    const [notesResult,planResult,tradeResult]=await Promise.allSettled([
+      fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
+      fetchManualTrades(session.user.id),
+    ]);
+    if(notesResult.status==="fulfilled" && planResult.status==="fulfilled" &&
+       tradeResult.status==="fulfilled"){
+      entries=notesResult.value;
+      plans=planResult.value;
+      trades=tradeResult.value.events;
+    }else unavailable=true;
   }
-  return <main style={{maxWidth:880,margin:"2rem auto",padding:"0 1rem"}}>
-    <p><Link href="/private">← 대시보드</Link> · <Link href="/private/trades">체결 기록</Link></p>
-    <h1>투자 일지</h1>
-    <p>매수 근거, 전략의 변화, 매매 후 복기와 관심종목을 기록하세요. 직접 작성한 내용은 증권사의 거래 정보와 구분되며, 변경 내용도 이력으로 남습니다.</p>
-    {!enabled ? <p role="status">투자 일지 작성은 현재 준비 중입니다. 사용자 데이터 보호와 운영 검증이 완료되면 이용할 수 있습니다.</p> :
-     unavailable ? <p role="alert">투자 일지 서버를 사용할 수 없습니다.</p> :
-     <>
-      {params.saved && <p role="status">새로운 일지 이력이 저장됐습니다.</p>}
-      {params.error && <p role="alert">입력값을 확인해 주세요. 저장 상태가 불확실하면 먼저 목록을 확인하세요.</p>}
-      <section><h2>새 기록 / 변경 이력</h2>
-        <form action={addJournal} style={{display:"grid",gap:12,maxWidth:570}}>
-          <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
-          <label>종목 <input name="ticker" placeholder="TSLA" required maxLength={32}/></label>
-          <label>기록 종류 <select name="kind" required>
-            <option value="THESIS">투자 논리</option>
-            <option value="STRATEGY">전략 및 목표 변경</option>
-            <option value="REVIEW">매매 복기</option>
-            <option value="TRADE_NOTE">체결 설명</option>
-            <option value="WATCHLIST_ADD">관심종목 추가</option>
-            <option value="WATCHLIST_REMOVE">관심종목 제외</option>
-          </select></label>
-          <label>내용 (관심종목 추가/제외에서는 비워두기)
-            <textarea name="content" rows={5} maxLength={6000}/></label>
-          <details><summary>관련 거래 연결 (선택사항)</summary>
-            <label>연결할 거래 기록 ID
-              <input name="tradeEventId" placeholder="거래 상세 화면의 기록 ID" />
-            </label>
-            <small>체결 설명을 특정 거래에 연결할 때만 입력하세요.</small>
-          </details>
-          <label><input name="confirmation" value="yes" type="checkbox" required/> 내가 작성한 정보임을 확인합니다.</label>
-          <button type="submit">일지 이력 저장</button>
-        </form>
-      </section>
-      <section><h2>최근 작성 기록 (최대 200건)</h2>
-      {entries.length===0 ? <p>등록된 기록이 없습니다.</p> :
-        entries.map(e=><article key={e.id} style={{borderBottom:"1px solid #aaa",padding:"0.75rem 0"}}>
-          <strong>{e.ticker} · {journalKindLabel[e.kind] ?? e.kind}</strong> <small>{e.createdAt}</small>
-          {e.content && <p style={{whiteSpace:"pre-wrap"}}>{e.content}</p>}
-          <small>직접 작성 · {e.tradeEventId ? <Link href={"/private/trades/" + e.tradeEventId}>관련 거래 보기</Link> : "독립 기록"}</small>
-        </article>)}
-      </section>
-     </>}
+  return <main className="journal-page">
+    <div className="page-intro journal-intro">
+      <span className="breadcrumb"><Link href="/private">← 내 대시보드</Link></span>
+      <span className="eyebrow journal-eyebrow">MY INVESTMENT JOURNAL</span>
+      <h1>투자 일지</h1>
+      <p>매수·매도의 결과만이 아니라 <strong>그때 왜 그렇게 판단했는지</strong> 남겨보세요. 투자 논리와 계획의 변화를 종목별 시간순으로 확인할 수 있습니다.</p>
+    </div>
+    {!enabled && <div className="info-strip" role="status">
+      <span aria-hidden="true">◌</span><div><strong>일지 저장 기능은 운영 검증 중입니다.</strong>
+      <p>종목별 기록 화면을 준비했습니다. 실제 데이터 저장은 사용자 격리·운영 백업 검증 후 활성화됩니다. 가상의 일지나 수익은 표시하지 않습니다.</p></div>
+    </div>}
+    {unavailable && <div className="state-panel" role="alert">
+      <h2>비공개 투자일지를 불러올 수 없습니다.</h2>
+      <p>기존 기록은 변경되지 않았습니다. 서버가 정상인지 확인한 뒤 다시 시도해 주세요.</p>
+      <Link href="/private/journal" className="btn btn-outline">다시 확인</Link>
+    </div>}
+    {enabled&&!unavailable && params.saved && <p role="status">
+      {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
+    </p>}
+    {enabled&&!unavailable && params.error && <p role="alert">
+      입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
+    </p>}
+    <JournalWorkspace enabled={enabled&&!unavailable}
+      entries={entries} plans={plans} trades={trades}
+      noteAction={addJournal} planAction={addPlan}
+      noteKey={randomUUID()} planKey={randomUUID()}/>
+    <div className="journal-disclaimer">
+      <strong>나의 기록과 실제 거래는 다릅니다.</strong> 목표가·손절가는 증권사 주문이 아닌 개인 투자 계획입니다.
+      연결된 거래는 사용자가 직접 입력한 최근 거래만 포함하며, Tiger 공식 승인 전에는 브로커 거래 이력이 자동으로 연결되지 않습니다.
+    </div>
   </main>;
 }

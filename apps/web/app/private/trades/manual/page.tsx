@@ -29,8 +29,26 @@ export default async function ManualTradeList({searchParams}:{
     :<section className="state-panel">
       <h2>내가 등록한 체결과 정정 이력</h2>
       {events.length===0?<p>직접 입력한 거래가 없습니다.</p>:
-      <div style={{overflowX:"auto"}}>
-        <table style={{width:"100%"}}>
+      <>
+        <div className="mobile-data-cards" aria-label="직접 입력한 거래 목록">
+          {events.map(e=><article className="mobile-data-card" key={e.id}>
+            <div className="mobile-data-card-head">
+              <strong>{e.ticker??"정정 이벤트"}</strong>
+              <small>{e.kind==="VOID"?"정정 기록":voidedIds.has(e.id)?"취소된 기록":"직접 입력"}</small>
+            </div>
+            <div className="mobile-data-card-meta">{e.side==="BUY"?"매수":e.side==="SELL"?"매도":"정정"} · {e.executedAt??e.createdAt}</div>
+            <dl className="mobile-data-card-fields">
+              <div><dt>수량</dt><dd>{formatDecimal(e.quantity,"—")}</dd></div>
+              <div><dt>체결가</dt><dd>{formatDecimal(e.price,"—")} {e.currency??""}</dd></div>
+              <div><dt>수수료</dt><dd>{formatDecimal(e.fee,"미확인")}</dd></div>
+            </dl>
+            <div className="mobile-data-card-action">
+              <Link href={"/private/trades/"+e.id}>상세 및 정정 보기 →</Link>
+            </div>
+          </article>)}
+        </div>
+        <div className="responsive-table desktop-data-table">
+        <table>
           <thead><tr><th>기록</th><th>종목</th><th>방향</th><th>수량</th><th>체결가</th><th>수수료</th><th>체결 시각</th><th>상세</th></tr></thead>
           <tbody>{events.map(e=><tr key={e.id}>
             <td>{e.kind==="VOID"?"정정 기록":voidedIds.has(e.id)?"취소된 기록":"직접 입력"}</td>
@@ -43,7 +61,8 @@ export default async function ManualTradeList({searchParams}:{
             <td><Link href={"/private/trades/"+e.id}>상세 / 정정 →</Link></td>
           </tr>)}</tbody>
         </table>
-      </div>}
+        </div>
+      </>}
       <p>현재 조회 API는 최근 50개 이벤트까지만 제공합니다. 이 화면은 전체 감사 내역이 아닙니다. 정정은 각 기록의 상세 화면에서 진행합니다.</p>
     </section>}
   </main>;

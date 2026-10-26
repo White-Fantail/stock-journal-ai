@@ -82,9 +82,10 @@ class OwnerFundsProbeTests(unittest.TestCase):
         ):
             with self.subTest(env=env),patch(
                 "temporary.tiger_personal.fund_probe_worker.configuration"
-            ) as config,self.assertRaises(PersonalFundsProbeRefused):
-                run_fund_probe(env,client_factory=lambda *a:self.fail(
-                    "No provider access before owner check"),now=NOW)
+            ) as config:
+                with self.assertRaises(PersonalFundsProbeRefused):
+                    run_fund_probe(env,client_factory=lambda *a:self.fail(
+                        "No provider access before owner check"),now=NOW)
                 config.assert_not_called()
 
     def test_nonvalidated_sdk_response_does_not_emit_money(self):
@@ -106,8 +107,12 @@ class OwnerFundsProbeTests(unittest.TestCase):
             with self.assertRaises(PersonalFundsProbeRefused) as ctx:
                 run_fund_probe(OWNER_ENV,now=NOW)
         self.assertEqual(str(ctx.exception),"RSA_CONFIGURATION_UNAVAILABLE")
-        with self.assertRaises(PersonalFundsProbeRefused):
-            run_fund_probe(OWNER_ENV,now=datetime(2026,10,27))
+        with patch("temporary.tiger_personal.fund_probe_worker.configuration",
+                   return_value=("a","ABC12345","synthetic")):
+            with self.assertRaises(PersonalFundsProbeRefused) as invalid:
+                run_fund_probe(OWNER_ENV,now=datetime(2026,10,27),
+                               client_factory=lambda *a:self.fail("should not read"))
+        self.assertEqual(str(invalid.exception),"TIME_INVALID")
 
 
 if __name__=="__main__":

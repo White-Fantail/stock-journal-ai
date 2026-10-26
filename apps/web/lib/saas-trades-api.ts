@@ -52,8 +52,9 @@ export function manualTradeEnabled(): boolean {
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" |
+      "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!manualTradeEnabled() || !saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -61,6 +62,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
   }
   const body = JSON.stringify(path === "/internal/v1/trades/create" ? {subject, trade:payload} :
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :
+    path === "/internal/v1/journal/plan/create" ? {subject, plan:payload} :
     path === "/internal/v1/account/delete" ? {subject, confirmation:payload} :
     path === "/internal/v1/trades/detail" ? {subject, tradeId:payload} : {subject});
   const timestamp = String(Math.floor(Date.now() / 1000));
@@ -130,4 +132,36 @@ export async function fetchTradeDetail(subject:string,id:string):Promise<ManualT
   const result=await postS2("/internal/v1/trades/detail",subject,id) as {event?:ManualTradeEvent};
   if(!result?.event || result.event.id !== id) throw new Error("Trade detail unavailable");
   return result.event;
+}
+
+/** Prices are a full user-authored plan revision, NEVER a broker order. */
+export type JournalPlan = Readonly<{
+  id:string; ticker:string; targetPrice:string|null; stopPrice:string|null;
+  priceCurrency:string|null; rationale:string; createdAt:string;
+  provenance:"USER_AUTHORED"; isBrokerOrder:false;
+}>;
+export type JournalPlanInput = {
+  idempotencyKey:string; ticker:string; targetPrice:string|null;
+  stopPrice:string|null; priceCurrency:string|null; rationale:string;
+};
+export async function fetchJournalPlans(subject:string):Promise<readonly JournalPlan[]> {
+  const result=await postS2("/internal/v1/journal/plans",subject) as {
+    plans?:JournalPlan[]; source?:string;
+  };
+  if(result?.source!=="USER_AUTHORED_ONLY" || !Array.isArray(result.plans) ||
+     result.plans.length>200 || !result.plans.every(p=>
+       p && p.provenance==="USER_AUTHORED" && p.isBrokerOrder===false &&
+       typeof p.id==="string" && typeof p.ticker==="string" &&
+       typeof p.rationale==="string" && typeof p.createdAt==="string" &&
+       (p.targetPrice===null || typeof p.targetPrice==="string") &&
+       (p.stopPrice===null || typeof p.stopPrice==="string") &&
+       (p.priceCurrency===null || typeof p.priceCurrency==="string")))
+    throw new Error("Invalid plan history response");
+  return result.plans;
+}
+export async function submitJournalPlan(subject:string,plan:JournalPlanInput):Promise<string> {
+  const result=await postS2("/internal/v1/journal/plan/create",subject,plan) as {id?:string};
+  if(!result?.id || !/^[0-9a-f-]{36}$/i.test(result.id))
+    throw new Error("Invalid plan confirmation");
+  return result.id;
 }

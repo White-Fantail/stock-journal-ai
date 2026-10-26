@@ -21,8 +21,18 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "008_tiger_oauth.sql", "009_tiger_runtime_login.sql",
                           "010_broker_backfill_staging.sql",
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql",
-                          "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql"])
+                          "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql",
+                          "016_journal_plan_revisions.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_journal_plan_revisions_are_append_only_and_tenant_scoped(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="016_journal_plan_revisions.sql")
+        self.assertIn("CREATE TABLE saas_journal_plan_revisions",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT, INSERT",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertNotIn("DROP TABLE",source)
 
     def test_lineage_migration_is_additive_and_enforces_source_account(self):
         source=next(sql for name,_,sql in manifest()

@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from services.saas_api.identity import provision, resolve
 from services.saas_api.trades import TradeInputError, TradeConflict, TradeNotFound, list_trades, create_trade
 from services.saas_api.journal import list_notes, create_note, export_journal
+from services.saas_api.journal_plans import list_plans,create_plan
 from services.saas_api.request_security import valid_nonce, consume_signed_request, RequestRejected
 from services.saas_api.account import delete_account
 from services.saas_api.trade_detail import trade_detail
@@ -27,7 +28,8 @@ from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, fin
 _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
-            "/internal/v1/journal/export", "/internal/v1/account/delete", "/internal/v1/trades/detail",
+            "/internal/v1/journal/export", "/internal/v1/journal/plans",
+            "/internal/v1/journal/plan/create", "/internal/v1/account/delete", "/internal/v1/trades/detail",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
             "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect",
@@ -80,7 +82,8 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length","-1"))
             # Korean rationale can be up to 3,000 characters (multibyte UTF-8).
             # Retain tighter request bounds on identity and read-only routes.
-            max_body = 16384 if path in ("/internal/v1/trades/create", "/internal/v1/journal/create") else _MAX_BYTES
+            max_body = 16384 if path in ("/internal/v1/trades/create", "/internal/v1/journal/create",
+                                         "/internal/v1/journal/plan/create") else _MAX_BYTES
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
             body=self.rfile.read(n)
@@ -151,6 +154,7 @@ class Handler(BaseHTTPRequestHandler):
                 if set(data) - ({"subject","tradeId"} if path == "/internal/v1/trades/detail" else
                                 {"subject","trade"} if path == "/internal/v1/trades/create" else
                                 {"subject","entry"} if path == "/internal/v1/journal/create" else
+                                {"subject","plan"} if path == "/internal/v1/journal/plan/create" else
                                 {"subject"}):
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
@@ -166,6 +170,10 @@ class Handler(BaseHTTPRequestHandler):
                             out=list_notes(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/journal/create":
                             out=create_note(identity_conn,trade_conn,data.get("subject"),data.get("entry"))
+                        elif path == "/internal/v1/journal/plans":
+                            out=list_plans(identity_conn,trade_conn,data.get("subject"))
+                        elif path == "/internal/v1/journal/plan/create":
+                            out=create_plan(identity_conn,trade_conn,data.get("subject"),data.get("plan"))
                         else:
                             out=export_journal(identity_conn,trade_conn,data.get("subject"))
                 return self.reply(200,out)

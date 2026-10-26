@@ -114,8 +114,12 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             SELECT id,entry_kind,ticker,text_content,trade_event_id,created_at
             FROM saas_journal_records ORDER BY created_at,id LIMIT %s
         """, (_LIMIT + 1,)).fetchall()
-        if len(trades) > _LIMIT or len(notes) > _LIMIT:
+        plans = trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
+            price_currency,rationale,created_at FROM saas_journal_plan_revisions
+            ORDER BY created_at,id LIMIT %s""",(_LIMIT+1,)).fetchall()
+        if len(trades) > _LIMIT or len(notes) > _LIMIT or len(plans) > _LIMIT:
             raise TradeConflict("Export exceeds safe complete bound; paginated export required")
+    from services.saas_api.journal_plans import _row as _plan_row
     return {"format": "stock-journal-ai.v1", "generatedAt": datetime.now(timezone.utc).isoformat(),
             "workspaceId": scope["workspaceId"], "trades": [_as_json(r) for r in trades],
-            "journal": [_entry(r) for r in notes], "complete": True}
+            "journal": [_entry(r) for r in notes], "plans":[_plan_row(p) for p in plans], "complete": True}

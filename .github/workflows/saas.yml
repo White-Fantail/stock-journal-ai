@@ -148,7 +148,7 @@ jobs:
                              env=env, check=True)
           with psycopg.connect(env["SAAS_DATABASE_URL"]) as c:
               versions = [r[0] for r in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql", "008_tiger_oauth.sql", "009_tiger_runtime_login.sql", "010_broker_backfill_staging.sql", "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql", "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql"]
+              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql", "008_tiger_oauth.sql", "009_tiger_runtime_login.sql", "010_broker_backfill_staging.sql", "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql", "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql", "016_journal_plan_revisions.sql"]
               assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
@@ -178,7 +178,7 @@ jobs:
           from services.saas_api.schema_admin import manifest
           suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
           sources = manifest()
-          assert len(sources) == 15
+          assert len(sources) == 16
           with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
               for name, _ in suites:
                   c.execute("CREATE DATABASE " + name)
@@ -223,7 +223,7 @@ jobs:
               assert (result.returncode != 0) if occupied else (result.returncode == 0)
               with psycopg.connect(dsn) as c:
                   names = [v[0] for v in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-                  assert len(names) == (4 if occupied else 15), names
+                  assert len(names) == (4 if occupied else 16), names
                   assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
                   if occupied:
                       assert c.execute("SELECT count(*) FROM saas_csv_import_batches").fetchone()[0] == 1
@@ -286,7 +286,7 @@ jobs:
           python - <<'PY'
           import psycopg
           with psycopg.connect("postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_restore") as c:
-              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 15
+              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 16
               assert c.execute("SELECT to_regclass('public.saas_journal_records')").fetchone()[0]
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0]
           print("Synthetic PostgreSQL 18 backup/restore PASS (not production backup proof)")

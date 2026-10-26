@@ -68,7 +68,8 @@ export function buildMonthlyProcessReport(
  if(!window||!Number.isFinite(now.getTime())||
     window.start>now.getTime())return null;
  // Historical paging is bounded. Never label a truncated sample as complete.
- if(notes.length>=200||plans.length>=200||trades.length>=200)return null;
+ // API limits: journal notes 200, plan revisions 200, manual trade events 50.
+ if(notes.length>=200||plans.length>=200||trades.length>=50)return null;
  const inWindow=(at:string|null|undefined)=>{
    const n=at?Date.parse(at):NaN;
    return Number.isFinite(n)&&n>=window.start&&n<Math.min(window.end,now.getTime()+1);

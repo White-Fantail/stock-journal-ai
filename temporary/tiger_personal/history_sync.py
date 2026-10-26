@@ -54,10 +54,17 @@ def _order(item,account):
     at=str(int(raw_time)) if raw_time is not None else None
     if at is not None and not re.fullmatch(r"[0-9]{13}",at):
         raise ValueError("INVALID_ORDER_TIME")
+    commission_currency=getattr(item,"commission_currency",None)
+    if hasattr(commission_currency,"value"):
+        commission_currency=commission_currency.value
+    if commission_currency is not None and (not isinstance(commission_currency,str)
+        or not re.fullmatch(r"[A-Z]{3}",commission_currency)):
+        raise ValueError("INVALID_COMMISSION_CURRENCY")
     return {"id":str(ident),"symbol":str(symbol),"currency":currency,"side":side,
             "status":status,"filled":filled,"filledScale":scale,
             "price":amount(getattr(item,"avg_fill_price",None)),
             "fee":amount(getattr(item,"commission",None)),
+            "feeCurrency":commission_currency,
             "at":at}
 
 def _send(subject,account,begin,end,part,parts,complete,orders,env):
@@ -198,6 +205,16 @@ def main():
         # Only an allowlisted failure phase, never user/provider exception text.
         phase = str(exc) if type(exc) is RuntimeError and str(exc) in ("QUERY","UPLOAD") else "CONFIG_OR_SDK"
         print("PERSONAL_ORDER_HISTORY_UNAVAILABLE step="+phase)
+        raise SystemExit(1)
+    try:
+        from temporary.tiger_personal.fill_probe import sync_probe
+        result=sync_probe()
+        print("PERSONAL_TRANSACTION_PROBE_STAGED orders="+str(result["ordersProbed"])+
+              " matched="+str(result["matchedSamples"])+
+              " unavailable="+str(result["queryUnavailable"]))
+    except Exception:
+        # Do not leak Tiger API response text; order sync remains independent.
+        print("PERSONAL_TRANSACTION_PROBE_UNAVAILABLE")
         raise SystemExit(1)
 
 if __name__=="__main__":

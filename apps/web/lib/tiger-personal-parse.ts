@@ -29,7 +29,7 @@ function order(x:unknown):x is TigerPersonalOrder {
   return object(x) && hash(x.sourceRef) && symbol(x.symbol) && moneyCurrency(x.currency) &&
     side(x.side) && typeof x.status==="string" && /^[A-Z_]{3,32}$/.test(x.status) &&
     nullableDecimal(x.filled) && nullableDecimal(x.price) && nullableDecimal(x.fee) &&
-    (x.feeCurrency===null || moneyCurrency(x.feeCurrency)) &&
+    (x.feeCurrency===undefined || x.feeCurrency===null || moneyCurrency(x.feeCurrency)) &&
     (x.at===null || epoch(x.at));
 }
 function fill(x:unknown):x is TigerPersonalFill {
@@ -100,7 +100,15 @@ export function parsePersonalRead(raw:unknown):PersonalReadParseResult {
       }else warnings.add("ASSETS_INVALID");
     }
     const positions=list(a.positions,100,position,"POSITIONS_INVALID",warnings);
-    const orders=list(a.orders,120,order,"ORDERS_INVALID",warnings);
+    const orders=list(a.orders,120,order,"ORDERS_INVALID",warnings).map(o=>{
+      if(o.feeCurrency===undefined){
+        // Older signed Tiger order snapshots predate the fee-currency field.
+        // Never infer USD just because the traded stock was in USD.
+        warnings.add("ORDERS_LEGACY_FEE_CURRENCY");
+        return {...o,feeCurrency:null};
+      }
+      return o;
+    });
     const marketObservations=list(a.marketObservations,40,quote,"QUOTES_INVALID",warnings);
     const fillObservations=list(a.fillObservations,60,fill,"FILLS_INVALID",warnings);
     const feeObservations=list(a.feeObservations,30,fee,"FEES_INVALID",warnings);

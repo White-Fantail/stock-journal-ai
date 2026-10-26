@@ -13,6 +13,19 @@ const KIND_LABEL:Record<JournalKind,string>={
   TRADE_NOTE:"체결 메모",WATCHLIST_ADD:"관심종목 등록",
   WATCHLIST_REMOVE:"관심종목 해제",
 };
+const STRATEGY_LABEL:Record<string,string>={
+  LONG_TERM:"장기 투자",TECHNICAL:"기술적 근거 진입",
+  EVENT_DRIVEN:"이벤트·실적 기반",OTHER:"기타 전략",
+};
+const HORIZON_LABEL:Record<string,string>={
+  UNDER_3_MONTHS:"3개월 미만",THREE_TO_TWELVE_MONTHS:"3개월~1년",
+  ONE_TO_THREE_YEARS:"1~3년",OVER_THREE_YEARS:"3년 이상",
+  OPEN_ENDED:"장기·종료 시점 미정",
+};
+const CADENCE_LABEL:Record<string,string>={
+  WEEKLY:"매주",MONTHLY:"매월",QUARTERLY:"분기마다",
+  SEMIANNUAL:"6개월마다",ANNUAL:"매년",EVENT_DRIVEN:"기업 공시·사건 발생 시",
+};
 type View="activity"|"trades"|"observed"|"broker";
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
@@ -175,7 +188,7 @@ export function JournalWorkspace({
             </div>
             {active&&<div className="journal-current-actions">
                <Link className="btn btn-outline" href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>+ 투자 판단 작성</Link>
-               <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>목표·손절 설정</Link>
+               <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>투자 전략·계획 관리</Link>
              </div>}
              {active?.watched&&<span className="pill">관심종목</span>}
           </div>
@@ -195,6 +208,23 @@ export function JournalWorkspace({
                <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>손절가 {active.plan?"변경":"입력"} →</Link>
             </div>
           </div>}
+          {active&&<div className="journal-current-grid" aria-label="투자 전략과 위험 계획">
+            <div><span>투자 전략</span>
+              <strong>{active.plan?.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong>
+              <small>{active.plan?.investmentHorizon?HORIZON_LABEL[active.plan.investmentHorizon]??"기간 확인 필요":"투자 기간 미설정"}</small>
+            </div>
+            <div><span>최대 보유 비중 (나의 기준)</span>
+              <strong>{active.plan?.maxAllocationPct?active.plan.maxAllocationPct+"%":"미설정"}</strong>
+              <small>계좌 스냅샷과 직접 비교한 매매 신호가 아닙니다.</small>
+            </div>
+            <div><span>정기 투자 점검</span>
+              <strong>{active.plan?.reviewCadence?CADENCE_LABEL[active.plan.reviewCadence]??"확인 필요":"미설정"}</strong>
+              <small>가격 감시 없이 스스로 검토하는 주기입니다.</small>
+            </div>
+          </div>}
+          {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
+            <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
+          </p>}
           {!active&&<div className="journal-actions">
              <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
              <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>
@@ -220,13 +250,13 @@ export function JournalWorkspace({
 
           {view==="activity" ? <div className="journal-timeline">
             {history.length===0 ?
-              <div className="journal-empty">아직 투자 기록이 없습니다. <Link href={"/private/journal/new?ticker="+encodeURIComponent(selected)}>투자 판단 작성 →</Link> · <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected)}>목표·손절 계획 설정 →</Link></div>:
+              <div className="journal-empty">아직 투자 기록이 없습니다. <Link href={"/private/journal/new?ticker="+encodeURIComponent(selected)}>투자 판단 작성 →</Link> · <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected)}>투자 전략·계획 작성 →</Link></div>:
               history.map(e=>
                 <article key={e.type+e.id} className="journal-entry">
                   <div className="journal-entry-dot" aria-hidden="true"/>
                   <div className="journal-entry-content">
                     <div className="journal-entry-meta">
-                      <span className="journal-entry-kind">{e.type==="plan"?"목표·손절 계획 변경":KIND_LABEL[e.value.kind]}</span>
+                      <span className="journal-entry-kind">{e.type==="plan"?"투자 전략·계획 변경":KIND_LABEL[e.value.kind]}</span>
                       <time dateTime={e.timestamp}>{displayTime(e.timestamp)}</time>
                     </div>
                     {e.type==="plan" ? <>
@@ -234,6 +264,16 @@ export function JournalWorkspace({
                         <span>목표 <strong>{planPrice(e.value.targetPrice,e.value.priceCurrency)}</strong></span>
                         <span>손절 <strong>{planPrice(e.value.stopPrice,e.value.priceCurrency)}</strong></span>
                       </div>
+                      {(e.value.strategyType||e.value.investmentHorizon||e.value.maxAllocationPct||e.value.reviewCadence)&&
+                        <div className="journal-plan-values">
+                          {e.value.strategyType&&<span>전략 <strong>{STRATEGY_LABEL[e.value.strategyType]??"확인 필요"}</strong></span>}
+                          {e.value.investmentHorizon&&<span>기간 <strong>{HORIZON_LABEL[e.value.investmentHorizon]??"확인 필요"}</strong></span>}
+                          {e.value.maxAllocationPct&&<span>최대 비중 <strong>{e.value.maxAllocationPct}%</strong></span>}
+                          {e.value.reviewCadence&&<span>점검 <strong>{CADENCE_LABEL[e.value.reviewCadence]??"확인 필요"}</strong></span>}
+                        </div>}
+                      {e.value.invalidationCondition&&<p className="journal-entry-text">
+                        <strong>논리 무효화 조건:</strong> {e.value.invalidationCondition}
+                      </p>}
                       <p className="journal-entry-text">{e.value.rationale}</p>
                     </> : <>
                       {e.value.content && <p className="journal-entry-text">{e.value.content}</p>}

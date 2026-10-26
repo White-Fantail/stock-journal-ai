@@ -66,3 +66,11 @@ The metadata-only `saas_broker_dispatch_queue` has composite workspace/job FK, d
 
 ## Privacy and deletion
 Provider data exists in the user-specific private DB, never in Git, CI fixtures, S3 public buckets, error telemetry or model prompts without explicit scope. Document retention/backups/revocation and user export/delete. Deleting a Git file does not retroactively purge public Git commit history.
+
+
+## Private broker-ledger release (migration 017, source-only)
+`saas_broker_ledger_publications` is an append-only, tenant/account-scoped release manifest pointing to **one** immutable P4 reconciliation version. `saas_broker_ledger_sources` binds its keyed fill identities to the exact original encrypted P3 source-stage ID and evidence SHA, and to the staged verified execution, using composite foreign keys. No provider raw IDs or financial facts go into public GitHub.
+
+`services/saas_api/ledger_publication.py` is deliberately **not** an HTTP route. Its release call obtains fresh owner membership and connected inquiry-only Tiger entitlement, locks the account, demands the latest review is STAGED, rechecks fill-to-source cardinality and absence of later conflicting versions, fingerprints native-currency staged data, then verifies a separately issued `SAAS_P4_PUBLICATION_KEY` HMAC proof and an explicit opt-in gate. It cannot issue proofs. Replays are idempotent; releases are immutable, not silent updates. Any later BLOCKED review must suppress a prior release in future read models, even though its audit record remains.
+
+Tiger live API completeness and trusted independent attestation are still pending. No customer-facing holdings, history, valuation, FX or realized/unrealized returns are published by this migration.

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../../lib/require-workspace";
-import { tigerSyncStatus, type TigerSyncJob, type TigerSyncStatus } from "../../../../lib/tiger-api";
+import { tigerSyncStatus, tigerPersonalRead, type TigerSyncJob, type TigerSyncStatus } from "../../../../lib/tiger-api";
+import { PersonalOrderHistory } from "../personal-preview";
 
 export const metadata:Metadata={title:"Tiger 동기화 상태 · Positionary"};
 export const dynamic="force-dynamic";
@@ -69,6 +70,12 @@ function Job({job}:{job:TigerSyncJob}) {
 }
 export default async function TigerSyncPage() {
   if (!await currentWorkspace()) redirect("/login");
+  const personal=await tigerPersonalRead();
+  if(personal && personal.accounts.length) return <main>
+    <div className="page-intro"><h1>Tiger 개인 계좌 동기화</h1>
+      <p>개인 API로 수집한 시점별 자산·주문 기록이며 전체 체결 내역 완전성은 아직 검증 전이야.</p></div>
+    <PersonalOrderHistory data={personal}/>
+  </main>;
   let result:TigerSyncStatus|null=null;
   try {result=await tigerSyncStatus();}catch {/* Do not invent account activity on outage. */}
   return <main>

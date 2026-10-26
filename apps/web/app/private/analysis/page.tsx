@@ -4,7 +4,7 @@ import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {fetchJournal,fetchJournalPlans,fetchManualTrades} from "../../../lib/saas-trades-api";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
-import {aiReady} from "./actions";
+import {aiConfigured} from "../../../lib/ai-configuration";
 import {AnalysisPanel} from "./analysis-panel";
 
 export const dynamic="force-dynamic";
@@ -33,6 +33,6 @@ export default async function AnalysisPage(){
       <h1>AI 투자 복기</h1>
       <p>어떤 판단을 했는지, 계획을 얼마나 기록했는지, 반복되는 습관은 무엇인지 돌아봅니다.</p>
     </div>
-    <AnalysisPanel available={aiReady()} symbols={safe}/>
+    <AnalysisPanel available={aiConfigured()} symbols={safe}/>
   </main>;
 }

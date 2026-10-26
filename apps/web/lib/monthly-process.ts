@@ -27,10 +27,15 @@ function nzOffsetMinutes(at:number):number{
 }
 function nzMonthStart(year:number,month:number):number{
   const midnight=Date.UTC(year,month-1,1);
-  // NZ DST transitions do not occur at local midnight; noon UTC is a safe
-  // offset probe at the first day of the month.
-  const offset=nzOffsetMinutes(midnight+12*3600000);
-  return midnight-offset*60000;
+  // First-Sunday-in-April NZ DST may change later in the same day.
+  // Resolve the offset at local midnight, not at midday or UTC midnight.
+  let utc=midnight-nzOffsetMinutes(midnight)*60000;
+  for(let i=0;i<3;i++){
+    const corrected=midnight-nzOffsetMinutes(utc)*60000;
+    if(corrected===utc)return utc;
+    utc=corrected;
+  }
+  return utc;
 }
 export function currentNzMonth(now=new Date()):string{
   const parts=new Intl.DateTimeFormat("en-CA",{timeZone:ZONE,year:"numeric",month:"2-digit"})

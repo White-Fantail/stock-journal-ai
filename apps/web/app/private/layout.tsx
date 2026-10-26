@@ -20,6 +20,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
         <Link href="/private/journal">투자 일지</Link>
         <Link href="/private/analysis">AI 분석</Link>
         <Link href="/private/alerts">점검 센터</Link>
+        <Link href="/private/reports/monthly">월간 복기</Link>
         <Link href="/private/brokers">증권사 연결</Link>
         <Link href="/private/settings">설정</Link>
       </nav>
@@ -34,6 +35,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
             <Link href="/private/risk">위험 계산기</Link>
             <Link href="/private/analysis">AI 분석</Link>
             <Link href="/private/alerts">점검 센터</Link>
+            <Link href="/private/reports/monthly">월간 복기</Link>
             <Link href="/private/brokers">증권사 연결</Link>
             <Link href="/private/settings">설정</Link>
           </div>

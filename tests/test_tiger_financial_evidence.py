@@ -112,7 +112,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
           [row(1,business_date="2026-10-31")],
           [row(1,business_date="2026-02-30")],
           [row(1,id="not-a-number")],
-          [row(1,type="\\nsecret")],
+          [row(1,type="\nsecret")],
           [row(1,page="1")],
           [row(1,updated_at="sensitive")],
           [],

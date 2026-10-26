@@ -26,8 +26,8 @@ export function assessPerformanceReadiness(
 ):PerformanceReadiness{
   const accessible=ledger!==null && ledger.readEnabled &&
     ledger.coverage==="VERIFIED_ACCOUNTS_ONLY";
-  const verified=accessible?ledger.accounts.filter(a=>a.state==="VERIFIED"):[];
-  const truncated=accessible&&ledger.truncated;
+  const verified=accessible&&ledger!==null?ledger.accounts.filter(a=>a.state==="VERIFIED"):[];
+  const truncated=accessible&&ledger?.truncated===true;
   const published=!truncated&&verified.length>0;
   const asOf=verified.reduce<string|null>((last,account)=>{
     const at=account.asOf;

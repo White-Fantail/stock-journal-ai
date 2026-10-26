@@ -231,7 +231,7 @@ jobs:
           from services.saas_api.schema_admin import manifest
           suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
           sources = manifest()
-          assert len(sources) == 22
+          assert len(sources)>4 and sources[-1][0] == "023_investment_strategy_plan.sql"
           with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
               for name, _ in suites:
                   c.execute("CREATE DATABASE " + name)
@@ -264,6 +264,7 @@ jobs:
                   "SAAS_MIGRATION_BACKUP_VERIFIED":"1", # synthetic CI test only
                   "SAAS_TRADE_RUNTIME_PASSWORD":"a"*64,
                   "SAAS_BROKER_RUNTIME_PASSWORD":"b"*64,
+                  "SAAS_PUBLICATION_RUNTIME_PASSWORD":"d"*64,
                   "RAILWAY_PROJECT_ID":"881e854d-86a2-436f-86a5-b17e5f92e912",
                   "RAILWAY_SERVICE_ID":"350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
                   "RAILWAY_ENVIRONMENT_ID":"1a79e220-c75e-40be-a608-2d1f21a3ebb8",
@@ -276,7 +277,7 @@ jobs:
               assert (result.returncode != 0) if occupied else (result.returncode == 0)
               with psycopg.connect(dsn) as c:
                   names = [v[0] for v in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-                  assert len(names) == (4 if occupied else 22), names
+                  assert len(names) == (4 if occupied else len(sources)), names
                   assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
                   if occupied:
                       assert c.execute("SELECT count(*) FROM saas_csv_import_batches").fetchone()[0] == 1
@@ -339,7 +340,10 @@ jobs:
           python - <<'PY'
           import psycopg
           with psycopg.connect("postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_restore") as c:
-              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 22
+              from services.saas_api.schema_admin import manifest
+              actual = [row[0] for row in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
+              expected = sorted(version for version, _, _ in manifest())
+              assert actual == expected, (actual, expected)
               assert c.execute("SELECT to_regclass('public.saas_journal_records')").fetchone()[0]
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0]
           print("Synthetic PostgreSQL 18 backup/restore PASS (not production backup proof)")

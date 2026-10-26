@@ -16,6 +16,7 @@ from services.saas_api.identity import provision, resolve
 from services.saas_api.trades import TradeInputError, TradeConflict, TradeNotFound, list_trades, create_trade
 from services.saas_api.journal import list_notes, create_note, export_journal
 from services.saas_api.journal_broker_links import create_broker_note
+from services.saas_api.journal_observation_links import create_observation_note
 from services.saas_api.journal_plans import list_plans,create_plan
 from services.saas_api.request_security import valid_nonce, consume_signed_request, RequestRejected
 from services.saas_api.account import delete_account
@@ -54,7 +55,7 @@ from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, fin
 _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
-            "/internal/v1/journal/export", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/plans",
+            "/internal/v1/journal/export", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
             "/internal/v1/journal/plan/create", "/internal/v1/account/delete", "/internal/v1/trades/detail",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
@@ -117,7 +118,8 @@ class Handler(BaseHTTPRequestHandler):
                            "/internal/v1/tiger/personal-orders-import",
                              "/internal/v1/tiger/personal-transactions-import",
                              "/internal/v1/tiger/personal-quotes-import")
-                        else 32768 if path == "/internal/v1/journal/broker-note/create"
+                        else 32768 if path in ("/internal/v1/journal/broker-note/create",
+                                                  "/internal/v1/journal/observation-note/create")
                         else 16384 if path in ("/internal/v1/trades/create",
                                                 "/internal/v1/journal/create",
                                                 "/internal/v1/journal/plan/create")
@@ -222,6 +224,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(503,{"error":"FINANCIAL_DB_ROLE_NOT_CONFIGURED"})
                 if path == "/internal/v1/journal/broker-note/create" and set(data)!={"subject","brokerNote"}:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
+                if path == "/internal/v1/journal/observation-note/create" and set(data)!={"subject","observationNote"}:
+                    return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 # Deny tenant/account selection in client payload, even though
                 # every request also derives membership fresh from Google subject.
                 if set(data) - ({"subject","tradeId"} if path == "/internal/v1/trades/detail" else
@@ -229,6 +233,7 @@ class Handler(BaseHTTPRequestHandler):
                                 {"subject","entry"} if path == "/internal/v1/journal/create" else
                                 {"subject","plan"} if path == "/internal/v1/journal/plan/create" else
                                 {"subject","brokerNote"} if path == "/internal/v1/journal/broker-note/create" else
+                                {"subject","observationNote"} if path == "/internal/v1/journal/observation-note/create" else
                                 {"subject"}):
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
@@ -251,6 +256,13 @@ class Handler(BaseHTTPRequestHandler):
                             with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
                                 out=create_broker_note(identity_conn,broker_conn,trade_conn,
                                     data.get("subject"),data.get("brokerNote"))
+                        elif path == "/internal/v1/journal/observation-note/create":
+                            broker_dsn=os.environ.get("SAAS_BROKER_DATABASE_URL")
+                            if not broker_dsn or broker_dsn in (dsn,scoped_dsn):
+                                return self.reply(503,{"error":"BROKER_DB_ROLE_NOT_CONFIGURED"})
+                            with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
+                                out=create_observation_note(identity_conn,broker_conn,trade_conn,
+                                    data.get("subject"),data.get("observationNote"))
                         elif path == "/internal/v1/journal/plans":
                             out=list_plans(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/journal/plan/create":

@@ -27,6 +27,7 @@ def delete_account(identity_conn, subject: str, confirmation: object) -> dict:
         if linked:
             raise TradeConflict("Disconnect and revoke broker credentials before account deletion")
         # Private record ordering respects the immutable VOID reference and composite FKs.
+        identity_conn.execute("DELETE FROM saas_journal_plan_revisions WHERE workspace_id=%s", (wid,))
         identity_conn.execute("DELETE FROM saas_journal_records WHERE workspace_id=%s", (wid,))
         identity_conn.execute("DELETE FROM saas_trade_events WHERE workspace_id=%s AND event_kind='VOID'", (wid,))
         identity_conn.execute("DELETE FROM saas_trade_events WHERE workspace_id=%s", (wid,))

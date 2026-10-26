@@ -18,7 +18,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view" | "personal-health-view";
+export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view" | "personal-health-view" | "personal-diagnostics";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -302,9 +302,18 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
          Number.isInteger(a.windowCount) && a.windowCount>=0 &&
          Number.isInteger(a.totalOrders) && a.totalOrders>=0 &&
          typeof a.hasMore==="boolean" &&
-         typeof a.partial==="boolean" && typeof a.truncated==="boolean")) return null;
+         typeof a.partial==="boolean" && typeof a.truncated==="boolean")) {
+      console.warn("[tiger-personal] received an incompatible response shape");
+      return null;
+    }
+    if(result.accounts.length===0) console.warn("[tiger-personal] authorized request returned no accounts");
     return result;
-  } catch {return null;}
+  } catch (error) {
+    const code=error instanceof Error && /^TIGER_[0-9]{3}$/.test(error.message)
+      ? error.message : "UNAVAILABLE";
+    if(code!=="TIGER_403") console.warn("[tiger-personal] owner read failed",code);
+    return null;
+  }
 }
 
 /** Signed owner-only cron health. This does NOT attest brokerage transactions. */
@@ -333,4 +342,30 @@ export async function tigerPersonalHealth():Promise<TigerPersonalHealth|null>{
   }catch{
     return null;
   }
+}
+
+/** Only aggregate metadata for the authorized personal-Tiger owner. */
+export type TigerPersonalDiagnostics=Readonly<{
+  source:"PERSONAL_READ_DIAGNOSTIC";
+  connections:ReadonlyArray<{mode:string;status:string;count:number}>;
+  accountCount:number;
+  pilotReadableAccountCount:number;
+  snapshotCounts:ReadonlyArray<{kind:string;count:number}>;
+}>;
+export async function tigerPersonalDiagnostics():Promise<TigerPersonalDiagnostics|null>{
+  try{
+    const value=await tigerCall("personal-diagnostics") as TigerPersonalDiagnostics;
+    const count=(n:unknown)=>Number.isSafeInteger(n) && (n as number)>=0;
+    if(!value || value.source!=="PERSONAL_READ_DIAGNOSTIC" ||
+       !count(value.accountCount) || !count(value.pilotReadableAccountCount) ||
+       value.pilotReadableAccountCount>value.accountCount ||
+       !Array.isArray(value.connections) || value.connections.length>20 ||
+       !Array.isArray(value.snapshotCounts) || value.snapshotCounts.length>12 ||
+       !value.connections.every(x=>x && typeof x.mode==="string" &&
+         /^[A-Z_]{2,32}$/.test(x.mode) && typeof x.status==="string" &&
+         /^[A-Z_]{2,32}$/.test(x.status) && count(x.count)) ||
+       !value.snapshotCounts.every(x=>x && typeof x.kind==="string" &&
+         /^[A-Z_]{2,32}$/.test(x.kind) && count(x.count))) return null;
+    return value;
+  }catch{return null;}
 }

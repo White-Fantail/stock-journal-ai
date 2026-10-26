@@ -77,6 +77,19 @@ class QuoteSourceTests(unittest.TestCase):
         self.assertIsNone(market_quotes.indicative_quote({**POSITIONS[0],"currency":"HKD"},q,NOW,NOW-3600000))
         self.assertIsNone(market_quotes.indicative_quote({**POSITIONS[0],"quantity":"-1"},q,NOW,NOW-3600000)["estimatedReturnPct"])
 
+    def test_quotes_for_sold_symbols_do_not_hide_active_positions(self):
+        now=datetime.now(timezone.utc)
+        millis=int(now.timestamp()*1000)-900000
+        doc={"source":"PERSONAL_QUOTE_OBSERVATION","quotes":[
+            {"symbol":"TSLA","currency":"USD","price":"210","quoteAt":str(millis),"mode":"US_DELAYED_15M"},
+            {"symbol":"NVDA","currency":"USD","price":"105","quoteAt":str(millis),"mode":"US_DELAYED_15M"}]}
+        class Broker:
+            def execute(self,*args):
+                return SimpleNamespace(fetchone=lambda:("encrypted",))
+        with patch.object(market_quotes,"unseal",return_value=doc):
+            result=market_quotes.load_quotes(Broker(),"workspace","account",POSITIONS,now)
+        self.assertEqual([q["symbol"] for q in result["marketObservations"]],["TSLA"])
+
     def test_ingress_requires_pinned_subject_us_quote_and_time(self):
         now=int(datetime.now(timezone.utc).timestamp()*1000)
         row={"subject":OWNER,"account":"U12345678",

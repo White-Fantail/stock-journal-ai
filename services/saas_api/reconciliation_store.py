@@ -107,13 +107,53 @@ def _version_key(secret, digest, attested):
     return hmac.new(secret,payload.encode(),hashlib.sha256).hexdigest()
 
 
-def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,attestation=None):
-    """Write one atomic immutable decision; no provider or arbitrary DB access.
 
-    All source facts must originate from a separately certified, trusted read
-    service. Without that certificate, even a mathematically correct input
-    creates a BLOCKED audit only, never a staged execution/position.
+def _bound_digest(base_digest, links, secret):
+    """Bind the signed decision to exact persisted stage evidence versions."""
+    records=sorted((str(stage),key,sha) for stage,key,sha in links)
+    raw=json.dumps(["positionary:p4:source-links:v1",base_digest,records],
+                   sort_keys=True,separators=(",",":")).encode()
+    return hmac.new(secret,raw,hashlib.sha256).hexdigest()
+
+
+def _find_lineage(broker, wid, account:AccountEvidence, secret):
+    """No evidence aliases: a single source ID must resolve to ONE exact version.
+
+    The adapter/independent issuer must separately verify decrypted provider
+    payload semantics; a matching fingerprint alone is never certification.
     """
+    expected={source_key(secret,"TIGER",account.account_id,"FILL",f.source_id)
+              for f in account.executions}
+    if len(expected)>5000:
+        raise AuditRefused("SOURCE_TOO_LARGE")
+    if not expected:
+        return (),set()
+    rows=broker.execute("""SELECT id,source_key_hmac,evidence_sha256
+       FROM saas_broker_source_stage
+       WHERE workspace_id=%s AND account_id=%s AND kind='FILL'
+         AND source_key_hmac=ANY(%s::text[])
+       ORDER BY source_key_hmac,id
+       LIMIT 10001""",
+       (wid,account.account_id,list(expected))).fetchall()
+    by_key={}
+    for rid,key,evidence in rows:
+        by_key.setdefault(str(key),[]).append((rid,str(key),str(evidence)))
+    issues=set()
+    if any(key not in by_key for key in expected):
+        issues.add("SOURCE_EVIDENCE_MISSING")
+    if any(len(values)!=1 for values in by_key.values()) or len(rows)>5000:
+        issues.add("SOURCE_EVIDENCE_CONFLICT")
+    unique=tuple(values[0] for values in by_key.values() if len(values)==1)
+    return unique,issues
+
+
+def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,attestation=None):
+    """Append an immutable review; verified staging requires exact source lineage.
+
+    This method is internal-only. It neither grants provider coverage nor
+    issues proof, and never publishes positions to a customer.
+    """
+    from services.broker_connectors.reconciliation_issues import summaries
     if os.environ.get("SAAS_P4_RECORDING_ENABLED")!="1":
         raise AuditRefused("RECONCILIATION_DISABLED")
     if not isinstance(account,AccountEvidence) or not isinstance(account.workspace_id,UUID) or (
@@ -122,31 +162,6 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
     secret=_secret("SAAS_SOURCE_HMAC_KEY")
     verdict=reconcile(account)
     digest=_input_digest(account,secret)
-    verified=verdict.status=="RECONCILED" and _attested(digest,attestation)
-    issues=set(verdict.issue_codes)
-    if verdict.status=="RECONCILED" and not verified:
-        issues.add("INDEPENDENT_ATTESTATION_REQUIRED")
-    decision="STAGED" if verified else "BLOCKED"
-    key=_version_key(secret,digest,verified)
-    if len(issues)>64 or any(not re.fullmatch(r"[A-Z][A-Z0-9_]{1,63}",c) for c in issues):
-        raise AuditRefused("ISSUE_CODE_INVALID")
-    sources=[]
-    positions=[]
-    if verified:
-        for f in account.executions:
-            _number(f.quantity)
-            _number(f.price)
-            _number(f.fee)
-            sources.append((source_key(secret,"TIGER",account.account_id,"FILL",f.source_id),
-                            f.symbol,f.side,f.currency,f.quantity,f.price,f.fee,
-                            f.occurred_at.astimezone(timezone.utc)))
-        # identical source replays must not violate the append-only PK.
-        sources=list({r[0]:r for r in sources}.values())
-        for p in verdict.positions:
-            _number(p.quantity)
-            _number(p.cost_basis)
-            _number(p.realized_pnl,signed=True)
-            positions.append((p.symbol,p.currency,p.quantity,p.cost_basis,p.realized_pnl))
     with broker.transaction():
         wid=_scope(identity,broker,subject)
         if wid!=str(account.workspace_id):
@@ -158,6 +173,18 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
           FOR UPDATE OF a""",(wid,account.account_id)).fetchone()
         if not row or not _account_authorized(broker,wid,account.account_id):
             raise AuditRefused("ACCOUNT_NOT_AUTHORIZED")
+        # All signatures are bound to the *actual* tenant-scoped stage rows,
+        # not to user-supplied raw source IDs or unauthenticated HTTP claims.
+        links,lineage_issues=_find_lineage(broker,wid,account,secret)
+        bound_digest=_bound_digest(digest,links,secret)
+        issues=set(verdict.issue_codes)|lineage_issues
+        verified=(verdict.status=="RECONCILED" and not lineage_issues
+                  and _attested(bound_digest,attestation))
+        if verdict.status=="RECONCILED" and not verified:
+            issues.add("INDEPENDENT_ATTESTATION_REQUIRED")
+        classified=summaries(tuple(sorted(issues)))
+        decision="STAGED" if verified else "BLOCKED"
+        key=_version_key(secret,bound_digest,verified)
         existing=broker.execute("""SELECT id,version_num,state
           FROM saas_reconciliation_versions
           WHERE workspace_id=%s AND account_id=%s AND evidence_hmac=%s""",
@@ -165,6 +192,24 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
         if existing:
             return {"state":existing[2],"version":existing[1],"replayed":True,
                     "issues":sorted(issues),"published":False}
+
+        sources=[]
+        positions=[]
+        if verified:
+            for f in account.executions:
+                _number(f.quantity)
+                _number(f.price)
+                _number(f.fee)
+                sources.append((source_key(secret,"TIGER",account.account_id,"FILL",f.source_id),
+                                f.symbol,f.side,f.currency,f.quantity,f.price,f.fee,
+                                f.occurred_at.astimezone(timezone.utc)))
+            sources=list({r[0]:r for r in sources}.values())
+            for p in verdict.positions:
+                _number(p.quantity)
+                _number(p.cost_basis)
+                _number(p.realized_pnl,signed=True)
+                positions.append((p.symbol,p.currency,p.quantity,p.cost_basis,p.realized_pnl))
+
         number=broker.execute("""SELECT coalesce(max(version_num),0)+1
           FROM saas_reconciliation_versions WHERE workspace_id=%s AND account_id=%s""",
           (wid,account.account_id)).fetchone()[0]
@@ -174,10 +219,21 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
           (wid,account.account_id,number,key,decision,verdict.checked_fills,
            verdict.duplicate_replays,account.end)).fetchone()[0]
-        for code in sorted(issues):
+        for issue in classified:
             broker.execute("""INSERT INTO saas_reconciliation_issues
-              (workspace_id,version_id,account_id,code) VALUES (%s,%s,%s,%s)""",
-              (wid,version,account.account_id,code))
+              (workspace_id,version_id,account_id,code,category,severity,evidence_scope)
+              VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+              (wid,version,account.account_id,issue.code,issue.category,
+               issue.severity,issue.scope))
+        # Preserve links for BOTH blocked and staged decisions, including
+        # independently observed yet unresolved source evidence. Account FK
+        # + full stage fingerprint protects against silent repointing.
+        for stage,key_hmac,evidence_sha in links:
+            broker.execute("""INSERT INTO saas_reconciliation_source_links
+              (workspace_id,version_id,account_id,source_stage_id,
+               source_key_hmac,evidence_sha256)
+              VALUES (%s,%s,%s,%s,%s,%s)""",
+              (wid,version,account.account_id,stage,key_hmac,evidence_sha))
         for src in sources:
             broker.execute("""INSERT INTO saas_verified_execution_stage
               (workspace_id,version_id,account_id,source_key_hmac,symbol,
@@ -206,13 +262,20 @@ def review_status(identity,broker,subject):
           ORDER BY v.account_id,v.version_num DESC
           LIMIT 50""",(wid,)).fetchall()
         issue_by_id={}
+        link_counts={}
         for version,*_ in rows:
             issue_by_id[version]=[
-                r[0] for r in broker.execute("""SELECT code FROM saas_reconciliation_issues
+                {"code":issue[0],"category":issue[1],"severity":issue[2],
+                 "scope":issue[3]}
+                for issue in broker.execute("""SELECT code,category,severity,evidence_scope
+                   FROM saas_reconciliation_issues
                    WHERE workspace_id=%s AND version_id=%s ORDER BY code LIMIT 64""",
                    (wid,version)).fetchall()]
+            link_counts[version]=broker.execute("""SELECT count(*)
+                FROM saas_reconciliation_source_links
+                WHERE workspace_id=%s AND version_id=%s""",(wid,version)).fetchone()[0]
     return {"provider":"TIGER","published":False,
             "accounts":[{"accountId":str(account),"alias":alias,"version":number,
                          "state":state,"createdAt":created.isoformat(),
-                         "issues":issue_by_id[vid]}
+                         "issues":issue_by_id[vid],"sourceEvidenceCount":link_counts[vid]}
                         for vid,account,alias,number,state,created in rows]}

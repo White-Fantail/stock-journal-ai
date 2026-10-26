@@ -42,7 +42,7 @@ export function derivePersonalAlerts(
        detail:"계좌 스냅샷과는 별개로, 수집 실행 결과 보고가 아직 없습니다.",
        observedAt:account.lastAssetsAt});
    }else if(account.latest.assets!=="OK" || account.latest.orders!=="OK" ||
-            account.latest.fills==="UNAVAILABLE"){
+            account.latest.fills!=="OK"){
      signals.push({id:account.alias+":failure",kind:"SYNC_FAILED",severity:"warning",
        title:account.alias+" · 일부 수집 실패 또는 미확인",
        detail:"자산 "+account.latest.assets+" · 주문 "+account.latest.orders+

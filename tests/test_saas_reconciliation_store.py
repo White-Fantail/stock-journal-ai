@@ -9,8 +9,9 @@ from services.broker_connectors.contracts import BrokerPosition
 from services.broker_connectors.fifo_projection import VerifiedExecution
 from services.broker_connectors.reconciliation import AccountEvidence,CertifiedWindow,PositionEvidence
 from services.saas_api.reconciliation_store import (
-    AuditRefused,_input_digest,_attested,_number,_version_key,
+    AuditRefused,_input_digest,_bound_digest,_attested,_number,_version_key,
 )
+from services.broker_connectors.reconciliation_issues import classify,summaries
 
 T=datetime(2026,10,10,tzinfo=timezone.utc)
 D=Decimal
@@ -32,6 +33,23 @@ class AuditContractTests(unittest.TestCase):
         self.assertNotEqual(first,_input_digest(replace(a,executions=(
             replace(a.executions[0],quantity=D("3")),)),b"s"*32))
         self.assertNotIn("synthetic-fill",first)
+
+    def test_issues_are_classified_and_unknown_code_stays_blocking(self):
+        fee=classify("FEE_UNKNOWN")
+        self.assertEqual((fee.category,fee.scope,fee.severity),
+                         ("FEES","EXECUTION","BLOCKER"))
+        unknown=classify("SYNTHETIC_UNKNOWN_ISSUE")
+        self.assertEqual(unknown.category,"INTEGRITY")
+        self.assertEqual(unknown.severity,"BLOCKER")
+        self.assertEqual(len(summaries(["FEE_UNKNOWN","FEE_UNKNOWN"])),1)
+        for unsafe in ("token:secret","bad newline\\n", "x"*100):
+            with self.assertRaises(ValueError):
+                classify(unsafe)
+
+    def test_source_proof_binds_stage_identity_and_digest(self):
+        a=_bound_digest("a"*64,((uuid4(),"b"*64,"c"*64),),b"k"*32)
+        b=_bound_digest("a"*64,((uuid4(),"b"*64,"c"*64),),b"k"*32)
+        self.assertNotEqual(a,b)
 
     def test_attestation_missing_or_provider_unapproved(self):
         self.assertFalse(_attested("a"*64,None))

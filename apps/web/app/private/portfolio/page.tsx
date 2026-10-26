@@ -63,8 +63,16 @@ function AccountReadiness({account,connection,job,review}:{
     {review && <div className="sync-issues">
       <h3>최근 검증 이력 · v{review.version}</h3>
       <p className="sync-subtle">{review.state==="STAGED"?"수집원장 비공개 준비 완료 · 사용자 포트폴리오 미공개":"검증 문제 발견 · 수정 후 재검증 필요"} · {timeLabel(review.createdAt)}</p>
-      {review.issues.length>0 && <ul>{review.issues.map(code=>
-        <li key={code}>{issueText[code]??"추가로 확인해야 할 거래내역 검증 항목이 있습니다."}</li>)}</ul>}
+      <p className="sync-subtle">연결된 원본 증거: {review.sourceEvidenceCount}건 · 증거 추적 정보만 표시</p>
+      {review.issues.length>0 && <ul>{review.issues.map(issue=>
+        <li key={issue.code}>
+          <strong>{({
+            COVERAGE:"이력 범위",EXECUTION:"체결 기록",FEES:"수수료",
+            CORPORATE_ACTION:"기업행동",CASH:"현금 거래",SNAPSHOT:"보유수량",
+            AUTHORIZATION:"검증 승인",INTEGRITY:"데이터 무결성"
+          } as Record<string,string>)[issue.category]??"추가 검증"} · {issue.severity==="BLOCKER"?"확인 필요":"검토 권장"}</strong>
+          {" — "}{issueText[issue.code]??"추가로 확인해야 할 거래내역 검증 항목이 있습니다."}
+        </li>)}</ul>}
     </div>}
     <Link href="/private/tiger/sync" className="btn btn-outline">수집 및 오류 상태 확인 →</Link>
   </section>;

@@ -91,9 +91,16 @@ export async function tigerSyncStatus():Promise<TigerSyncStatus> {
 }
 
 /** Latest immutable reconciliation status; never exposes staged money or fills. */
+export type TigerReviewIssue = {
+  code:string;
+  category:"COVERAGE"|"EXECUTION"|"FEES"|"CORPORATE_ACTION"|"CASH"|"SNAPSHOT"|"AUTHORIZATION"|"INTEGRITY";
+  severity:"BLOCKER"|"REVIEW";
+  scope:"ACCOUNT"|"WINDOW"|"EXECUTION"|"SNAPSHOT";
+};
 export type TigerReviewAccount = {
   accountId:string; alias:string; version:number;
-  state:"BLOCKED"|"STAGED"; createdAt:string; issues:string[];
+  state:"BLOCKED"|"STAGED"; createdAt:string;
+  issues:TigerReviewIssue[]; sourceEvidenceCount:number;
 };
 export type TigerReviewStatus = {
   provider:"TIGER"; published:false; accounts:TigerReviewAccount[];
@@ -106,8 +113,14 @@ export async function tigerReviewStatus():Promise<TigerReviewStatus> {
        typeof a.alias==="string" && Number.isInteger(a.version) && a.version>0 &&
        (a.state==="BLOCKED" || a.state==="STAGED") &&
        typeof a.createdAt==="string" && Array.isArray(a.issues) &&
-       a.issues.length<=64 &&
-       a.issues.every(code=>typeof code==="string" && /^[A-Z][A-Z0-9_]{1,63}$/.test(code))))
+       a.issues.length<=64 && Number.isInteger(a.sourceEvidenceCount) &&
+       a.sourceEvidenceCount>=0 && a.sourceEvidenceCount<=5000 &&
+       a.issues.every(i=>i && typeof i.code==="string" &&
+         /^[A-Z][A-Z0-9_]{1,63}$/.test(i.code) &&
+         ["COVERAGE","EXECUTION","FEES","CORPORATE_ACTION","CASH","SNAPSHOT",
+          "AUTHORIZATION","INTEGRITY"].includes(i.category) &&
+         ["BLOCKER","REVIEW"].includes(i.severity) &&
+         ["ACCOUNT","WINDOW","EXECUTION","SNAPSHOT"].includes(i.scope))))
     throw new Error("INVALID_TIGER_REVIEW_STATUS");
   return data;
 }

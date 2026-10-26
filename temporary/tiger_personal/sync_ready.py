@@ -36,11 +36,18 @@ def amount(obj):
     return "0" if text=="-0" else text
 
 def normalize(assets,positions):
-    if not isinstance(assets,(list,tuple)) or not assets:
+    if isinstance(assets,(list,tuple)):
+        if len(assets)!=1:
+            raise ValueError("NO_ASSET_PROOF")
+        assets=assets[0]
+    if assets is None:
         raise ValueError("NO_ASSET_PROOF")
     if not isinstance(positions,(list,tuple)) or len(positions)>100:
         raise ValueError("INVALID_POSITION_RESPONSE")
-    summary=getattr(assets[0],"summary",None)
+    summary=getattr(assets,"summary",None)
+    if summary is None:
+        seg=getattr(assets,"segments",None)
+        summary=seg.get("S") if isinstance(seg,dict) else None
     if summary is None:
         raise ValueError("NO_ASSET_PROOF")
     asset={"netLiquidation":amount(getattr(summary,"net_liquidation",None)),
@@ -120,7 +127,10 @@ def run(env=None):
     asset_reader = client.get_assets if account.startswith("U") else client.get_prime_assets
     assets = asset_reader(account=account)
     positions = client.get_positions(account=account)
-    for record in list(assets)+list(positions):
+    observed_assets=assets if isinstance(assets,(list,tuple)) else [assets]
+    if len(observed_assets)!=1:
+        raise ValueError("INVALID_ACCOUNT_ASSETS")
+    for record in list(observed_assets)+list(positions):
         observed_account = getattr(record, "account", None)
         if observed_account is not None and str(observed_account) != account:
             raise ValueError("BROKER_ACCOUNT_MISMATCH")

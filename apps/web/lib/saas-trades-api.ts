@@ -49,8 +49,9 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
+      "/internal/v1/journal/broker-note/create" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -58,6 +59,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
   }
   const body = JSON.stringify(path === "/internal/v1/trades/create" ? {subject, trade:payload} :
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :
+    path === "/internal/v1/journal/broker-note/create" ? {subject, brokerNote:payload} :
     path === "/internal/v1/journal/plan/create" ? {subject, plan:payload} :
     path === "/internal/v1/account/delete" ? {subject, confirmation:payload} :
     path === "/internal/v1/trades/detail" ? {subject, tradeId:payload} : {subject});
@@ -92,6 +94,7 @@ export async function submitManualTrade(subject: string, trade: ManualEventInput
 export type JournalEntry = Readonly<{
   id: string; kind: JournalKind; ticker: string; content: string;
   tradeEventId: string | null; createdAt: string; provenance: "USER_AUTHORED";
+  brokerRef:{accountId:string;sourceRef:string;reviewVersion:number}|null;
 }>;
 export type JournalKind = "THESIS" | "STRATEGY" | "REVIEW" | "TRADE_NOTE" |
   "WATCHLIST_ADD" | "WATCHLIST_REMOVE";
@@ -159,5 +162,25 @@ export async function submitJournalPlan(subject:string,plan:JournalPlanInput):Pr
   const result=await postS2("/internal/v1/journal/plan/create",subject,plan) as {id?:string};
   if(!result?.id || !/^[0-9a-f-]{36}$/i.test(result.id))
     throw new Error("Invalid plan confirmation");
+  return result.id;
+}
+
+/** User-written note attached to one independently verified Tiger fill.
+ *  A broker note cannot be created for a staged/blocked/partial source.
+ */
+export type BrokerFillNoteInput = {
+  idempotencyKey:string;
+  ticker:string;
+  content:string;
+  accountId:string;
+  sourceRef:string;
+};
+export async function submitBrokerFillNote(subject:string, note:BrokerFillNoteInput):Promise<string>{
+  const result=await postS2("/internal/v1/journal/broker-note/create",subject,note) as {
+    id?:string; source?:string;
+  };
+  if(!result || typeof result.id!=="string" ||
+     !/^[0-9a-f-]{36}$/i.test(result.id) || result.source!=="USER_AUTHORED")
+    throw new Error("Broker fill note not confirmed");
   return result.id;
 }

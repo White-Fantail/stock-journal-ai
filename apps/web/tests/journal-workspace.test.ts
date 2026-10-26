@@ -38,6 +38,7 @@ test("trade and journal entry points never depend on retired S2 env flag",()=>{
   const paths=[
     "../lib/saas-trades-api.ts",
     "../app/private/journal/page.tsx",
+    "../app/private/page.tsx",
     "../app/private/trades/page.tsx",
     "../app/private/trades/[id]/page.tsx",
     "../app/private/settings/page.tsx",

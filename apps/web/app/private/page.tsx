@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../lib/require-workspace";
-import { manualTradeEnabled } from "../../lib/saas-trades-api";
 import { tigerStatus, type TigerStatus } from "../../lib/tiger-api";
 
 export const metadata: Metadata = {title:"내 대시보드"};
@@ -41,14 +40,14 @@ export default async function WorkspaceHome() {
       <article className="dashboard-card">
         <div className="icon-square" aria-hidden="true">≡</div>
         <h3>거래 기록</h3>
-        <span className={manualTradeEnabled() ? "pill" : "pill pill-neutral"}>{manualTradeEnabled() ? "직접 입력 이용 가능" : "운영 검증 중"}</span>
-        <p style={{marginTop:14}}>거래 기록을 출처별로 구분하여 관리합니다. 거래 입력은 보안 검증 후 활성화됩니다.</p>
+        <span className="pill">직접 입력 이용 가능</span>
+        <p style={{marginTop:14}}>거래 기록을 출처별로 구분하여 관리합니다. 직접 확인한 체결은 사용자 입력 기록으로 남습니다.</p>
         <Link href="/private/trades">거래 기록 보기 →</Link>
       </article>
       <article className="dashboard-card">
         <div className="icon-square" aria-hidden="true">✎</div>
         <h3>투자 일지</h3>
-        <span className={manualTradeEnabled() ? "pill" : "pill pill-neutral"}>{manualTradeEnabled() ? "기록 이용 가능" : "운영 검증 중"}</span>
+        <span className="pill">기록 이용 가능</span>
         <p style={{marginTop:14}}>매수 근거, 투자 전략과 복기를 내가 작성한 기록으로 남기는 공간입니다.</p>
         <Link href="/private/journal">내 투자 일지 열기 →</Link>
       </article>
@@ -58,7 +57,7 @@ export default async function WorkspaceHome() {
       <div className="connection-steps">
         <div className="connection-step">1 · 가입 완료<small>Google 계정으로 개인 공간 생성</small></div>
         <div className="connection-step">2 · 연동 상태 확인<small>Tiger 연결은 공식 승인 이후 사용 가능</small></div>
-        <div className="connection-step">3 · 투자 기록 쌓기<small>운영 검증이 완료된 기록 기능부터 이용</small></div>
+        <div className="connection-step">3 · 투자 기록 쌓기<small>투자 일지와 직접 거래 기록 작성</small></div>
       </div>
       <p className="subtle">계좌 잔액·수익률은 검증된 데이터가 준비되기 전까지 표시하지 않습니다. 없는 데이터를 0으로 계산하지 않습니다.</p>
     </div>

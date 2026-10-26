@@ -162,6 +162,24 @@ with psycopg.connect(dsn) as identity:
         assert "PRIVATE_PROVIDER_FILL" not in str(report)
         assert review_status(identity,broker,b[0])["accounts"]==[]
 
+        # A conflicting provider version with the same keyed source ID must
+        # never reuse the previously staged proof/version. Even a formerly
+        # valid signed digest fails when the original evidence set changes.
+        identity.execute("""INSERT INTO saas_broker_source_stage
+            (workspace_id,window_id,account_id,kind,source_key_hmac,
+             evidence_sha256,encrypted_payload)
+            VALUES (%s,%s,%s,'FILL',%s,%s,%s)""",
+            (a[2],window,a[3],staged_key,"e"*64,b"v"*40))
+        identity.commit()
+        conflict=record_reconciliation(identity,broker,a[0],good,attestation=sig)
+        assert conflict["state"]=="BLOCKED" and conflict["version"]==5,conflict
+        assert "SOURCE_EVIDENCE_CONFLICT" in conflict["issues"],conflict
+        latest=review_status(identity,broker,a[0])["accounts"][0]
+        assert latest["state"]=="BLOCKED" and latest["version"]==5,latest
+        assert any(issue["category"]=="INTEGRITY" for issue in latest["issues"])
+        # Conflicting origins are not attached as individually trusted links.
+        assert latest["sourceEvidenceCount"]==0
+
         try:
             record_reconciliation(identity,broker,a[0],evidence(b[2],b[3]),
                                   attestation=signature(evidence(b[2],b[3]),()))

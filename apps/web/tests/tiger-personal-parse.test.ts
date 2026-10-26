@@ -74,6 +74,24 @@ test("malformed fee/fill observations cannot poison the user's valid portfolio",
   assert.equal(parsed.value?.accounts[0].fillObservations.length,0);
   assert.equal(parsed.value?.accounts[0].partial,true);
 });
+test("legacy order with absent fee currency is still displayed without guessing the currency",()=>{
+  const input=payload();
+  const {feeCurrency:ignored,...legacy}=observedOrder;
+  const doc={...input,accounts:[{...input.accounts[0],orders:[legacy]}]};
+  const result=parsePersonalRead(doc);
+  assert.equal(result.value?.accounts[0].orders.length,1);
+  assert.equal(result.value?.accounts[0].orders[0].feeCurrency,null);
+  assert.equal(result.value?.accounts[0].partial,true);
+  assert.deepEqual(result.warnings,["ORDERS_LEGACY_FEE_CURRENCY"]);
+});
+test("invalid fee currency still rejects the damaged order",()=>{
+  const input=payload();
+  const doc={...input,accounts:[{...input.accounts[0],orders:[{...observedOrder,feeCurrency:"INVALID"}]}]};
+  const result=parsePersonalRead(doc);
+  assert.equal(result.value?.accounts[0].orders.length,0);
+  assert.deepEqual(result.warnings,["ORDERS_INVALID"]);
+});
+
 test("wrong provenance or account structure cannot enter the private UI",()=>{
   const input=payload();
   assert.equal(parsePersonalRead({...input,verified:true}).value,null);

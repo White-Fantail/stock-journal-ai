@@ -12,7 +12,7 @@ export type MonthlyProcessReport=Readonly<{
   userTradeRecordCount:number;voidCount:number;
   uniqueSymbols:number;symbols:readonly SymbolActivity[];
   plannedSymbols:number;completeStrategySymbols:number;
-  dueAsOfMonthEnd:number;checkedAsOf:string;
+  dueAsOfCutoff:number;checkedAsOf:string;
   source:"USER_AUTHORED_PROCESS_ONLY";
 }>;
 const MONTH=/^(20[2-9][0-9])-(0[1-9]|1[0-2])$/;
@@ -110,7 +110,7 @@ export function buildMonthlyProcessReport(
    symbols:[...symbols.values()].sort((a,b)=>b.notes+b.plans+b.manualRecords-
      (a.notes+a.plans+a.manualRecords)||a.ticker.localeCompare(b.ticker)).slice(0,30),
    plannedSymbols:latest.size,completeStrategySymbols:complete.length,
-   dueAsOfMonthEnd:due.filter(t=>t.state==="DUE").length,
+   dueAsOfCutoff:due.filter(t=>t.state==="DUE").length,
    checkedAsOf:new Date(ended-1).toISOString(),
    source:"USER_AUTHORED_PROCESS_ONLY"};
 }

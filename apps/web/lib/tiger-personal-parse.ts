@@ -127,15 +127,10 @@ export function parsePersonalRead(raw:unknown):PersonalReadParseResult {
     });
     if(typeof a.fillProbeTruncated!=="boolean") warnings.add("PAGINATION_INVALID");
   }
+  const safeAccounts=warnings.size?accounts.map(a=>({...a,partial:true})):accounts;
   const output:TigerPersonalRead={
-    coverage:"SNAPSHOT_ONLY",verified:false,accounts,
+    coverage:"SNAPSHOT_ONLY",verified:false,accounts:safeAccounts,
     ...(warnings.size ? {readWarnings:[...warnings].sort()} : {}),
   };
-  if(warnings.size){
-    output.accounts.forEach(a=>{
-      // Records were dropped. Never claim that the resulting subset is complete.
-      a.partial=true;
-    });
-  }
   return {value:output,warnings:[...warnings].sort()};
 }

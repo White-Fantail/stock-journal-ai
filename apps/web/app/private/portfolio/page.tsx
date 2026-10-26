@@ -6,6 +6,9 @@ import { currentWorkspace } from "../../../lib/require-workspace";
 import { tigerPersonalRead } from "../../../lib/tiger-api";
 import { PersonalPortfolioBlock } from "../tiger/personal-preview";
 import {assessConcentration} from "../../../lib/portfolio-risk";
+import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
+import {fetchJournalPlans,type JournalPlan} from "../../../lib/saas-trades-api";
+import {auth} from "../../../auth";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
 
@@ -144,7 +147,7 @@ function AccountReadiness({account,connection,job,review}:{
 }
 
 /** Explicitly scoped to each account: do not combine different currencies or as-of dates. */
-function PortfolioConcentration({data}:{data:TigerPersonalRead}){
+function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:readonly JournalPlan[]|null}){
   return <section className="user-panel" aria-label="보유 종목 집중도">
     <div className="user-panel-head">
       <h2>보유 종목 집중도</h2>
@@ -155,6 +158,7 @@ function PortfolioConcentration({data}:{data:TigerPersonalRead}){
     {data.readWarnings?.length?<p role="status">조회된 정보에 오류가 있어 집중도 계산을 보류합니다.</p>:
       data.accounts.map((account,index)=>{
         const result=assessConcentration(account);
+        const policy=data.readWarnings?.length?null:assessAccountPolicyReference(account,plans);
         return <div key={account.alias+":"+index} className="account-summary-item">
           <div className="account-summary-head"><strong>{account.alias}</strong>
             <small>{timeLabel(account.asOf)} 기준</small></div>
@@ -173,14 +177,41 @@ function PortfolioConcentration({data}:{data:TigerPersonalRead}){
             <p className="user-footnote">위 비중의 분모는 확인된 보유 주식의 평가액 합계입니다. 현금이나 순자산 대비 비중은 아닙니다.
               집중도가 높다고 반드시 매도해야 하는 것은 아니며, 개인의 위험 한도에 비춰 검토해야 합니다.</p>
           </>}
+          <div className="user-panel-head" style={{marginTop:18}}>
+            <h3>내 최대 비중 계획과 비교</h3>
+            <Link href="/private/journal">계획 관리 →</Link>
+          </div>
+          {policy===null?<p className="user-footnote">Tiger 조회 오류가 있어 계좌 순자산 기준 비교를 보류합니다.</p>:
+            policy.state==="UNAVAILABLE"?<p className="user-footnote">{policy.reason}</p>:<>
+              <p className="user-footnote">Tiger 동일 계좌 순자산({policy.accountCurrency}) 대비 참고 비중입니다.
+                계획의 최대 보유 비중은 전체 투자 포트폴리오 기준일 수 있어, 아래 비교만으로 한도 위반이나 매매 필요성을 판정하지 않습니다.</p>
+              <div className="user-list">
+                {policy.positions.map(p=><div className="user-list-row" key={p.ticker}>
+                  <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.ticker)}>{p.ticker}</Link></strong>
+                    <small>계좌 순자산 대비 {p.observedAccountPct}%</small></div>
+                  <div className="user-list-value">
+                    <strong>{p.personalPortfolioLimitPct===null?"최대 비중 미설정":"계획 "+p.personalPortfolioLimitPct+"%"}</strong>
+                    <small>{p.exceedsAccountReference===null?"계획 비교 보류":
+                      p.exceedsAccountReference?"계좌 기준 참고 비중이 계획 수치보다 높음":"계좌 기준 참고 비중이 계획 수치 이하"}</small>
+                  </div>
+                </div>)}
+              </div>
+              <p className="user-footnote">이 값은 {timeLabel(policy.asOf)}의 계좌 자산 스냅샷에만 해당합니다.
+                다른 계좌·통화·외부 자산이나 검증되지 않은 환율을 합산하지 않았습니다. 전체 포트폴리오 정책 준수 여부는 미확인입니다.</p>
+            </>}
         </div>;
       })}
   </section>;
 }
 
 export default async function PortfolioPage() {
-  if(!await currentWorkspace()) redirect("/login");
-  const personal=await tigerPersonalRead();
+  const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
+  if(!workspace||!session?.user?.id) redirect("/login");
+  const [accountResult,planResult]=await Promise.allSettled([
+    tigerPersonalRead(),fetchJournalPlans(session.user.id),
+  ]);
+  const personal=accountResult.status==="fulfilled"?accountResult.value:null;
+  const plans=planResult.status==="fulfilled"?planResult.value:null;
   if(personal && personal.accounts.length>0) return <main className="portfolio-data">
     <div className="page-intro home-data-heading">
       <div><h1>포트폴리오</h1><p>보유 종목과 계좌별 평가 정보를 확인하세요.</p></div>
@@ -190,7 +221,7 @@ export default async function PortfolioPage() {
         <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
       </div>
     </div>
-    <PortfolioConcentration data={personal}/>
+    <PortfolioConcentration data={personal} plans={plans}/>
     <PersonalPortfolioBlock data={personal}/>
   </main>;
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);

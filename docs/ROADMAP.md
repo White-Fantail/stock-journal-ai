@@ -98,3 +98,10 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Keep current market value, unrealized P/L and total return explicitly **미확인** until a separately scoped, verified market-data/FX calculation exists. Neither a Tiger snapshot nor a manual trade assertion can be used as a live price.
 - [x] Include actual Next.js production build in synthetic-only GitHub Actions CI in addition to TypeScript, security contracts, and disposable PostgreSQL 18 A/B checks.
 - [ ] Test future production Tiger OAuth/API with officially approved **read-only** grants and independent source attestation before activating financial views.
+
+### Step 1 · Tiger personal execution and fee source probe (2026-10-26)
+- [x] Add owner-only bounded read-only `get_transactions` observations for up to six recent STOCK orders over the last 30 days; require SDK cursor pages, broker order/account identity, exact fractional scale, and summed filled quantity comparison. The query is **Prime/Paper-dependent**; unavailable/unsupported replies remain UNAVAILABLE, never inferred from `get_orders`.
+- [x] Store transaction samples independently from order observations as encrypted `PERSONAL_TRANSACTION_OBSERVATION` under existing RLS with an owner-only HMAC bridge. New samples are always `PARTIAL`, cannot enter reconciled P4 ledgers, and do not certify any wider historical range.
+- [x] Distinguish order commission and its potentially missing commission currency from individual fill fees. A fill has no certified fee allocation or certified timezone.
+- [ ] Deploy the worker/API through the approved main-only release, inspect safe status counters on the actual Tiger account, and verify Prime eligibility, cursor support and fee field availability; this source-only change **has not exercised a live credential**.
+- [ ] Extend covered-range executions, provider-verified fees, funding/corporate actions and audit before step 2 FIFO portfolio publication.

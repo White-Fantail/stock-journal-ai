@@ -148,7 +148,20 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         금액 또는 증거 불일치 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
         조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
       <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. 수수료 금액·통화 모두 확인된 경우만 별도로 구분해.</p>
-      {data.accounts.some(a=>a.feeObservations.length>0) && <div className="responsive-table">
+      {data.accounts.some(a=>a.feeObservations.length>0) && <>
+        <div className="mobile-data-cards" aria-label="주문 수수료 검증 목록">
+          {data.accounts.flatMap(a=>a.feeObservations).map(f=><article className="mobile-data-card" key={f.sourceRef}>
+            <div className="mobile-data-card-head"><strong>{f.symbol}</strong>
+              <small>{f.status==="MATCHED"?"금액·통화 확인":"통화 미확인"}</small></div>
+            <dl className="mobile-data-card-fields">
+              <div><dt>주문 수수료 합계</dt><dd>{viewNumber(f.total)} {f.currency??"통화 미확인"}</dd></div>
+            </dl>
+            <details className="data-disclosure"><summary>수수료 구성 보기</summary>
+              <p>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</p>
+            </details>
+          </article>)}
+        </div>
+        <div className="responsive-table desktop-data-table">
         <table style={{width:"100%"}}>
           <thead><tr><th>주문 종목</th><th>수수료 합계</th><th>검증 수준</th><th>수수료 구성</th></tr></thead>
           <tbody>{data.accounts.flatMap(a=>a.feeObservations).map(f=><tr key={f.sourceRef}>
@@ -158,10 +171,23 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</td>
           </tr>)}</tbody>
         </table>
-      </div>}
+      </div></>}
       {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
       {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
-        <div className="responsive-table"><table>
+        <><div className="mobile-data-cards" aria-label="개별 체결 관측 모바일 목록">
+          {data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><article className="mobile-data-card" key={f.sourceRef}>
+            <div className="mobile-data-card-head"><strong><Link href={"/private/journal?ticker="+encodeURIComponent(f.symbol)}>{f.symbol}</Link></strong>
+              <small>{f.side==="BUY"?"매수":"매도"}</small></div>
+            <div className="mobile-data-card-meta">원본 체결 시각 {f.timeRaw??"미확인"} · 시간대 미검증</div>
+            <dl className="mobile-data-card-fields">
+              <div><dt>체결 수량</dt><dd>{viewNumber(f.quantity)}주</dd></div>
+              <div><dt>체결 가격</dt><dd>{viewNumber(f.price)} {f.currency}</dd></div>
+            </dl>
+            <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
+              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 복기 작성 →</Link></div>
+          </article>)}
+        </div>
+        <div className="responsive-table desktop-data-table"><table>
           <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th><th>투자 기록</th></tr></thead>
           <tbody>{data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><tr key={f.sourceRef}>
             <td>{f.timeRaw??"미확인"}</td>
@@ -171,7 +197,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
               "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 복기 작성 →</Link></td>
           </tr>)}</tbody>
-        </table></div>}
+        </table></div></>}
     </div>}
     {!compact && <nav className="record-pagination" aria-label="주문 페이지 이동">
       {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}

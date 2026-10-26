@@ -41,3 +41,10 @@ Account review issues are classified by controlled code into COVERAGE, EXECUTION
 
 ### User-authored target/stop plans (migration 016)
 `journal_plans.py` accepts and serializes exact user-authored investment intent, distinct from a brokerage order. The signed `/internal/v1/journal/plans` and `/internal/v1/journal/plan/create` routes share the dedicated `saas_trade_app` role and fresh membership checks. Revisions are append-only; absent prices mean unset, not zero, and all revisions plus note/trade records are included in the bounded complete journal export and account deletion. The responsive `/private/journal` UI is implemented in `dev`; no live Tiger data, current quote or AI output is claimed. The journal is not behind a runtime feature flag; real Google account A/B isolation, production role verification and recoverable backup/restore remain release readiness checks before wider onboarding.
+
+
+### P4 append-only broker-ledger publication foundation (migration 017; OFF by default)
+
+An internal-only `ledger_publication.release_verified_review` operation can seal a tenant's *latest* independently STAGED review into immutable `saas_broker_ledger_publications` and source links. It rejects missing/multiple encrypted raw source versions, stale reviews, another tenant's account, and unsigned/unapproved requests; it is replay-idempotent and copies **no** user-authored trade events. It requires all of `SAAS_P4_PUBLICATION_ENABLED=1`, verified official third-party Tiger read-only approval flags, and a separately issued HMAC over the exact staged review. `SAAS_P4_PUBLICATION_KEY` must be a distinct private 64-character lowercase hex key; do not reuse the staging or reconciliation key. The API **does not sign**, route or auto-execute a release.
+
+The foundation is inert until independent evidence issuance, actual Tiger history/fee/cash/FX/corporate-action mappings and real operational/RLS acceptance exist. A publication record is not a permission to display holdings: future private read models must refuse every release superseded by a latest BLOCKED/incomplete review. No user-visible broker data, AI or order placement is enabled.

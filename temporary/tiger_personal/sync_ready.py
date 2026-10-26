@@ -17,6 +17,12 @@ from uuid import uuid4
 from decimal import Decimal, InvalidOperation
 from temporary.tiger_personal.runner import configuration
 
+class PilotStepError(Exception):
+    """Safe operational diagnostic with no provider response or credentials."""
+    def __init__(self, step):
+        self.step = step
+        super().__init__(step)
+
 _PATH="/internal/v1/tiger/personal-import"
 
 def amount(obj):
@@ -107,43 +113,57 @@ def submit(subject,account,asset,positions,env):
 
 def run(env=None):
     env=os.environ if env is None else env
-    tiger_id,account,key=configuration(env)
-    # Validate destination and transport secret before loading the trading-capable key.
-    _endpoint(env)
-    if len(env.get("POSITIONARY_PERSONAL_BRIDGE_SECRET",""))<32:
-        raise ValueError("BRIDGE_DISABLED")
-    if not re.fullmatch(r"[0-9]{3,255}",env.get("POSITIONARY_PERSONAL_GOOGLE_SUBJECT","")):
-        raise ValueError("OWNER_ID_MISSING")
-    from tigeropen.tiger_open_config import TigerOpenClientConfig
-    from tigeropen.trade.trade_client import TradeClient
-    cfg=TigerOpenClientConfig()
-    cfg.tiger_id=tiger_id
-    cfg.account=account
-    cfg.private_key=key
-    cfg.license=env.get("POSITIONARY_PERSONAL_LICENSE","TBNZ")
-    cfg.timeout=10
-    cfg.retry_max_tries=1
-    client=TradeClient(cfg)
-    asset_reader = client.get_assets if account.startswith("U") else client.get_prime_assets
-    assets = asset_reader(account=account)
-    positions = client.get_positions(account=account)
-    observed_assets=assets if isinstance(assets,(list,tuple)) else [assets]
-    if len(observed_assets)!=1:
-        raise ValueError("INVALID_ACCOUNT_ASSETS")
-    for record in list(observed_assets)+list(positions):
-        observed_account = getattr(record, "account", None)
-        if observed_account is not None and str(observed_account) != account:
-            raise ValueError("BROKER_ACCOUNT_MISMATCH")
-    asset,rows=normalize(assets, positions)
-    return submit(env["POSITIONARY_PERSONAL_GOOGLE_SUBJECT"],account,asset,rows,env)
+    step="CONFIG"
+    try:
+        tiger_id,account,key=configuration(env)
+        _endpoint(env)
+        if len(env.get("POSITIONARY_PERSONAL_BRIDGE_SECRET",""))<32:
+            raise ValueError("BRIDGE_DISABLED")
+        if not re.fullmatch(r"[0-9]{3,255}",env.get("POSITIONARY_PERSONAL_GOOGLE_SUBJECT","")):
+            raise ValueError("OWNER_ID_MISSING")
+        step="SDK"
+        from tigeropen.tiger_open_config import TigerOpenClientConfig
+        from tigeropen.trade.trade_client import TradeClient
+        cfg=TigerOpenClientConfig()
+        cfg.tiger_id=tiger_id
+        cfg.account=account
+        cfg.private_key=key
+        cfg.license=env.get("POSITIONARY_PERSONAL_LICENSE","TBKIWI")
+        cfg.timeout=10
+        cfg.retry_max_tries=1
+        client=TradeClient(cfg)
+        step="ASSETS"
+        # The account field in the Tiger developer export is authoritative.
+        asset_reader=client.get_assets if account.startswith("U") else client.get_prime_assets
+        assets=asset_reader(account=account)
+        observed_assets=assets if isinstance(assets,(list,tuple)) else [assets]
+        if len(observed_assets)!=1:
+            raise ValueError("INVALID_ACCOUNT_ASSETS")
+        step="POSITIONS"
+        positions=client.get_positions(account=account)
+        if not isinstance(positions,(list,tuple)):
+            raise ValueError("INVALID_POSITION_RESPONSE")
+        step="NORMALIZE"
+        for record in list(observed_assets)+list(positions):
+            observed_account=getattr(record,"account",None)
+            if observed_account is not None and str(observed_account)!=account:
+                raise ValueError("BROKER_ACCOUNT_MISMATCH")
+        asset,rows=normalize(assets,positions)
+        step="UPLOAD"
+        return submit(env["POSITIONARY_PERSONAL_GOOGLE_SUBJECT"],account,asset,rows,env)
+    except Exception:
+        # Never print provider exception details; upstream SDK may embed secrets.
+        raise PilotStepError(step) from None
 
 def main():
     try:
         count=run()
         print("PILOT_SNAPSHOT_STAGED count="+str(count))
+    except PilotStepError as failure:
+        print("PILOT_SYNC_FAILED step="+failure.step)
+        sys.exit(1)
     except Exception:
-        # Third-party SDK exception messages are never exposed (may contain PII).
-        print("PILOT_SYNC_UNAVAILABLE")
+        print("PILOT_SYNC_FAILED step=UNKNOWN")
         sys.exit(1)
 
 if __name__=="__main__":

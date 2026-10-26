@@ -24,7 +24,12 @@ def configuration(env):
         private_key = base64.b64decode(encoded_key, validate=True).decode("ascii")
     except Exception as exc:
         raise ValueError("PILOT_INVALID_KEY") from exc
-    if not private_key.startswith("-----BEGIN") or "PRIVATE KEY-----" not in private_key:
+    # Tiger config exports DER/base64 PKCS#1 or PKCS#8 without PEM headers.
+    # Accept either this canonical format or a PEM wrapping, but never URLs/paths.
+    if private_key.startswith("-----BEGIN"):
+        if "PRIVATE KEY-----" not in private_key or "-----END" not in private_key:
+            raise ValueError("PILOT_INVALID_KEY")
+    elif not re.fullmatch(r"[A-Za-z0-9+/=]{256,8192}", private_key):
         raise ValueError("PILOT_INVALID_KEY")
     return tiger_id, account, private_key
 
@@ -48,7 +53,7 @@ def run(env=None, factory=None):
         cfg.tiger_id = tiger_id
         cfg.account = account
         cfg.private_key = private_key
-        cfg.license = env.get("POSITIONARY_PERSONAL_LICENSE", "TBKIWI")
+        cfg.license = env.get("POSITIONARY_PERSONAL_LICENSE", "TBNZ")
         cfg.timeout = 10
         cfg.retry_max_tries = 1
         client = TradeClient(cfg)

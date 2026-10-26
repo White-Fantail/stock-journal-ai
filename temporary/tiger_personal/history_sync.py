@@ -218,7 +218,11 @@ def main():
         result=sync_probe()
         print("PERSONAL_TRANSACTION_PROBE_STAGED orders="+str(result["ordersProbed"])+
               " matched="+str(result["matchedSamples"])+
-              " unavailable="+str(result["queryUnavailable"]))
+              " unavailable="+str(result["queryUnavailable"])+
+              " fees_matched="+str(result["feeMatched"])+
+              " fees_currency_unknown="+str(result["feeCurrencyUnknown"])+
+              " fees_difference="+str(result["feeDifference"])+
+              " fees_unavailable="+str(result["feeUnavailable"]))
     except Exception:
         # Do not leak Tiger API response text; order sync remains independent.
         print("PERSONAL_TRANSACTION_PROBE_UNAVAILABLE")

@@ -153,10 +153,15 @@ export default async function JournalNewPage({searchParams}:{
   if(mode==="observed" && (!safeTicker || observedPage<0 || !sourceKind ||
     !/^[0-9a-f]{64}$/.test(sourceRef) ||
     (sourceKind==="FILL" && observedPage!==0))) notFound();
-  const observed=mode==="observed"
-    ? accounts.flatMap(a=>sourceKind==="ORDER"?a.orders:a.fillObservations)
+  const observedOrder=mode==="observed" && sourceKind==="ORDER"
+    ? accounts.flatMap(a=>a.orders)
       .find(o=>o.sourceRef===sourceRef && o.symbol===safeTicker)
     : undefined;
+  const observedFill=mode==="observed" && sourceKind==="FILL"
+    ? accounts.flatMap(a=>a.fillObservations)
+      .find(o=>o.sourceRef===sourceRef && o.symbol===safeTicker)
+    : undefined;
+  const observed=observedOrder??observedFill;
   if(mode==="observed" && !observed) notFound();
   const heldSymbols=new Set(accounts.flatMap(a=>a.positions.map(p=>p.symbol)));
   const symbols=new Set<string>([
@@ -198,8 +203,8 @@ export default async function JournalNewPage({searchParams}:{
         <input type="hidden" name="sourceKind" value={sourceKind}/>
         <input type="hidden" name="page" value={observedPage}/>
         <p className="journal-form-hint"><strong>{safeTicker}</strong> · Tiger {sourceKind==="FILL"?"개별 체결 관측":"주문 관측"} ·
-          {"side" in observed && observed.side==="BUY"?" 매수":" 매도"} ·
-          {"quantity" in observed?formatDecimal(observed.quantity):formatDecimal(observed.filled)}주
+          {observed.side==="BUY"?" 매수":" 매도"} ·
+          {observedFill?formatDecimal(observedFill.quantity):formatDecimal(observedOrder?.filled)}주
         </p>
         <p className="journal-form-hint">원본 계좌·종목·체결 식별자는 서버에서 재확인합니다. 이 메모는 사용자 작성 기록이며 증권사 검증 원장은 변경되지 않습니다.</p>
         <label>매매 이유와 투자 계획·복기

@@ -16,7 +16,7 @@ from services.saas_api.reconciliation_store import (
 from services.broker_connectors.backfill import source_key
 from services.saas_api.tiger_oauth import TigerError, _scope
 from services.saas_api.ledger_publication import (
-    PublicationRefused, _candidate, release_verified_review,
+    PublicationRefused, _candidate, _publication_scope, release_verified_review,
 )
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
@@ -122,10 +122,11 @@ with psycopg.connect(dsn) as identity:
 
         # New P4 release is a second, independently signed boundary. The
         # production setting remains OFF: these are disposable synthetic roles.
+        broker.execute("SET ROLE saas_publication_app")
         os.environ["SAAS_P4_PUBLICATION_KEY"]="d"*64
         os.environ["SAAS_P4_PUBLICATION_ENABLED"]="0"
         with broker.transaction():
-            scoped=_scope(identity,broker,a[0])
+            scoped=_publication_scope(identity,broker,a[0])
             proposed=_candidate(broker,scoped,a[3])[-1]
         approval=hmac.new(bytes.fromhex(os.environ["SAAS_P4_PUBLICATION_KEY"]),
             ("positionary:p4:publish:v1:"+proposed).encode(),
@@ -159,6 +160,10 @@ with psycopg.connect(dsn) as identity:
             assert str(exc)=="ACCOUNT_NOT_AUTHORIZED"
         else:
             raise AssertionError("Cross-workspace publication was allowed")
+
+        broker.execute("SET ROLE saas_broker_app")
+        assert broker.execute("""SELECT has_table_privilege(
+            current_user,'saas_broker_ledger_publications','INSERT')""").fetchone()[0] is False
 
         # Tenant RLS, immutable stage and issue history must be real in PG.
         with broker.transaction():
@@ -226,6 +231,7 @@ with psycopg.connect(dsn) as identity:
         assert any(issue["category"]=="INTEGRITY" for issue in latest["issues"])
         # Conflicting origins are not attached as individually trusted links.
         assert latest["sourceEvidenceCount"]==0
+        broker.execute("SET ROLE saas_publication_app")
         try:
             release_verified_review(identity,broker,a[0],a[3],4,
                                     independent_signature=approval)
@@ -233,6 +239,7 @@ with psycopg.connect(dsn) as identity:
             assert str(exc)=="REVIEW_NOT_RELEASEABLE"
         else:
             raise AssertionError("Prior publication remained active after a blocked revision")
+        broker.execute("SET ROLE saas_broker_app")
 
         try:
             record_reconciliation(identity,broker,a[0],evidence(b[2],b[3]),

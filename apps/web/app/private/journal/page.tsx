@@ -61,7 +61,7 @@ async function addBrokerFillNote(form:FormData){
   }catch{
     redirect("/private/journal?error=unavailable");
   }
-  redirect("/private/journal?saved=broker-note");
+  redirect("/private/journal?saved=broker-note&ticker="+encodeURIComponent(ticker));
 }
 
 async function addPlan(form:FormData) {
@@ -89,7 +89,7 @@ async function addPlan(form:FormData) {
 
 export default async function JournalPage({
   searchParams,
-}:{searchParams:Promise<{saved?:string;error?:string}>}) {
+}:{searchParams:Promise<{saved?:string;error?:string;ticker?:string}>}) {
   const [workspace,session,params]=await Promise.all([
     currentWorkspace(),auth(),searchParams,
   ]);
@@ -136,7 +136,7 @@ export default async function JournalPage({
     {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
-    <JournalWorkspace enabled={!unavailable}
+    <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
       entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       brokerNoteAction={addBrokerFillNote}
       brokerNoteKeys={Object.fromEntries((brokerRead?.executions??[]).map(f=>[

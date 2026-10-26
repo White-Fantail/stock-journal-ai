@@ -19,6 +19,9 @@ from services.saas_api.ledger_publication import (
     PublicationRefused, _candidate, _publication_scope, release_verified_review,
 )
 from services.saas_api.ledger_read import private_ledger
+from services.saas_api.journal_broker_links import create_broker_note
+from services.saas_api.journal import list_notes,export_journal
+from services.saas_api.trades import TradeNotFound,TradeConflict
 
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
@@ -223,6 +226,76 @@ with psycopg.connect(dsn) as identity:
         assert not second["executions"] and not second["positions"],second
         assert len(second["accounts"])==1 and second["accounts"][0]["state"]=="NOT_VERIFIED"
 
+        # Write human-authored rationale under an entirely separate trade
+        # runtime principal. No Tiger provider ID or personal real data.
+        with psycopg.connect(dsn,autocommit=True) as trade:
+            trade.execute("SET ROLE saas_trade_app")
+            annotation={"idempotencyKey":str(uuid4()),"ticker":"TEST",
+                        "content":"Synthetic independent fill rationale",
+                        "accountId":str(a[3]),"sourceRef":staged_key}
+            saved=create_broker_note(identity,broker,trade,a[0],annotation)
+            assert saved["source"]=="USER_AUTHORED" and not saved["replayed"],saved
+            again=create_broker_note(identity,broker,trade,a[0],annotation)
+            assert again["id"]==saved["id"] and again["replayed"],again
+            try:
+                create_broker_note(identity,broker,trade,a[0],
+                                   {**annotation,"content":"Replayed with another reason"})
+            except TradeConflict:
+                pass
+            else:
+                raise AssertionError("Conflicting note idempotency key was reused")
+
+            journal=list_notes(identity,trade,a[0])["entries"]
+            target=next(e for e in journal if e["id"]==saved["id"])
+            assert target["kind"]=="TRADE_NOTE"
+            assert target["content"]==annotation["content"]
+            assert target["brokerRef"]=={"accountId":str(a[3]),
+                                         "sourceRef":staged_key,"reviewVersion":4}
+            exported=export_journal(identity,trade,a[0])
+            assert any(e["id"]==saved["id"] and e["brokerRef"]==target["brokerRef"]
+                       for e in exported["journal"])
+
+            for changed in (
+                {**annotation,"idempotencyKey":str(uuid4()),"accountId":str(b[3])},
+                {**annotation,"idempotencyKey":str(uuid4()),"sourceRef":"f"*64},
+                {**annotation,"idempotencyKey":str(uuid4()),"ticker":"OTHER"},
+            ):
+                try:
+                    create_broker_note(identity,broker,trade,a[0],changed)
+                except TradeNotFound:
+                    pass
+                else:
+                    raise AssertionError("Forged or mismatched certified source linked")
+            with trade.transaction():
+                from services.saas_api.trades import _tenant_scope
+                _tenant_scope(trade,{"workspaceId":str(b[2]),"userId":str(b[1])})
+                assert trade.execute(
+                    "SELECT count(*) FROM saas_journal_broker_fill_links").fetchone()[0]==0
+            for command in ("UPDATE saas_journal_broker_fill_links SET ticker='OTHER'",
+                            "DELETE FROM saas_journal_broker_fill_links"):
+                with trade.transaction():
+                    from services.saas_api.trades import _tenant_scope
+                    _tenant_scope(trade,{"workspaceId":str(a[2]),"userId":str(a[1])})
+                    try:
+                        trade.execute(command)
+                    except psycopg.errors.InsufficientPrivilege:
+                        pass
+                    else:
+                        raise AssertionError("Broker note link was mutable")
+
+            # A revocation is never an authorization to erase a human note.
+            os.environ["SAAS_P4_LEDGER_READ_ENABLED"]="0"
+            disabled_notes=list_notes(identity,trade,a[0])["entries"]
+            assert any(e["id"]==saved["id"] and e["brokerRef"] for e in disabled_notes)
+            try:
+                create_broker_note(identity,broker,trade,a[0],
+                    {**annotation,"idempotencyKey":str(uuid4())})
+            except TradeNotFound:
+                pass
+            else:
+                raise AssertionError("Created link with broker read disabled")
+            os.environ["SAAS_P4_LEDGER_READ_ENABLED"]="1"
+
         assert broker.execute("""SELECT has_table_privilege(
             current_user,'saas_broker_ledger_publications','INSERT')""").fetchone()[0] is False
 
@@ -292,6 +365,17 @@ with psycopg.connect(dsn) as identity:
         # Previously valid release is immutable audit only, not readable data.
         blocked_view=private_ledger(identity,broker,a[0])
         assert blocked_view["executions"]==[] and blocked_view["positions"]==[]
+        with psycopg.connect(dsn,autocommit=True) as trade:
+            trade.execute("SET ROLE saas_trade_app")
+            preserved=list_notes(identity,trade,a[0])["entries"]
+            assert any(e["id"]==saved["id"] and e["brokerRef"] for e in preserved)
+            try:
+                create_broker_note(identity,broker,trade,a[0],
+                    {**annotation,"idempotencyKey":str(uuid4())})
+            except TradeNotFound:
+                pass
+            else:
+                raise AssertionError("Created annotation against superseded release")
         assert blocked_view["accounts"][0]["state"]=="NOT_VERIFIED"
         assert any(issue["category"]=="INTEGRITY" for issue in latest["issues"])
         # Conflicting origins are not attached as individually trusted links.

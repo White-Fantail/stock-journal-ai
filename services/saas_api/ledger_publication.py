@@ -155,8 +155,12 @@ def release_verified_review(identity, broker, subject, account_id, version_num, 
         raise PublicationRefused("INVALID_VERSION")
     with broker.transaction():
         wid = _publication_scope(identity, broker, subject)
+        # Coordinate with the review writer without granting the publisher
+        # UPDATE privileges on broker accounts or staging tables.
+        broker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                       (str(wid)+":"+str(account),))
         lock = broker.execute("""SELECT id FROM saas_broker_accounts
-          WHERE workspace_id=%s AND id=%s FOR UPDATE""", (wid, account)).fetchone()
+          WHERE workspace_id=%s AND id=%s""", (wid, account)).fetchone()
         if not lock or not _account_authorized(broker, wid, account):
             raise PublicationRefused("ACCOUNT_NOT_AUTHORIZED")
         vid, number, as_of, fills, positions, digest = _candidate(broker, wid, account)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDecimal } from "../../../lib/format-decimal";
 import type { TigerLedgerRead } from "../../../lib/tiger-api";
 import type {
   JournalEntry, JournalKind, JournalPlan, ManualTradeEvent,
@@ -42,7 +43,7 @@ function displayTime(value:string):string{
 function planPrice(value:string|null,currency:string|null){
   if(value===null) return "미설정";
   const compact=value.replace(/(\.\d*?[1-9])0+$/,"$1").replace(/\.0+$/,"");
-  return `${compact} ${currency??""}`;
+  return `${formatDecimal(compact)} ${currency??""}`;
 }
 function contentPreview(value:string,max=115){
   return value.length>max?value.slice(0,max)+"…":value;
@@ -240,7 +241,7 @@ export function JournalWorkspace({
                 <option value="">연결하지 않고 기록</option>
                 {trades.filter(t=>t.kind==="EXECUTION"&&t.ticker===draftTicker&&
                   !voided.has(t.id)).map(t=>
-                  <option key={t.id} value={t.id}>{t.side==="BUY"?"매수":"매도"} {t.quantity??"?"}주 · {displayTime(t.executedAt??t.createdAt)}</option>)}
+                  <option key={t.id} value={t.id}>{t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity,"?")}주 · {displayTime(t.executedAt??t.createdAt)}</option>)}
               </select>
               <small>최근 직접 입력한 거래만 선택할 수 있습니다. 서버가 종목과 소유권을 다시 확인합니다.</small>
             </label>}
@@ -336,7 +337,7 @@ export function JournalWorkspace({
             {connectedTrades.length===0 ?
               <p className="journal-empty">현재 목록에서 이 종목의 유효한 직접 입력 거래가 확인되지 않았습니다.</p>:
               connectedTrades.map(t=><div className="journal-trade-row" key={t.id}>
-                <div><strong>{t.side==="BUY"?"매수":"매도"} {t.quantity??"?"}주</strong>
+                <div><strong>{t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity,"?")}주</strong>
                   <small>{displayTime(t.executedAt??t.createdAt)} · 사용자 직접 입력</small>
                 </div>
                 <a href={`/private/trades/${t.id}`}>상세 보기 ↗</a>
@@ -351,10 +352,10 @@ export function JournalWorkspace({
               현재 조회한 검증 원장에서 이 종목의 체결이 확인되지 않았습니다. 이것이 거래가 없었다는 뜻은 아닙니다.
             </p> : brokerTrades.map(t=><article className="journal-trade-row" key={t.accountId+":"+t.sourceRef}>
               <div>
-                <strong>{t.side==="BUY"?"매수":"매도"} {t.quantity}주 · {t.price} {t.currency}</strong>
+                <strong>{t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity)}주 · {formatDecimal(t.price)} {t.currency}</strong>
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
-                <small>수수료 {t.fee} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
+                <small>수수료 {formatDecimal(t.fee)} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
                 {entries.filter(e=>e.brokerRef?.accountId===t.accountId &&
                      e.brokerRef?.sourceRef===t.sourceRef &&
                      e.brokerRef?.reviewVersion===t.reviewVersion).map(e=>

@@ -56,10 +56,10 @@ export default async function NewTradePage({searchParams}:{
         <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
         <label>종목 심볼 <input required name="ticker" placeholder="TSLA" maxLength={32}/></label>
         <label>매매 구분 <select required name="side"><option value="BUY">매수</option><option value="SELL">매도</option></select></label>
-        <label>체결 수량 <input required name="quantity" inputMode="decimal" placeholder="1.25" pattern="[0-9]+(\\.[0-9]+)?"/></label>
-        <label>1주 체결가 <input required name="price" inputMode="decimal" placeholder="250.50" pattern="[0-9]+(\\.[0-9]+)?"/></label>
+        <label>체결 수량 <input required name="quantity" inputMode="decimal" placeholder="1.25" pattern="[0-9]+([.][0-9]+)?"/></label>
+        <label>1주 체결가 <input required name="price" inputMode="decimal" placeholder="250.50" pattern="[0-9]+([.][0-9]+)?"/></label>
         <label>통화 <input required name="currency" defaultValue="USD" maxLength={3}/></label>
-        <label>수수료 (모르면 비워두기) <input name="fee" inputMode="decimal" placeholder="미확인" pattern="[0-9]+(\\.[0-9]+)?"/></label>
+        <label>수수료 (모르면 비워두기) <input name="fee" inputMode="decimal" placeholder="미확인" pattern="[0-9]+([.][0-9]+)?"/></label>
         <label>체결 시각과 UTC 오프셋
           <input required name="executedAt" placeholder="2026-10-25T14:30:00-04:00" aria-describedby="timehelp"/>
         </label>

@@ -8,7 +8,7 @@ import {formatDecimal} from "../../../../lib/format-decimal";
 export const dynamic="force-dynamic";
 
 export default async function ManualTradeList({searchParams}:{
-  searchParams:Promise<{recorded?:string;voided?:string}>
+  searchParams:Promise<{recorded?:string;voided?:string;error?:string}>
 }){
   const [session,workspace,query]=await Promise.all([auth(),currentWorkspace(),searchParams]);
   if(!workspace||!session?.user?.id) redirect("/login");
@@ -24,6 +24,7 @@ export default async function ManualTradeList({searchParams}:{
     <p><Link className="btn btn-primary" href="/private/trades/new">+ 거래 추가</Link></p>
     {query.recorded==="1"&&<p role="status">사용자가 확인한 거래가 추가되었습니다.</p>}
     {query.voided==="1"&&<p role="status">원본을 보존하고 취소 기록을 추가했습니다.</p>}
+    {query.error&&<p role="alert">정정 내용을 확인하거나 목록을 확인한 후 다시 시도해 주세요.</p>}
     {unavailable?<p role="alert">직접 입력한 거래 기록을 불러올 수 없습니다. 기존 기록은 변경되지 않았습니다.</p>
     :<section className="state-panel">
       <h2>내가 등록한 체결과 정정 이력</h2>

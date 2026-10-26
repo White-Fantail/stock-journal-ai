@@ -57,6 +57,10 @@
 - [ ] Build independently verified Tiger attestation issuer (provider approval required), expand complete source evidence for cash/FX/corporate-action validation, customer-visible publication gates and source-linked audited correction workflows.
 - **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
 
+### P4 private broker-ledger release foundation (2026-10-26)
+- [x] Implement a **separately signed**, append-only P4 internal review-to-broker-ledger release gate (migration 017). It binds the latest STAGED reconciliation, original encrypted source fingerprints, execution identities, Decimal positions and account to one immutable digest; rejects stale/missing/conflicting raw evidence, cross-tenant access and duplicate release. A new `SAAS_P4_PUBLICATION_ENABLED` switch defaults **off**, with an independent `SAAS_P4_PUBLICATION_KEY`; there is no signing issuer, HTTP publishing endpoint, real Tiger attestation, customer-visible broker ledger or holdings release yet.
+- [ ] Validate this gate with actual official Tiger read-only coverage proofs, fully mapped historical fills/orders/fees/cash/corporate actions and independent signer separation; only then surface tenant-scoped read-only broker ledger and linked investment journal. The current staged input does **not** confer user-visible verified balances.
+
 ## P5 — AI analysis and notifications (**planned**)
 - [ ] Opt-in consent, token/prompt minimization, ZDR/provider terms verification, per-workspace quotas and observability.
 - [ ] Trade critiques, thesis/strategy checks, post-trade reviews and optional scheduled insights with citations and source timestamps.

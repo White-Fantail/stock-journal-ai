@@ -1,7 +1,8 @@
 "use client";
 
 import {useActionState,useState} from "react";
-import {runAiAnalysis,initialAiState} from "./actions";
+import {runAiAnalysis,type AiState} from "./actions";
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null};
 
 export function AnalysisPanel({available,symbols}:{
   available:boolean;symbols:readonly string[];

@@ -67,7 +67,6 @@ test("a selected stock displays actionable target and stop controls",()=>{
   assert.ok(create.includes('name="reviewCadence"'));
   assert.ok(create.includes('name="investmentHorizon"'));
   assert.ok(ui.includes("e.value.invalidationCondition"));
-  assert.ok(!ui.includes('<form'));
   assert.ok(!ui.includes("<form"));
 });
 

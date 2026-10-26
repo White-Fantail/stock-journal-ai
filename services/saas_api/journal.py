@@ -47,9 +47,14 @@ def normalize_note(raw: Any) -> dict:
 
 
 def _entry(row) -> dict:
+    broker_ref=(None if len(row)<9 or row[6] is None else {
+        "accountId":str(row[6]),"sourceRef":str(row[7]),
+        "reviewVersion":int(row[8]),
+    })
     return {"id": str(row[0]), "kind": row[1], "ticker": row[2],
             "content": row[3], "tradeEventId": str(row[4]) if row[4] else None,
-            "createdAt": row[5].isoformat(), "provenance": "USER_AUTHORED"}
+            "createdAt": row[5].isoformat(), "provenance": "USER_AUTHORED",
+            "brokerRef":broker_ref}
 
 
 def list_notes(identity_conn, trade_conn, subject: str) -> dict:
@@ -58,8 +63,14 @@ def list_notes(identity_conn, trade_conn, subject: str) -> dict:
         _runtime_safety(trade_conn)
         _tenant_scope(trade_conn, scope)
         rows = trade_conn.execute("""
-            SELECT id,entry_kind,ticker,text_content,trade_event_id,created_at
-            FROM saas_journal_records ORDER BY created_at DESC,id DESC LIMIT 200
+            SELECT j.id,j.entry_kind,j.ticker,j.text_content,j.trade_event_id,j.created_at,
+                   l.account_id,l.source_key_hmac,v.version_num
+            FROM saas_journal_records j
+            LEFT JOIN saas_journal_broker_fill_links l
+              ON l.workspace_id=j.workspace_id AND l.journal_id=j.id
+            LEFT JOIN saas_reconciliation_versions v
+              ON v.workspace_id=l.workspace_id AND v.id=l.review_version_id
+            ORDER BY j.created_at DESC,j.id DESC LIMIT 200
         """).fetchall()
     return {"entries": [_entry(row) for row in rows], "limit": 200, "source": "USER_AUTHORED_ONLY"}
 
@@ -111,8 +122,14 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             (_LIMIT + 1,)
         ).fetchall()
         notes = trade_conn.execute("""
-            SELECT id,entry_kind,ticker,text_content,trade_event_id,created_at
-            FROM saas_journal_records ORDER BY created_at,id LIMIT %s
+            SELECT j.id,j.entry_kind,j.ticker,j.text_content,j.trade_event_id,j.created_at,
+                   l.account_id,l.source_key_hmac,v.version_num
+            FROM saas_journal_records j
+            LEFT JOIN saas_journal_broker_fill_links l
+              ON l.workspace_id=j.workspace_id AND l.journal_id=j.id
+            LEFT JOIN saas_reconciliation_versions v
+              ON v.workspace_id=l.workspace_id AND v.id=l.review_version_id
+            ORDER BY j.created_at,j.id LIMIT %s
         """, (_LIMIT + 1,)).fetchall()
         plans = trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
             price_currency,rationale,created_at FROM saas_journal_plan_revisions

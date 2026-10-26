@@ -142,10 +142,8 @@ class Handler(BaseHTTPRequestHandler):
                     out=delete_account(identity_conn,data.get("subject"),data.get("confirmation"))
                 return self.reply(200,out)
             if path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/"):
-                # Financial operations are fail-closed and MUST use a separate
+                # Financial operations ALWAYS require a separate
                 # non-BYPASSRLS, SELECT/INSERT-only Postgres login role.
-                if os.environ.get("SAAS_S2_ENABLED") != "1":
-                    return self.reply(503,{"error":"FEATURE_NOT_ENABLED"})
                 scoped_dsn = os.environ.get("SAAS_TRADE_DATABASE_URL")
                 if not scoped_dsn or scoped_dsn == dsn:
                     return self.reply(503,{"error":"FINANCIAL_DB_ROLE_NOT_CONFIGURED"})

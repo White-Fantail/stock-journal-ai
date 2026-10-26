@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "../../../../auth";
 import { currentWorkspace } from "../../../../lib/require-workspace";
-import { fetchTradeDetail, manualTradeEnabled } from "../../../../lib/saas-trades-api";
+import { fetchTradeDetail } from "../../../../lib/saas-trades-api";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,6 @@ export default async function TradeDetail({params}:{
   const [session,workspace,{id}] = await Promise.all([auth(),currentWorkspace(),params]);
   if(!workspace || !session?.user?.id) redirect("/login");
   if(!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  if(!manualTradeEnabled()) return <main><p>체결 상세 기능은 운영 검증 후 활성화됩니다.</p></main>;
   let trade;
   try {trade=await fetchTradeDetail(session.user.id,id);}
   catch {notFound();}

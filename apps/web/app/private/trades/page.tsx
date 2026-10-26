@@ -3,14 +3,13 @@ import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { fetchManualTrades, manualTradeEnabled, submitManualTrade } from "../../../lib/saas-trades-api";
+import { fetchManualTrades, submitManualTrade } from "../../../lib/saas-trades-api";
 
 export const dynamic = "force-dynamic";
 
 /** Next Server Action: CSRF/origin protections from Next + fresh membership. */
 async function recordManualExecution(formData: FormData) {
   "use server";
-  if (!manualTradeEnabled()) redirect("/private/trades?error=disabled");
   const [session, workspace] = await Promise.all([auth(), currentWorkspace()]);
   const subject = session?.user?.id;
   if (!workspace || !subject || !/^[0-9]{3,255}$/.test(subject)) redirect("/login");
@@ -44,7 +43,6 @@ async function recordManualExecution(formData: FormData) {
 /** Append a compensating event; originals remain immutable. */
 async function correctManualExecution(formData: FormData) {
   "use server";
-  if (!manualTradeEnabled()) redirect("/private/trades?error=disabled");
   const [session, workspace] = await Promise.all([auth(), currentWorkspace()]);
   const subject = session?.user?.id;
   if (!workspace || !subject || !/^[0-9]{3,255}$/.test(subject)) redirect("/login");
@@ -77,16 +75,13 @@ export default async function ManualTradesPage({
     auth(), currentWorkspace(), searchParams,
   ]);
   if (!workspace || !session?.user?.id) redirect("/login");
-  const active = manualTradeEnabled();
   let events: Awaited<ReturnType<typeof fetchManualTrades>>["events"] = [];
   let unavailable = false;
-  if (active) {
-    try {
-      const response = await fetchManualTrades(session.user.id);
-      events = response.events;
-    } catch {
-      unavailable = true;
-    }
+  try {
+    const response = await fetchManualTrades(session.user.id);
+    events = response.events;
+  } catch {
+    unavailable = true;
   }
   const voidedIds = new Set(events.filter(e => e.kind === "VOID" && e.voidsEventId)
     .map(e => e.voidsEventId));
@@ -95,9 +90,7 @@ export default async function ManualTradesPage({
       <p><Link href="/private">← 대시보드</Link></p>
       <h1>내 거래 기록</h1>
       <p>내가 직접 확인해 입력한 거래는 증권사에서 제공한 거래 사실과 구분됩니다. 모든 기록은 내 계정의 비공개 공간에 속합니다.</p>
-      {!active ? (
-        <p role="status">직접 거래 기록 입력은 현재 준비 중입니다. 사용자별 데이터 보호와 운영 보안 검증이 완료되면 사용할 수 있습니다.</p>
-      ) : unavailable ? (
+      {unavailable ? (
         <p role="alert">거래 원장 서비스를 사용할 수 없습니다. 기존 기록은 변경하지 않았습니다.</p>
       ) : (
         <>

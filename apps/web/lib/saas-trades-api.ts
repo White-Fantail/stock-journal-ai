@@ -45,10 +45,6 @@ export type ManualVoidInput = {
 
 export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 
-export function manualTradeEnabled(): boolean {
-  return process.env.SAAS_S2_ENABLED === "1";
-}
-
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" |
@@ -56,9 +52,9 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
                       subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
-  if (!manualTradeEnabled() || !saasAuthConfigured(env, env.NODE_ENV === "development")
+  if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
-    throw new Error("Manual trade service not enabled");
+    throw new Error("Authenticated financial API not configured");
   }
   const body = JSON.stringify(path === "/internal/v1/trades/create" ? {subject, trade:payload} :
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :

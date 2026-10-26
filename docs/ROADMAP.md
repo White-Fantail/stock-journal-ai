@@ -26,7 +26,7 @@
 - [x] Synthetic two-identity signed HTTP A/B negative tests with real PostgreSQL limited login, revocation, forgery and export access.
 - [x] Rebuild investment-journal frontend into responsive per-symbol workspace with latest thesis and review, typed chronological updates, watchlist changes, selective user-entered trade linkage and target/stop plan revision timeline; no unverified real-world balances shown.
 - [x] Add tenant-scoped, immutable user-authored target/stop plan revisions (migration 016) with full reset semantics, normalized positive Decimal input, idempotency, bounded history, JSON export and account deletion; exercise HTTP and PostgreSQL A/B isolation in CI.
-- [ ] Real Google browser A/B negative suite + production runtime-role audit + verified restore before enabling `SAAS_S2_ENABLED=1` (currently intentionally disabled).
+- [ ] Real Google browser A/B negative suite + production runtime-role audit + verified restore before wider customer onboarding. User-authored journal/trades no longer depend on an environment feature toggle; authentication and restricted RLS DB access always apply.
 - **Exit:** a new Google user can safely keep a private manual journal without a linked broker.
 
 ## P3 — Tiger adapter: first production data source (**high-priority next build**)

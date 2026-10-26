@@ -5,7 +5,7 @@ import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import {
   fetchJournal, fetchJournalPlans, fetchManualTrades,
-  submitJournal, submitJournalPlan, manualTradeEnabled,
+  submitJournal, submitJournalPlan,
   type JournalKind,
 } from "../../../lib/saas-trades-api";
 import { JournalWorkspace } from "./journal-workspace";
@@ -24,7 +24,6 @@ const field=(form:FormData,name:string)=>{
 /** CSRF, membership, provider access and tenant writes are checked server-side. */
 async function addJournal(form:FormData) {
   "use server";
-  if(!manualTradeEnabled()) redirect("/private/journal?error=disabled");
   const [session,workspace]=await Promise.all([auth(),currentWorkspace()]);
   const subject=session?.user?.id;
   if(!workspace||!subject) redirect("/login");
@@ -46,7 +45,6 @@ async function addJournal(form:FormData) {
 
 async function addPlan(form:FormData) {
   "use server";
-  if(!manualTradeEnabled()) redirect("/private/journal?error=disabled");
   const [session,workspace]=await Promise.all([auth(),currentWorkspace()]);
   const subject=session?.user?.id;
   if(!workspace||!subject) redirect("/login");
@@ -75,12 +73,11 @@ export default async function JournalPage({
     currentWorkspace(),auth(),searchParams,
   ]);
   if(!workspace||!session?.user?.id) redirect("/login");
-  const enabled=manualTradeEnabled();
   let entries:Awaited<ReturnType<typeof fetchJournal>>=[];
   let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
   let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
   let unavailable=false;
-  if(enabled){
+  {
     const [notesResult,planResult,tradeResult]=await Promise.allSettled([
       fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
       fetchManualTrades(session.user.id),
@@ -99,22 +96,18 @@ export default async function JournalPage({
       <h1>투자 일지</h1>
       <p>매수·매도의 결과만이 아니라 <strong>그때 왜 그렇게 판단했는지</strong> 남겨보세요. 투자 논리와 계획의 변화를 종목별 시간순으로 확인할 수 있습니다.</p>
     </div>
-    {!enabled && <div className="info-strip" role="status">
-      <span aria-hidden="true">◌</span><div><strong>일지 저장 기능은 운영 검증 중입니다.</strong>
-      <p>종목별 기록 화면을 준비했습니다. 실제 데이터 저장은 사용자 격리·운영 백업 검증 후 활성화됩니다. 가상의 일지나 수익은 표시하지 않습니다.</p></div>
-    </div>}
     {unavailable && <div className="state-panel" role="alert">
       <h2>비공개 투자일지를 불러올 수 없습니다.</h2>
       <p>기존 기록은 변경되지 않았습니다. 서버가 정상인지 확인한 뒤 다시 시도해 주세요.</p>
       <Link href="/private/journal" className="btn btn-outline">다시 확인</Link>
     </div>}
-    {enabled&&!unavailable && params.saved && <p role="status">
+    {!unavailable && params.saved && <p role="status">
       {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
     </p>}
-    {enabled&&!unavailable && params.error && <p role="alert">
+    {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
-    <JournalWorkspace enabled={enabled&&!unavailable}
+    <JournalWorkspace enabled={!unavailable}
       entries={entries} plans={plans} trades={trades}
       noteAction={addJournal} planAction={addPlan}
       noteKey={randomUUID()} planKey={randomUUID()}/>

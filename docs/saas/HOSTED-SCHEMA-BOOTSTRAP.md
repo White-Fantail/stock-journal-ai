@@ -17,7 +17,7 @@ Current versions:
 Never remove or edit migration 004 simply because the CSV product has been discontinued. The version ledger is operational DB history, **not customer CSV-upload functionality**. New reviewed forward migrations (006+) must include same-change manifest approval and CI on disposable PostgreSQL. Never automatically allow destructive/nontransactional SQL without a separate reviewed plan.
 
 ## Dedicated financial DB runtime role
-For the reviewed 007 rollout, Railway API private `SAAS_TRADE_RUNTIME_PASSWORD` must be a randomly generated 64-hex-character secret. The pre-deploy runner configures the login password inside the guarded migration transaction; `SAAS_TRADE_DATABASE_URL` must connect as `saas_trade_app`, not the identity/owner/admin role. Never log or commit these secrets. Real A/B Google-user HTTP negative testing, distinct DB role verification and restore rehearsal precede setting `SAAS_S2_ENABLED=1`.
+For the reviewed 007 rollout, Railway API private `SAAS_TRADE_RUNTIME_PASSWORD` must be a randomly generated 64-hex-character secret. The pre-deploy runner configures the login password inside the guarded migration transaction; `SAAS_TRADE_DATABASE_URL` must connect as `saas_trade_app`, not the identity/owner/admin role. Never log or commit these secrets. Real A/B Google-user HTTP negative testing, distinct DB role verification and restore rehearsal are operational onboarding prerequisites; there is no investment-journal feature toggle.
 
 ## Inspection
 In the Railway **API container**, using the correct `SAAS_DATABASE_URL`:
@@ -30,7 +30,7 @@ For a one-time explicitly verified setup, the operator-only manual command is:
 ```sh
 python -m services.saas_api.schema_admin --apply --approve-schema-change --backup-verified
 ```
-Only after matching the intended DB and verifying recoverable backups. A successful `--deploy` migration does not enable broker sync, manual trades, AI or public customer registration. `SAAS_S2_ENABLED` remains unset until actual non-BYPASSRLS financial runtime roles, authenticated A/B HTTP access tests and restore drill pass.
+Only after matching the intended DB and verifying recoverable backups. A successful `--deploy` migration does not enable broker sync, manual trades, AI or public customer registration. Journal endpoints have no activation switch but remain fail-closed without the non-BYPASSRLS financial runtime role and fresh authenticated membership; perform A/B HTTP access tests and restore drills before general availability.
 
 ## Deployment verification
 - API `/healthz` is reachable and the Google flow provisions distinct private workspaces for two test Google identities.

@@ -53,7 +53,7 @@ def main():
                       NOSUPERUSER NOBYPASSRLS IN ROLE saas_trade_runtime""")
     trade_dsn=dsn.replace("saas_ci:synthetic_only","saas_http_ci:http-ci-password")
     env={**os.environ,"SAAS_DATABASE_URL":dsn,"SAAS_TRADE_DATABASE_URL":trade_dsn,
-         "SAAS_INTERNAL_SECRET":SECRET,"SAAS_S2_ENABLED":"1","PORT":PORT}
+         "SAAS_INTERNAL_SECRET":SECRET,"PORT":PORT}
     p=subprocess.Popen([sys.executable,"-m","services.saas_api.server"],
         env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:

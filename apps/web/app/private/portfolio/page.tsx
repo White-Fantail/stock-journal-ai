@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../lib/require-workspace";
+import { tigerPersonalRead } from "../../../lib/tiger-api";
+import { PersonalPortfolioBlock, PersonalOrderHistory } from "../tiger/personal-preview";
 import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
 
 export const metadata:Metadata={title:"포트폴리오 · Positionary"};
@@ -124,6 +126,13 @@ function AccountReadiness({account,connection,job,review}:{
 
 export default async function PortfolioPage() {
   if(!await currentWorkspace()) redirect("/login");
+  const personal=await tigerPersonalRead();
+  if(personal && personal.accounts.length>0) return <main>
+    <div className="page-intro"><h1>내 포트폴리오</h1>
+      <p>개인 Tiger API에서 수집한 계좌 자산과 보유 종목을 볼 수 있어.</p></div>
+    <PersonalPortfolioBlock data={personal}/>
+    <PersonalOrderHistory data={personal} compact/>
+  </main>;
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
   const historyState:TigerSyncStatus|null=history.status==="fulfilled"?history.value:null;

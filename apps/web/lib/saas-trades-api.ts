@@ -68,7 +68,8 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
   const signature = createHmac("sha256", env.SAAS_INTERNAL_SECRET!)
     .update(`${timestamp}\n${nonce}\nPOST\n${path}\n${body}`).digest("hex");
   const response = await fetch(new URL(path, env.SAAS_INTERNAL_API_URL), {
-    method: "POST", cache: "no-store", signal: AbortSignal.timeout(5000),
+    method: "POST", cache: "no-store",
+    signal: AbortSignal.timeout(path === "/internal/v1/journal/broker-note/create" ? 14000 : 5000),
     headers: { "Content-Type": "application/json",
       "X-Saas-Timestamp": timestamp, "X-Saas-Nonce": nonce, "X-Saas-Signature": signature },
     body,

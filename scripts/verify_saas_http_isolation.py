@@ -124,6 +124,27 @@ def main():
         code,versions=request("/internal/v1/journal/plans",{"subject":A})
         assert code==200 and len(versions["plans"])==2
         assert versions["plans"][0]["targetPrice"]=="280.000000000000"
+        strategy={**plan,"idempotencyKey":str(uuid4()),
+            "targetPrice":None,"stopPrice":None,"priceCurrency":None,
+            "strategyType":"LONG_TERM","investmentHorizon":"OVER_THREE_YEARS",
+            "invalidationCondition":"My fictional thesis is invalidated",
+            "maxAllocationPct":"18.50","reviewCadence":"QUARTERLY",
+            "rationale":"Synthetic long-horizon strategy"}
+        code,strategic=request("/internal/v1/journal/plan/create",
+            {"subject":A,"plan":strategy})
+        assert code==200 and "id" in strategic,(code,strategic)
+        code,replayed=request("/internal/v1/journal/plan/create",
+            {"subject":A,"plan":strategy})
+        assert code==200 and replayed["replayed"],(code,replayed)
+        code,history=request("/internal/v1/journal/plans",{"subject":A})
+        assert code==200 and len(history["plans"])==3,(code,history)
+        assert any(p["strategyType"]=="LONG_TERM" and
+                   p["maxAllocationPct"]=="18.50" for p in history["plans"])
+        code,none=request("/internal/v1/journal/plans",{"subject":B})
+        assert code==200 and none["plans"]==[],(code,none)
+        code,_=request("/internal/v1/journal/plan/create",
+            {"subject":A,"plan":{**strategy,"maxAllocationPct":"150"}})
+        assert code==400,code
         # A signed request is NOT a broker publication certificate. This
         # synthetic HTTP harness has no approved broker login or grant.
         forged_note={"idempotencyKey":str(uuid4()),"ticker":"TSLA",

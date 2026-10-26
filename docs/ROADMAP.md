@@ -105,3 +105,5 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Distinguish order commission and its potentially missing commission currency from individual fill fees. A fill has no certified fee allocation or certified timezone.
 - [ ] Deploy the worker/API through the approved main-only release, inspect safe status counters on the actual Tiger account, and verify Prime eligibility, cursor support and fee field availability; this source-only change **has not exercised a live credential**.
 - [ ] Extend covered-range executions, provider-verified fees, funding/corporate actions and audit before step 2 FIFO portfolio publication.
+
+- [ ] **Deployment wiring:** Railway `positionary-tiger-personal` source is currently pinned to historical main commit `a83424d8`; a normal main push alone will not roll out the new probe. On the expressly approved main release, update the runner's source ref to follow `main` and verify its next single-run execution and safe status counters. Never copy the RSA key into code or logs.

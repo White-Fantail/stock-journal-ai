@@ -55,14 +55,17 @@ export default async function JournalPage({
     </div>}
     {!unavailable && params.saved && <p role="status">
       {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":
-       params.saved==="broker-note"?"검증 체결에 연결한 투자일지 메모를 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
+       params.saved==="broker-note"?"검증 체결에 연결한 투자일지 메모를 저장했습니다.":
+       params.saved==="observed-note"?"Tiger 관측 주문·체결에 연결한 나의 매매 복기를 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
     </p>}
     {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
     <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
       entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
-      personalPositions={personal?.accounts.flatMap(a=>a.positions)??[]}/>
+      personalPositions={personal?.accounts.flatMap(a=>a.positions)??[]}
+      personalOrders={personal?.accounts.flatMap(a=>a.orders)??[]}
+      personalFills={personal?.accounts.flatMap(a=>a.fillObservations)??[]}/>
     <p className="journal-limit">목표·손절은 직접 작성한 투자 계획이며 실제 증권사 주문이 아닙니다. 거래 관측 및 검증 체결은 각각의 출처를 구분하여 표시합니다.</p>
   </main>;
 }

@@ -3,8 +3,9 @@ import {randomUUID} from "node:crypto";
 import {redirect,notFound} from "next/navigation";
 import {auth} from "../../../../auth";
 import {currentWorkspace} from "../../../../lib/require-workspace";
-import {fetchManualTrades,submitJournal,submitJournalPlan,submitBrokerFillNote,type JournalKind} from "../../../../lib/saas-trades-api";
-import {tigerLedgerRead} from "../../../../lib/tiger-api";
+import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJournalPlan,submitBrokerFillNote,type JournalKind} from "../../../../lib/saas-trades-api";
+import {tigerLedgerRead,tigerPersonalRead} from "../../../../lib/tiger-api";
+import {JournalSymbolPicker} from "./symbol-picker";
 import {formatDecimal} from "../../../../lib/format-decimal";
 
 export const dynamic="force-dynamic";
@@ -27,7 +28,7 @@ async function addJournal(form:FormData) {
   if(!workspace||!subject) redirect("/login");
   const kind=field(form,"kind") as JournalKind;
   const ticker=field(form,"ticker").toUpperCase();
-  if(field(form,"confirmation")!=="yes" || !KINDS.has(kind) || !TICKER.test(ticker))
+  if(!KINDS.has(kind) || !TICKER.test(ticker))
     redirect("/private/journal/new?error=invalid");
   try {
     await submitJournal(subject,{
@@ -47,7 +48,7 @@ async function addBrokerFillNote(form:FormData){
   const subject=session?.user?.id;
   if(!workspace||!subject) redirect("/login");
   const ticker=field(form,"ticker").toUpperCase();
-  if(field(form,"confirmation")!=="yes" || !TICKER.test(ticker))
+  if(!TICKER.test(ticker))
     redirect("/private/journal/new?error=invalid");
   try{
     await submitBrokerFillNote(subject,{
@@ -68,7 +69,7 @@ async function addPlan(form:FormData) {
   const subject=session?.user?.id;
   if(!workspace||!subject) redirect("/login");
   const ticker=field(form,"ticker").toUpperCase();
-  if(field(form,"confirmation")!=="yes" || !TICKER.test(ticker))
+  if(!TICKER.test(ticker))
     redirect("/private/journal/new?error=invalid");
   const target=field(form,"targetPrice")||null;
   const stop=field(form,"stopPrice")||null;
@@ -104,11 +105,37 @@ export default async function JournalNewPage({searchParams}:{
     }catch{notFound();}
     if(brokerFills.length===0) notFound();
   }
-  let manual:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
-  if(mode==="note"&&safeTicker){
-    try{manual=(await fetchManualTrades(session.user.id)).events;}catch{ /* No optional association. */ }
-  }
-  const activeManual=manual.filter(e=>e.kind==="EXECUTION"&&e.ticker===safeTicker);
+  // Build ticker choices solely from THIS user's scoped records, never from
+  // public fixtures, hard-coded tickers or another workspace.
+  const results=await Promise.allSettled([
+    fetchManualTrades(session.user.id),
+    fetchJournal(session.user.id),
+    fetchJournalPlans(session.user.id),
+    tigerPersonalRead(),
+  ]);
+  const manual=results[0].status==="fulfilled"?results[0].value.events:[];
+  const entries=results[1].status==="fulfilled"?results[1].value:[];
+  const plans=results[2].status==="fulfilled"?results[2].value:[];
+  const accounts=results[3].status==="fulfilled"?(results[3].value?.accounts??[]):[];
+  const heldSymbols=new Set(accounts.flatMap(a=>a.positions.map(p=>p.symbol)));
+  const symbols=new Set<string>([
+    ...heldSymbols,
+    ...accounts.flatMap(a=>a.orders.map(o=>o.symbol)),
+    ...entries.map(e=>e.ticker),
+    ...plans.map(p=>p.ticker),
+    ...manual.map(e=>e.ticker).filter((v):v is string=>typeof v==="string"),
+    ...brokerFills.map(e=>e.symbol),
+  ]);
+  if(safeTicker) symbols.add(safeTicker);
+  const tickerOptions=[...symbols].filter(s=>TICKER.test(s))
+    .sort((a,b)=>Number(heldSymbols.has(b))-Number(heldSymbols.has(a))||a.localeCompare(b))
+    .slice(0,200);
+  const cancelled=new Set(manual.filter(e=>e.kind==="VOID").map(e=>e.voidsEventId));
+  const eligibleTrades=manual.filter(e=>e.kind==="EXECUTION" &&
+    e.ticker && !cancelled.has(e.id)).map(e=>({
+      id:e.id,ticker:e.ticker!,side:e.side,quantity:e.quantity,
+      executedAt:e.executedAt??e.createdAt,
+    }));
   const back="/private/journal"+(safeTicker?"?ticker="+encodeURIComponent(safeTicker):"");
   return <main className="journal-page">
     <div className="page-intro">
@@ -132,13 +159,12 @@ export default async function JournalNewPage({searchParams}:{
         </label>
         <p className="journal-form-hint">독립 검증된 체결만 선택할 수 있습니다. 직접 입력 거래와 구분됩니다.</p>
         <label>이 체결의 매매 근거와 복기<textarea name="content" rows={7} maxLength={6000} required placeholder="진입·청산 근거, 잘한 점, 다음에 보완할 점"/></label>
-        <label className="journal-confirm"><input type="checkbox" name="confirmation" value="yes" required/> 직접 작성한 판단이며 주문이 아닙니다.</label>
         <button type="submit" className="btn btn-primary journal-save">복기 저장</button>
       </form>
     :mode==="plan"?
       <form action={addPlan} className="journal-compose-form">
         <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
-        <label>종목 심볼<input name="ticker" defaultValue={safeTicker} required maxLength={32} pattern="[A-Za-z0-9.:-]{1,32}" placeholder="TSLA"/></label>
+        <JournalSymbolPicker symbols={tickerOptions} initialTicker={safeTicker} />
         <div className="journal-form-three">
           <label>목표가<input name="targetPrice" inputMode="decimal" pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
           <label>손절가<input name="stopPrice" inputMode="decimal" pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
@@ -146,13 +172,12 @@ export default async function JournalNewPage({searchParams}:{
         </div>
         <p className="journal-form-hint">두 가격을 모두 비우면 기존 계획을 해제하는 이력을 남깁니다.</p>
         <label>계획을 정하거나 변경하는 이유<textarea name="rationale" rows={6} maxLength={3000} required/></label>
-        <label className="journal-confirm"><input type="checkbox" name="confirmation" value="yes" required/> 개인 계획이며 실제 주문이 아닙니다.</label>
         <button type="submit" className="btn btn-primary journal-save">계획 저장</button>
       </form>
     :<form action={addJournal} className="journal-compose-form">
       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
       <div className="journal-form-two">
-        <label>종목 심볼<input name="ticker" defaultValue={safeTicker} required maxLength={32} pattern="[A-Za-z0-9.:-]{1,32}" placeholder="TSLA"/></label>
+        <JournalSymbolPicker symbols={tickerOptions} initialTicker={safeTicker} trades={eligibleTrades} />
         <label>기록 유형<select name="kind" defaultValue="THESIS">
           <option value="THESIS">투자 논리</option>
           <option value="STRATEGY">전략 변경</option>
@@ -163,11 +188,7 @@ export default async function JournalNewPage({searchParams}:{
         </select></label>
       </div>
       <label>내 생각 (관심종목 추가·제외는 선택)<textarea name="content" rows={7} maxLength={6000} placeholder="투자 이유, 확인할 지표, 손절·청산을 재검토할 조건 등"/></label>
-      {activeManual.length>0&&<label>관련 직접 입력 체결 (체결 메모인 경우에만 연결)
-        <select name="tradeEventId" defaultValue=""><option value="">연결하지 않음</option>
-          {activeManual.map(e=><option key={e.id} value={e.id}>{e.side==="BUY"?"매수":"매도"} {formatDecimal(e.quantity)}주 · {e.executedAt??e.createdAt}</option>)}
-        </select></label>}
-      <label className="journal-confirm"><input type="checkbox" name="confirmation" value="yes" required/> 내가 직접 작성한 판단입니다.</label>
+
       <button type="submit" className="btn btn-primary journal-save">기록 저장</button>
     </form>}
     </section>

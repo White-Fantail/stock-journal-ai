@@ -1,6 +1,6 @@
 # Railway SaaS internal API
 
-The Python service provides HMAC-protected internal identity provision/resolve and **feature-gated** tenant financial event endpoints plus per-user authored journal, export and explicit account deletion; Google session/OIDC is owned by Next.js/Auth.js. An approval-gated Tiger enterprise OAuth2 flow and encrypted credential vault are implemented in source; **no live Tiger authorization has been verified or enabled**. No customer CSV import or trading/order execution endpoint exists here.
+The Python service provides HMAC-protected internal identity provision/resolve and authenticated, tenant-scoped financial event endpoints plus per-user authored journal, export and explicit account deletion; Google session/OIDC is owned by Next.js/Auth.js. An approval-gated Tiger enterprise OAuth2 flow and encrypted credential vault are implemented in source; **no live Tiger authorization has been verified or enabled**. No customer CSV import or trading/order execution endpoint exists here.
 
 - `server.py`: internal endpoints, `/healthz`, signed requests.
 - `identity.py`: Google `sub`-based workspace provisioning/membership resolution.

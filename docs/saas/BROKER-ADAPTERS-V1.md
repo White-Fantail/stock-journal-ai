@@ -64,3 +64,16 @@ The source-only `services/broker_connectors/paged_contract.py` and `services/saa
 The hosted `/internal/v1/tiger/sync-status` service route is HMAC-signed by the Next.js server, resolves Google subject membership afresh and executes tenant-scoped queries using the restricted broker login. The user-facing `/private/tiger/sync` page reports only account alias, window/page processing, retry/reauth hints and sanitized issue codes. It does not expose provider payloads, cursors, grant details or performance. The `historyVerified` field remains false independent of window completion.
 
 Tiger's published [Get Order Transactions](https://enterprise-docs.itigerup.com/reference/get-transactions) documentation confirms a GET endpoint, required `accountId`, optional `orderId`, `limit` up to 100, bearer authorization and `X-TIGR-UID` for the documented context. `tiger_history_probe.py` validates only that documented inquiry and a narrow successful response envelope using synthetic fixtures. The source **does not assume** pagination cursors, date-range support, fill field mappings, global history completeness, account-type eligibility or a valid NZ read-only user scope. Production normalization remains disabled pending real formally approved redacted provider evidence.
+
+
+## Tiger financial activity observations (read-only contract, 2026-10-27)
+
+Tiger's official Python SDK documents get_fund_details filters for DEPOSIT_WITHDRAW, FOREX and CORPORATE_ACTION, bounded offset/limit pagination, SEC/FUT segments, and business dates. Related get_funding_history and get_analytics_asset endpoints provide further historical funding/valuation observations. API documentation does not establish the deployed app's permission or prove full history coverage.
+
+The offline-injected services/broker_connectors/tiger_financial_evidence.py contract uses immutable account-bound windows, 20-page / 50-row limits per filter, strict provider page and total record count consistency, numeric/date/currency validation, and account-bound HMAC source identifiers without raw provider IDs. Duplicates, incomplete, ambiguous or unbounded pages fail closed. Observed SDK floating-point amounts remain precision-unverified.
+
+This collector has NO live TradeClient construction, RSA/OAuth access, public route, scheduled job, new database write, quote polling or verified-ledger publication. SHADOW_OBSERVED_ONLY is not proof of account history or correctness. Production connection requires a separately approved worker, verified provider grants, scope/account controls, a reviewed SDK response mapping and independent audit of corporate actions, transfers, cash movements, FX and period NAV.
+
+The preexisting encrypted saas_broker_source_stage reserves CASH and CORPORATE_ACTION source types, but no evidence is written there by this module. Never use these observations to calculate verified personal returns or show trade execution advice.
+
+Official reference: https://quant.itigerup.com/openapi/en/python/operation/trade/accountInfo.html

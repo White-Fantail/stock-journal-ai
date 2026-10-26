@@ -66,12 +66,83 @@ def _transaction(item, account, order):
             "price":price, "timeRaw":original_time}
 
 
+
+def _fee_review(client, account, order):
+    """Observe actual *order-level* itemized charges, never fill-level fees.
+
+    Tiger's documented get_order(show_charges=True) returns Charge category totals
+    and after-discount fee details. No assumptions about charge currency or GST.
+    An unsupported account/SDK is explicitly UNAVAILABLE.
+    """
+    default={"status":"UNAVAILABLE","total":None,"currency":None,"details":[]}
+    try:
+        detail=client.get_order(account=account,id=int(order["id"]),show_charges=True)
+        contract=getattr(detail,"contract",None)
+        observed_currency=getattr(contract,"currency",None)
+        if hasattr(observed_currency,"value"):
+            observed_currency=observed_currency.value
+        action=getattr(detail,"action",None)
+        if hasattr(action,"value"):
+            action=action.value
+        identity=(str(getattr(detail,"id",None))==order["id"] and
+                  str(getattr(detail,"account",None))==account and
+                  str(action).upper()==order["side"] and
+                  getattr(contract,"symbol",None)==order["symbol"] and
+                  observed_currency==order["currency"])
+        if not identity:
+            return {**default,"status":"DIFFERENCE"}
+        currency=getattr(detail,"commission_currency",None)
+        if hasattr(currency,"value"):
+            currency=currency.value
+        if currency is not None and currency not in _CURRENCIES:
+            return {**default,"status":"DIFFERENCE"}
+        charges=getattr(detail,"charges",None)
+        if not isinstance(charges,(tuple,list)) or not charges or len(charges)>8:
+            return default
+        rows=[]
+        total=Decimal(0)
+        for charge in charges:
+            category=getattr(charge,"category",None)
+            sub=getattr(charge,"details",None)
+            raw_total=amount(getattr(charge,"total",None))
+            if (category not in ("TIGER","THIRD_PARTY")
+                    or not isinstance(sub,(list,tuple)) or not sub or len(sub)>12
+                    or raw_total is None):
+                return {**default,"status":"DIFFERENCE"}
+            charge_sum=Decimal(0)
+            detail_rows=[]
+            for component in sub:
+                kind=getattr(component,"type",None)
+                raw_amount=amount(getattr(component,"after_discount_amount",None))
+                if (not isinstance(kind,str) or not re.fullmatch(r"[A-Z_]{2,40}",kind)
+                        or raw_amount is None):
+                    return {**default,"status":"DIFFERENCE"}
+                charge_sum+=Decimal(raw_amount)
+                detail_rows.append({"category":category,"type":kind,"amount":raw_amount})
+            if charge_sum != Decimal(raw_total):
+                return {**default,"status":"DIFFERENCE"}
+            rows.extend(detail_rows)
+            total+=Decimal(raw_total)
+        # The signed order observation is not guaranteed to be the newest
+        # version. Disagreement remains a blocker, not an automatic overwrite.
+        order_total=order["fee"]
+        latest=amount(getattr(detail,"commission",None))
+        if (order_total is None or latest is None or
+                Decimal(order_total)!=total or Decimal(latest)!=total):
+            return {**default,"status":"DIFFERENCE"}
+        return {"status":"MATCHED" if currency is not None else "CURRENCY_UNKNOWN",
+                "total":amount(total),"currency":currency,"details":rows}
+    except Exception:
+        return default
+
+
 def _probe_order(client, account, order):
     observation = {"orderId":order["id"], "symbol":order["symbol"],
                    "currency":order["currency"], "side":order["side"],
                    "orderCommission":order["fee"],
                    "commissionCurrency":order.get("feeCurrency"),
-                   "status":"UNAVAILABLE", "fills":[]}
+                   "status":"UNAVAILABLE", "fills":[],
+                   "feeReview":_fee_review(client,account,order)}
     try:
         pages, seen, token, rows = 0, set(), "", {}
         while pages < 3:

@@ -171,20 +171,20 @@ def release_verified_review(identity, broker, subject, account_id, version_num, 
         if not _approved(digest, independent_signature):
             raise PublicationRefused("INDEPENDENT_PUBLICATION_REQUIRED")
 
-        existing = broker.execute("""SELECT id,publication_digest
+        existing = broker.execute("""SELECT id,publication_digest,publication_signature
           FROM saas_broker_ledger_publications
           WHERE workspace_id=%s AND account_id=%s AND review_version_id=%s""",
           (wid, account, vid)).fetchone()
         if existing:
-            if str(existing[1]) != digest:
+            if str(existing[1]) != digest or str(existing[2]) != independent_signature:
                 raise PublicationRefused("PUBLICATION_CONFLICT")
             return {"state": "RELEASED", "version": number,
                     "sourceCount": len(fills), "replayed": True}
         release_id = broker.execute("""INSERT INTO saas_broker_ledger_publications
           (workspace_id,account_id,review_version_id,publication_digest,
-           review_version_num,as_of_utc,source_count)
-          VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
-          (wid, account, vid, digest, number, as_of, len(fills))).fetchone()[0]
+           publication_signature,review_version_num,as_of_utc,source_count)
+          VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+          (wid, account, vid, digest, independent_signature, number, as_of, len(fills))).fetchone()[0]
         for key, stage, sha, *_ in fills:
             broker.execute("""INSERT INTO saas_broker_ledger_sources
               (workspace_id,publication_id,account_id,review_version_id,

@@ -90,3 +90,11 @@ Priority order: **P0 public data cleanup → P1 secure tenant foundations → P2
 
 ## Future execution track — gated independently from P3–P6
 A later optional Tiger order flow needs **separate customer trading authorization and Tiger provider/regulatory clearance**, a disjoint trade-capable credential vault/service/DB principal, explicit human preview and confirmation, broker-native idempotency/order reconciliation, audit, rate limits and a stop switch. Existing read-only grants cannot be upgraded implicitly. No order placement/cancel route or trade-capable token is present in P3.
+
+
+### Verified historical portfolio projection (2026-10-26)
+- [x] Verified Tiger release read model is wired into the account-scoped private portfolio UI. Only independently signed, **currently** approved and connected account releases reveal native-currency FIFO remaining cost basis and realized P/L for each ticker; missing or blocked accounts keep **미확인**.
+- [x] Display reference date/version, per-account proof boundary, truncation warning, direct link to the ticker journal and no cross-currency aggregation.
+- [x] Keep current market value, unrealized P/L and total return explicitly **미확인** until a separately scoped, verified market-data/FX calculation exists. Neither a Tiger snapshot nor a manual trade assertion can be used as a live price.
+- [x] Include actual Next.js production build in synthetic-only GitHub Actions CI in addition to TypeScript, security contracts, and disposable PostgreSQL 18 A/B checks.
+- [ ] Test future production Tiger OAuth/API with officially approved **read-only** grants and independent source attestation before activating financial views.

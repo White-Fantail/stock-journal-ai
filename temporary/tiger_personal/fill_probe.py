@@ -55,7 +55,7 @@ def _payload(value):
                 or p["commissionCurrency"] not in _CURRENCIES):
             raise PilotError("INVALID_PROBE")
         fee_review=p.get("feeReview")
-        if fee_review is not None:
+        if "feeReview" in p:
             if (not isinstance(fee_review,dict)
                     or set(fee_review)!={"status","total","currency","details"}
                     or fee_review["status"] not in
@@ -174,10 +174,10 @@ def load_probes(broker,wid,aid):
     # or individual commission allocations.
     return {"feeObservations":fee_observations[:30],
             "fillObservations":fills[:60], "fillProbeCount":len(orders),
-            "feeProbeMatched":sum(p.get("feeReview",{}).get("status")=="MATCHED" for p in orders.values()),
-            "feeProbeCurrencyUnknown":sum(p.get("feeReview",{}).get("status")=="CURRENCY_UNKNOWN" for p in orders.values()),
-            "feeProbeDifference":sum(p.get("feeReview",{}).get("status")=="DIFFERENCE" for p in orders.values()),
-            "feeProbeUnavailable":sum(p.get("feeReview",{}).get("status") in (None,"UNAVAILABLE") for p in orders.values()),
+            "feeProbeMatched":sum((p.get("feeReview") or {}).get("status")=="MATCHED" for p in orders.values()),
+            "feeProbeCurrencyUnknown":sum((p.get("feeReview") or {}).get("status")=="CURRENCY_UNKNOWN" for p in orders.values()),
+            "feeProbeDifference":sum((p.get("feeReview") or {}).get("status")=="DIFFERENCE" for p in orders.values()),
+            "feeProbeUnavailable":sum((p.get("feeReview") or {}).get("status") in (None,"UNAVAILABLE") for p in orders.values()),
             "fillProbeUnavailable":sum(p["status"]=="UNAVAILABLE" for p in orders.values()),
             "fillProbeDifference":sum(p["status"]=="DIFFERENCE" for p in orders.values()),
             "fillProbePartial":sum(p["status"]=="PARTIAL" for p in orders.values()),

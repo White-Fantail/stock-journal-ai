@@ -248,5 +248,9 @@ def sync_probe(env=None, client_factory=None):
     return {"ordersProbed":len(observations),
             "matchedSamples":sum(o["status"]=="OBSERVED" for o in observations),
             "queryUnavailable":sum(o["status"]=="UNAVAILABLE" for o in observations),
+            "feeMatched":sum(o["feeReview"]["status"]=="MATCHED" for o in observations),
+            "feeCurrencyUnknown":sum(o["feeReview"]["status"]=="CURRENCY_UNKNOWN" for o in observations),
+            "feeDifference":sum(o["feeReview"]["status"]=="DIFFERENCE" for o in observations),
+            "feeUnavailable":sum(o["feeReview"]["status"]=="UNAVAILABLE" for o in observations),
             "windowComplete":coverage}
 

@@ -23,6 +23,7 @@ type Props={
   plans:readonly JournalPlan[];
   trades:readonly ManualTradeEvent[];
   brokerRead:TigerLedgerRead|null;
+  initialTicker?:string;
   brokerNoteAction:(data:FormData)=>Promise<void>;
   brokerNoteKeys:Readonly<Record<string,string>>;
   noteAction:(data:FormData)=>Promise<void>;
@@ -51,7 +52,7 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 }
 
 export function JournalWorkspace({
-  enabled,entries,plans,trades,brokerRead,brokerNoteAction,brokerNoteKeys,
+  enabled,entries,plans,trades,brokerRead,initialTicker,brokerNoteAction,brokerNoteKeys,
   noteAction,planAction,noteKey,planKey,
 }:Props){
   const symbols=useMemo(()=>{
@@ -67,8 +68,8 @@ export function JournalWorkspace({
     }
     return [...names].sort();
   },[entries,plans,trades,brokerRead]);
-  const [selected,setSelected]=useState(symbols[0]??"");
-  const [draftTicker,setDraftTicker]=useState(symbols[0]??"");
+  const [selected,setSelected]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
+  const [draftTicker,setDraftTicker]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
   const [search,setSearch]=useState("");
   const [view,setView]=useState<View>("activity");
   const [composer,setComposer]=useState<"note"|"plan">("note");
@@ -354,6 +355,13 @@ export function JournalWorkspace({
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
                 <small>수수료 {t.fee} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
+                {entries.filter(e=>e.brokerRef?.accountId===t.accountId &&
+                     e.brokerRef?.sourceRef===t.sourceRef &&
+                     e.brokerRef?.reviewVersion===t.reviewVersion).map(e=>
+                  <div key={e.id} className="journal-entry-content">
+                    <small>연결된 내 투자 메모 · {displayTime(e.createdAt)}</small>
+                    <p className="journal-entry-text">{e.content}</p>
+                  </div>)}
                 {brokerNoteKeys[t.accountId+":"+t.sourceRef] &&
                   <button type="button" className="btn btn-outline"
                     aria-expanded={annotate===t.accountId+":"+t.sourceRef}
@@ -381,7 +389,7 @@ export function JournalWorkspace({
             {brokerRead.readEnabled && <p className="journal-limit">
               독립 검증 후 공개된 최근 체결만 표시합니다.
               {brokerRead.truncated?" 100건 상한에 도달해 일부 거래가 목록에 없을 수 있습니다.":""}
-              종목별 내 메모와 함께 볼 수 있지만 메모가 개별 체결에 자동 귀속되지는 않습니다.
+              메모는 사용자가 직접 해당 체결을 선택하여 연결할 때만 귀속됩니다.
             </p>}
           </div>}
         </section>}

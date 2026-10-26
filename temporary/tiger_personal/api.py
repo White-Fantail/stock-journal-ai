@@ -77,6 +77,7 @@ def import_pilot(identity, broker, payload):
 def view_pilot(identity, broker, subject, page=0):
     from temporary.tiger_personal.history import load_orders
     from temporary.tiger_personal.fill_probe import load_probes
+    from temporary.tiger_personal.market_quotes import load_quotes
     owner_only(subject)
     if type(page)!=int or not 0<=page<=20:
         raise PilotError("INVALID_PAGE")
@@ -92,8 +93,9 @@ def view_pilot(identity, broker, subject, page=0):
         for aid,alias,last in rows:
             item={"alias":alias,"asOf":last.isoformat() if last else None,
                   "assets":None,"positions":[]}
+            position_snapshot_at=None
             for kind,key in (("ASSETS","assets"),("POSITIONS","positions")):
-                data=broker.execute("""SELECT encrypted_payload FROM saas_tiger_source_snapshots
+                data=broker.execute("""SELECT encrypted_payload,observed_at FROM saas_tiger_source_snapshots
                   WHERE workspace_id=%s AND account_id=%s AND kind=%s
                   ORDER BY observed_at DESC,id DESC LIMIT 1""",(wid,aid,kind)).fetchone()
                 if data:
@@ -101,11 +103,14 @@ def view_pilot(identity, broker, subject, page=0):
                     if not isinstance(snap,dict) or snap.get("source")!="PERSONAL_SNAPSHOT_ONLY":
                         raise PilotError("INVALID_SOURCE")
                     item[key]=snap["data"]
+                    if key=="positions":
+                        position_snapshot_at=data[1]
                     if key=="assets":
                         # Older encrypted snapshots have no currency.
                         # Preserve the amount without inventing its unit.
                         item[key]={**item[key],"currency":item[key].get("currency")}
             item.update(load_orders(broker,wid,aid,page=page))
             item.update(load_probes(broker,wid,aid))
+            item.update(load_quotes(broker,wid,aid,item["positions"],position_snapshot_at))
             result.append(item)
     return {"coverage":"SNAPSHOT_ONLY","verified":False,"accounts":result}

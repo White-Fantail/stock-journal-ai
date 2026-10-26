@@ -23,7 +23,21 @@ from services.saas_api.trade_detail import trade_detail
 from services.saas_api.sync_status import sync_status
 from services.saas_api.reconciliation_store import review_status
 from services.saas_api.ledger_read import private_ledger
-from temporary.tiger_personal.api import PilotError, import_pilot, view_pilot
+# Removable pilot hook. The standard production image intentionally omits it.
+try:
+    from temporary.tiger_personal.api import PilotError, import_pilot, view_pilot
+except ModuleNotFoundError as exc:
+    if exc.name not in ("temporary", "temporary.tiger_personal", "temporary.tiger_personal.api"):
+        raise
+    class PilotError(Exception):
+        def __init__(self, code="DISABLED"):
+            super().__init__(code)
+            self.code = code
+    def import_pilot(*args):
+        raise PilotError()
+    def view_pilot(*args):
+        raise PilotError()
+
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
     list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
     disconnect as tiger_disconnect)

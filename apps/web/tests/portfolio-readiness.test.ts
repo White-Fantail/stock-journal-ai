@@ -47,7 +47,7 @@ test("verified native-currency FIFO uses only independently released account-sco
   assert.ok(page.includes("미확인"));
   assert.ok(page.includes("truncated"));
   assert.ok(gateway.includes("INVALID_TIGER_LEDGER_READ"));
-  for(const forbidden of ("Math.random(","parseFloat(","mockPosition","fakeHoldings","marketValue.toFixed")) {
+  for(const forbidden of ["Math.random(","parseFloat(","mockPosition","fakeHoldings","marketValue.toFixed"]) {
     assert.ok(!page.includes(forbidden),forbidden);
   }
 });

@@ -23,8 +23,21 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql",
                           "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql",
                           "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql",
-                          "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql"])
+                          "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql",
+                           "020_journal_tiger_observation_links.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_observation_journal_is_append_only_and_never_a_certified_fill(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="020_journal_tiger_observation_links.sql")
+        self.assertIn("CREATE TABLE saas_journal_tiger_observation_links",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT,INSERT",source)
+        self.assertIn("OBSERVED_NOT_VERIFIED",source)
+        self.assertIn("saas_journal_records",source)
+        self.assertIn("saas_broker_accounts",source)
+        self.assertNotIn("DROP TABLE",source)
+        self.assertNotIn("GRANT UPDATE",source)
 
     def test_quoted_evidence_kind_extends_existing_rls_table_without_data_rewrite(self):
         source=next(sql for name,_,sql in manifest()

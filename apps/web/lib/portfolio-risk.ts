@@ -1,5 +1,5 @@
 /** Read-only concentration of a SINGLE Tiger account snapshot, never live pricing.
- * Unknown, stale, truncated, mixed-currency or incomplete observations fail closed.
+ * Unknown, stale, mixed-currency or incomplete POSITION observations fail closed.
  * Percentages describe the observed invested stock market values only (not cash
  * or account equity). No order, price alert, quote fetch, or persistence.
  */
@@ -24,11 +24,9 @@ function percent(value:bigint,total:bigint):string{
 }
 
 export function assessConcentration(
-  account:Pick<TigerPersonalAccount,"asOf"|"partial"|"truncated"|"hasMore"|"positions">,
+  account:Pick<TigerPersonalAccount,"asOf"|"positions">,
   now=new Date(),
 ):ConcentrationResult{
-  if(account.partial||account.truncated||account.hasMore)
-    return {status:"UNAVAILABLE",reason:"일부 데이터만 수집되어 보유 종목 비중 계산을 보류합니다."};
   const when=account.asOf===null?NaN:Date.parse(account.asOf);
   const age=now.getTime()-when;
   if(!Number.isFinite(when)||age<0||age>7*86400000)

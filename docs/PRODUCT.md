@@ -29,3 +29,6 @@ A user can join without GitHub; unrelated users cannot observe each other's stat
 
 ## Privacy
 The public repository contains zero real customer financial records. Private tenant data lives in a protected service DB/secret store with backup/retention and self-service export/deletion. Broker data must never be shipped to a client other than its authorized workspace.
+
+## Investment journal workspace — implemented in dev, gated
+The private journal groups only a freshly authenticated workspace's own authored notes, target/stop revisions and recently **user-asserted** manual executions by ticker. The timeline preserves THESIS, STRATEGY, REVIEW, TRADE_NOTE, WATCHLIST and explicit plan-revision events. Target/stop are user intentions, never placed orders, contingent trades or validated prices. Missing values remain `unset`; each new plan revision is a complete snapshot, so deleting a target or stop is explicit and audit-preserving. An interactive ticker list uses client-side state without putting holdings/watchlist tickers in URLs or persistent browser storage. Neither Tiger historical importer nor AI analysis is implied. S2 remains disabled until production security gates are independently cleared.

@@ -24,6 +24,8 @@
 - [x] Build immutable trade detail and correction routes, typed journal and JSON export (bounded complete-result requirement), guarded explicit account deletion, idempotency and HTTP replay checks in source.
 - [x] Implement append-only, tenant RLS `THESIS`, `STRATEGY`, `REVIEW`, `TRADE_NOTE` and watchlist ADD/REMOVE events with provenance.
 - [x] Synthetic two-identity signed HTTP A/B negative tests with real PostgreSQL limited login, revocation, forgery and export access.
+- [x] Rebuild investment-journal frontend into responsive per-symbol workspace with latest thesis and review, typed chronological updates, watchlist changes, selective user-entered trade linkage and target/stop plan revision timeline; no unverified real-world balances shown.
+- [x] Add tenant-scoped, immutable user-authored target/stop plan revisions (migration 016) with full reset semantics, normalized positive Decimal input, idempotency, bounded history, JSON export and account deletion; exercise HTTP and PostgreSQL A/B isolation in CI.
 - [ ] Real Google browser A/B negative suite + production runtime-role audit + verified restore before enabling `SAAS_S2_ENABLED=1` (currently intentionally disabled).
 - **Exit:** a new Google user can safely keep a private manual journal without a linked broker.
 

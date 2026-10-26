@@ -21,6 +21,8 @@
 - `008_tiger_oauth.sql` / `009_tiger_runtime_login.sql`: Tiger encrypted grants and restricted broker login.
 - `010_broker_backfill_staging.sql`: durable backfill jobs, bounded windows, HMAC-keyed encrypted evidence (staging only, not ledger publication).
 
+- `016_journal_plan_revisions.sql`: new user-authored target/stop snapshots stored as append-only, tenant-isolated `saas_journal_plan_revisions`. Both prices nullable for explicit cancellation; currency required iff at least one price is provided. Decimal(36,12), no rounding from untrusted inputs; indexed per ticker/date and excluded from broker-order execution. Existing journal and broker schemas remain immutable.
+
 These migration names and checksums must remain stable on all deployed DBs. This is not a production-status assertion.
 
 ## Required next relational families (future forward migrations)

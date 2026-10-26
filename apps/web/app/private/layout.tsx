@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import { signOut } from "../../auth";
 import { currentWorkspace } from "../../lib/require-workspace";
 import { Brand, PublicFooter } from "../../components/site";
+import { SessionRefresh } from "../../components/session-refresh";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrivateLayout({children}: Readonly<{children: React.ReactNode}>) {
   if (!await currentWorkspace()) redirect("/login");
-  return <>
+  return <SessionRefresh>
     <header className="app-header"><div className="container">
       <Brand />
       <nav className="app-nav" aria-label="내 공간 메뉴">
@@ -25,5 +26,5 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
     </div></header>
     <div className="container app-shell">{children}</div>
     <PublicFooter />
-  </>;
+  </SessionRefresh>;
 }

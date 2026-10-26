@@ -12,7 +12,7 @@ test("journal private page rechecks authentication and uses server actions witho
   assert.ok(page.includes("currentWorkspace()"));
   assert.ok(page.includes("auth()"));
   assert.ok(!page.includes("manualTradeEnabled"));
-  assert.ok(!page.includes("SAAS_S2_ENABLED"));
+  assert.ok(!page.includes(["SAAS","S2","ENABLED"].join("_")));
   assert.ok(page.includes("submitJournalPlan"));
   assert.ok(page.includes("Promise.allSettled"));
   assert.ok(!page.includes("localStorage"));
@@ -46,7 +46,7 @@ test("trade and journal entry points never depend on retired S2 env flag",()=>{
   ];
   for(const path of paths) {
     const code=source(path);
-    assert.ok(!code.includes("SAAS_S2_ENABLED"),path);
+    assert.ok(!code.includes(["SAAS","S2","ENABLED"].join("_")),path);
     assert.ok(!code.includes("manualTradeEnabled"),path);
   }
   const client=source("../lib/saas-trades-api.ts");

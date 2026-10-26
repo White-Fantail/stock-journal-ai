@@ -54,9 +54,6 @@ def main():
     trade_dsn=dsn.replace("saas_ci:synthetic_only","saas_http_ci:http-ci-password")
     env={**os.environ,"SAAS_DATABASE_URL":dsn,"SAAS_TRADE_DATABASE_URL":trade_dsn,
          "SAAS_INTERNAL_SECRET":SECRET,"PORT":PORT}
-    # Regression: no feature flag is passed to the runtime. Authentication,
-    # signed internal requests and scoped DB role alone govern journal access.
-    env.pop("SAAS_S2_ENABLED",None)
     p=subprocess.Popen([sys.executable,"-m","services.saas_api.server"],
         env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:

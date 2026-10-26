@@ -17,6 +17,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
         <Link href="/private/portfolio">포트폴리오</Link>
         <Link href="/private/trades">거래 기록</Link>
         <Link href="/private/journal">투자 일지</Link>
+        <Link href="/private/analysis">AI 분석</Link>
         <Link href="/private/brokers">증권사 연결</Link>
         <Link href="/private/settings">설정</Link>
       </nav>

@@ -13,7 +13,7 @@ const KIND_LABEL:Record<JournalKind,string>={
   TRADE_NOTE:"체결 메모",WATCHLIST_ADD:"관심종목 등록",
   WATCHLIST_REMOVE:"관심종목 해제",
 };
-type View="activity"|"plans"|"trades"|"broker";
+type View="activity"|"trades"|"broker";
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
   plan:JournalPlan|null;review:JournalEntry|null;
@@ -203,19 +203,17 @@ export function JournalWorkspace({
           </div>
           <div className="journal-tabs" role="group" aria-label="기록 필터">
             <button type="button" aria-pressed={view==="activity"} onClick={()=>setView("activity")}
-              className={`btn ${view==="activity"?"journal-tab-active":""}`}>내 투자 기록</button>
-            <button type="button" aria-pressed={view==="plans"} onClick={()=>setView("plans")}
-              className={`btn ${view==="plans"?"journal-tab-active":""}`}>투자 계획</button>
+              className={`btn ${view==="activity"?"journal-tab-active":""}`}>투자 판단 · 계획</button>
             <button type="button" aria-pressed={view==="trades"} onClick={()=>setView("trades")}
               className={`btn ${view==="trades"?"journal-tab-active":""}`}>직접 입력 거래</button>
             <button type="button" aria-pressed={view==="broker"} onClick={()=>setView("broker")}
               className={`btn ${view==="broker"?"journal-tab-active":""}`}>Tiger 검증 체결</button>
           </div>
 
-          {view!=="trades" && view!=="broker" ? <div className="journal-timeline">
-            {(view==="plans"?history.filter(e=>e.type==="plan"):history).length===0 ?
-              <div className="journal-empty">아직 작성한 기록이 없습니다. <Link href={view==="plans"?"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected):"/private/journal/new?ticker="+encodeURIComponent(selected)}>{view==="plans"?"첫 목표·손절 계획 작성 →":"새 투자 기록 작성 →"}</Link></div>:
-              (view==="plans"?history.filter(e=>e.type==="plan"):history).map(e=>
+          {view==="activity" ? <div className="journal-timeline">
+            {history.length===0 ?
+              <div className="journal-empty">아직 투자 기록이 없습니다. <Link href={"/private/journal/new?ticker="+encodeURIComponent(selected)}>투자 판단 작성 →</Link> · <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected)}>목표·손절 계획 설정 →</Link></div>:
+              history.map(e=>
                 <article key={e.type+e.id} className="journal-entry">
                   <div className="journal-entry-dot" aria-hidden="true"/>
                   <div className="journal-entry-content">

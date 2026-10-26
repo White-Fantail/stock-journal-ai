@@ -58,3 +58,19 @@ test("a selected stock displays actionable target and stop controls",()=>{
   assert.ok(create.includes('name="rationale"'));
   assert.ok(!ui.includes("<form"));
 });
+
+test("journal shows investment notes and target-stop plan revisions in one chronological timeline",()=>{
+  const ui=read("../app/private/journal/journal-workspace.tsx");
+  assert.ok(ui.includes('type View="activity"|"trades"|"broker"'));
+  assert.ok(ui.includes("투자 판단 · 계획"));
+  assert.ok(!ui.includes('setView("plans")'));
+  assert.ok(!ui.includes('view==="plans"'));
+  assert.ok(ui.includes("history.map(e=>"));
+  assert.ok(ui.includes('type:"note" as const'));
+  assert.ok(ui.includes('type:"plan" as const'));
+  assert.ok(ui.includes("b.timestamp.localeCompare(a.timestamp)"));
+  assert.ok(ui.includes("e.type===\"plan\"?\"목표·손절 계획 변경\""));
+  assert.ok(ui.includes("e.value.rationale"));
+  assert.ok(ui.includes('href={"/private/journal/new?mode=plan&ticker="'));
+  assert.ok(!ui.includes("<form"));
+});

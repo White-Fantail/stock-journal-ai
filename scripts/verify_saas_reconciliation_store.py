@@ -161,6 +161,28 @@ with psycopg.connect(dsn) as identity:
         else:
             raise AssertionError("Cross-workspace publication was allowed")
 
+        with broker.transaction():
+            wid_a=_publication_scope(identity,broker,a[0])
+            stored=broker.execute("""SELECT publication_signature FROM
+              saas_broker_ledger_publications WHERE workspace_id=%s
+              AND account_id=%s""",(wid_a,a[3])).fetchone()[0]
+            assert stored==approval, "Independent release proof was not retained"
+        with broker.transaction():
+            wid_a=_publication_scope(identity,broker,a[0])
+            blocked_id=broker.execute("""SELECT id FROM saas_reconciliation_versions
+               WHERE workspace_id=%s AND account_id=%s AND version_num=3""",
+               (wid_a,a[3])).fetchone()[0]
+            try:
+                broker.execute("""INSERT INTO saas_broker_ledger_publications
+                  (workspace_id,account_id,review_version_id,review_version_num,
+                   publication_digest,publication_signature,as_of_utc,source_count)
+                  VALUES (%s,%s,%s,3,%s,%s,%s,0)""",
+                  (wid_a,a[3],blocked_id,"a"*64,"b"*64,end))
+            except psycopg.errors.ForeignKeyViolation:
+                pass
+            else:
+                raise AssertionError("Database allowed a BLOCKED review publication")
+
         # Publisher can INSERT only new append-only release rows, not rewrite
         # financial evidence or its prior published state.
         for command in (

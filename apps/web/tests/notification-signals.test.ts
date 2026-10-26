@@ -28,7 +28,7 @@ const personal=(quoteAge=20,currency="USD"):TigerPersonalRead=>({
 test("exact decimal price threshold avoids IEEE-754 money comparison",()=>{
   assert.equal(compareAmounts("210.125000000001","210.125"),1);
   assert.equal(compareAmounts("210.125","210.125000000001"),-1);
-  assert.equal(compareAmounts("0001","1"),undefined);
+  assert.throws(()=>compareAmounts("0001","1"),/INVALID_DECIMAL/);
 });
 test("only recent same-currency owned ticker prices trigger target/stop hints",()=>{
   const sig=derivePersonalAlerts(personal(),health(),[plan("210.125","190")],now);

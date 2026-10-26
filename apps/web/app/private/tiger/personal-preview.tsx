@@ -69,11 +69,32 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
             <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
-            <td>{viewNumber(o.fee)} {o.currency}</td>
+            <td>{viewNumber(o.fee)} {o.feeCurrency??"통화 미확인"}</td>
           </tr>)}</tbody>
         </table>
       </div>}
     {compact && rows.length>12 && <Link href="/private/trades">전체 관측 주문 보기 →</Link>}
+    {!compact && <div className="journal-trades" style={{marginTop:26}}>
+      <h3>개별 체결 API 확인 · 검증 전</h3>
+      <p>Tiger의 Prime 계좌용 get_transactions 읽기 전용 조회 결과야. 각 체결의 수량·가격은 관측값이며, 전체 계좌 이력이나 확정 손익으로 사용하지 않아.
+      원본 체결 시각의 시간대가 확인되지 않으면 뉴질랜드 시간으로 임의 변환하지 않아. 수수료는 주문 단위 관측값이고 개별 체결에 배분하지 않아.</p>
+      <p>조회한 주문 {data.accounts.reduce((n,a)=>n+a.fillProbeCount,0)}건 ·
+        세부 체결 관측 {data.accounts.reduce((n,a)=>n+a.fillObservations.length,0)}건 ·
+        조회 불가 {data.accounts.reduce((n,a)=>n+a.fillProbeUnavailable,0)}건 ·
+        수량 불일치 {data.accounts.reduce((n,a)=>n+a.fillProbeDifference,0)}건 ·
+        일부만 확인 {data.accounts.reduce((n,a)=>n+a.fillProbePartial,0)}건</p>
+      {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
+      {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
+        <div style={{overflowX:"auto"}}><table style={{width:"100%"}}>
+          <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th></tr></thead>
+          <tbody>{data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><tr key={f.sourceRef}>
+            <td>{f.timeRaw??"미확인"}</td>
+            <td><Link href={"/private/journal?ticker="+encodeURIComponent(f.symbol)}>{f.symbol}</Link></td>
+            <td>{f.side==="BUY"?"매수":"매도"}</td><td>{viewNumber(f.quantity)}</td>
+            <td>{viewNumber(f.price)} {f.currency}</td><td>개별 배분 미확인</td>
+          </tr>)}</tbody>
+        </table></div>}
+    </div>}
     {!compact && <div style={{display:"flex",gap:18,marginTop:14}}>
       {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}
       {data.accounts.some(a=>a.hasMore) && page<20 && <Link href={"/private/trades?page="+(page+1)}>다음 주문 기록 →</Link>}

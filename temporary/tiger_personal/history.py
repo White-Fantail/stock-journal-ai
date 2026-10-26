@@ -45,7 +45,7 @@ def _payload(value):
     seen=set()
     expected={"id","symbol","currency","side","status","filled","price","fee","at"}
     for item in items:
-        if not isinstance(item,dict) or set(item) not in (expected,expected|{"filledScale"}):
+        if not isinstance(item,dict) or not expected.issubset(item) or set(item)-expected-{"filledScale","feeCurrency"}:
             raise PilotError("INVALID_ORDER")
         order_id=item["id"]
         if not isinstance(order_id,str) or not _ID.fullmatch(order_id) or order_id in seen:
@@ -68,6 +68,10 @@ def _payload(value):
             raise PilotError("INVALID_ORDER_SCALE")
         price=number(item["price"],True)
         fee=number(item["fee"],True)
+        fee_currency=item.get("feeCurrency")
+        if fee_currency is not None and (not isinstance(fee_currency,str)
+            or not re.fullmatch(r"[A-Z]{3}",fee_currency)):
+            raise PilotError("INVALID_ORDER")
         if float(filled)<0 or (price is not None and float(price)<0):
             raise PilotError("INVALID_ORDER")
         at=item["at"]
@@ -76,7 +80,7 @@ def _payload(value):
         result.append({"id":order_id,"symbol":item["symbol"],"currency":item["currency"],
                        "side":item["side"],"status":item["status"],"filled":filled,
                        **({"filledScale":scale} if "filledScale" in item else {}),
-                       "price":price,"fee":fee,"at":at})
+                       "price":price,"fee":fee,"feeCurrency":fee_currency,"at":at})
     return account,begin,end,part,parts,value["complete"],result
 
 def import_orders(identity,broker,value):

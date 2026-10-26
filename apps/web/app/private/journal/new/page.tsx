@@ -120,7 +120,7 @@ async function addPlan(form:FormData) {
 
 
 export default async function JournalNewPage({searchParams}:{
-  searchParams:Promise<{ticker?:string;mode?:string;error?:string;
+  searchParams:Promise<{ticker?:string;mode?:string;kind?:string;error?:string;
     sourceRef?:string;sourceKind?:string;page?:string}>
 }){
   const [session,workspace,params]=await Promise.all([auth(),currentWorkspace(),searchParams]);
@@ -326,7 +326,7 @@ export default async function JournalNewPage({searchParams}:{
       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
       <div className="journal-form-two">
         <JournalSymbolPicker symbols={tickerOptions} initialTicker={safeTicker} trades={eligibleTrades} />
-        <label>기록 유형<select name="kind" defaultValue="THESIS">
+        <label>기록 유형<select name="kind" defaultValue={params.kind==="REVIEW"?"REVIEW":"THESIS"}>
           <option value="THESIS">투자 논리</option>
           <option value="STRATEGY">전략 변경</option>
           <option value="REVIEW">매매 복기</option>

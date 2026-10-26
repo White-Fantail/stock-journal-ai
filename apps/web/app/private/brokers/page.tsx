@@ -2,13 +2,15 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { tigerStatus, tigerPersonalRead, type TigerStatus } from "../../../lib/tiger-api";
+import { tigerStatus, tigerPersonalRead, tigerPersonalDiagnostics, type TigerStatus } from "../../../lib/tiger-api";
 
 export const metadata: Metadata = {title:"증권사 연결"};
 export const dynamic = "force-dynamic";
 export default async function BrokerConnections() {
   if (!await currentWorkspace()) redirect("/login");
   const personal=await tigerPersonalRead();
+  const diagnosis=personal?.accounts.length ? null : await tigerPersonalDiagnostics();
+  const personalNeedsAttention=Boolean(diagnosis && (diagnosis.accountCount>0 || diagnosis.snapshotCounts.length>0));
   let state: TigerStatus | null = null;
   try {state=await tigerStatus();} catch { /* Provider state not available. */ }
   const count=(state?.connections ?? []).filter(c=>c.status==="CONNECTED").length;
@@ -18,10 +20,11 @@ export default async function BrokerConnections() {
     <div className="broker-list">
       <section className="broker-card broker-card--highlight">
         <div className="broker-top"><span className="broker-logo" aria-hidden="true">T</span>
-          <span className={personal?.accounts.length || count ? "pill" : "pill pill-warning"}>{personal?.accounts.length ? "내 계좌 연결됨" : count ? "연결됨" : state?.enabled ? "연결 가능" : state ? "승인 준비 중" : "상태 확인 필요"}</span></div>
+          <span className={personal?.accounts.length || count ? "pill" : "pill pill-warning"}>{personal?.accounts.length ? "내 계좌 연결됨" : count ? "연결됨" : personalNeedsAttention ? "개인 연결 점검 필요" : state?.enabled ? "연결 가능" : state ? "승인 준비 중" : "상태 확인 필요"}</span></div>
         <h2>Tiger Brokers</h2>
-        <p>Positionary의 첫 번째 연동 대상입니다. {personal?.accounts.length ? "내 계정은 개인 API로 조회 중입니다. 다른 사용자는 공식 OAuth 승인 대기 상태입니다." : "공식 승인이 확인되면 Tiger 인증으로 조회 권한을 연결할 수 있습니다."}</p>
+        <p>Positionary의 첫 번째 연동 대상입니다. {personal?.accounts.length ? "내 계정은 개인 API로 조회 중입니다. 다른 사용자는 공식 OAuth 승인 대기 상태입니다." : personalNeedsAttention ? "기존에 연결했던 개인 Tiger 데이터가 현재 화면에 표시되지 않고 있습니다. 기존 계좌를 삭제하거나 재연결하지 말고 저장 상태를 확인하세요." : "공식 승인이 확인되면 Tiger 인증으로 조회 권한을 연결할 수 있습니다."}</p>
         <Link href="/private/tiger" className="btn btn-primary">연결 상태 자세히 보기 <span aria-hidden="true">→</span></Link>
+        {personalNeedsAttention && <p><Link href="/private/tiger/diagnostics">내 저장 데이터 점검 →</Link></p>}
       </section>
       <section className="broker-card">
         <div className="broker-top"><span className="broker-logo broker-logo--muted" aria-hidden="true">+</span><span className="pill pill-neutral">추후 지원</span></div>

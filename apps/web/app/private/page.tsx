@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../lib/require-workspace";
-import { tigerStatus, type TigerStatus } from "../../lib/tiger-api";
+import { tigerStatus, tigerPersonalRead, type TigerStatus } from "../../lib/tiger-api";
 
 export const metadata: Metadata = {title:"내 대시보드"};
 export const dynamic = "force-dynamic";
@@ -10,10 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function WorkspaceHome() {
   const workspace = await currentWorkspace();
   if (!workspace) redirect("/login");
+  const personal=await tigerPersonalRead();
   let state: TigerStatus | null = null;
   try {state = await tigerStatus();} catch { /* Distinguish unavailable state from disconnected. */ }
   const connected = (state?.connections ?? []).filter(c => c.status === "CONNECTED").length;
-  const connectionLabel = !state ? "상태 확인 필요" : connected ? "계좌 연결됨" : state.enabled ? "연결 가능" : "연동 준비 중";
+  const connectionLabel = personal?.accounts.length ? "개인 계좌 조회 연결됨" : !state ? "상태 확인 필요" : connected ? "계좌 연결됨" : state.enabled ? "연결 가능" : "연동 준비 중";
   return <main>
     <section className="dashboard-hero">
       <div><span className="eyebrow">MY INVESTMENT WORKSPACE</span>
@@ -27,7 +28,7 @@ export default async function WorkspaceHome() {
         <div className="icon-square" aria-hidden="true">◎</div>
         <h3>증권사 연결</h3>
         <span className={state?.enabled && connected ? "pill" : "pill pill-warning"}>{connectionLabel}</span>
-        <p style={{marginTop:14}}>Tiger Brokers부터 지원을 준비하고 있습니다. 공식 승인 전에는 인증이 시작되지 않습니다.</p>
+        <p style={{marginTop:14}}>{personal?.accounts.length ? "내 계정은 개인 Tiger API로 조회 중입니다. 다른 사용자는 공식 앱 승인 후 연결됩니다." : "Tiger 공식 앱 승인을 준비하고 있습니다."}</p>
         <Link href="/private/brokers">연결 상태 확인 →</Link>
       </article>
       <article className="dashboard-card">
@@ -56,7 +57,7 @@ export default async function WorkspaceHome() {
     <div className="state-panel">
       <div className="connection-steps">
         <div className="connection-step">1 · 가입 완료<small>Google 계정으로 개인 공간 생성</small></div>
-        <div className="connection-step">2 · 연동 상태 확인<small>Tiger 연결은 공식 승인 이후 사용 가능</small></div>
+        <div className="connection-step">2 · 연동 상태 확인<small>{personal?.accounts.length ? "내 계정에 Tiger 개인 조회 연결 완료" : "공식 승인 후 연결 가능"}</small></div>
         <div className="connection-step">3 · 투자 기록 쌓기<small>투자 일지와 직접 거래 기록 작성</small></div>
       </div>
       <p className="subtle">계좌 잔액·수익률은 검증된 데이터가 준비되기 전까지 표시하지 않습니다. 없는 데이터를 0으로 계산하지 않습니다.</p>

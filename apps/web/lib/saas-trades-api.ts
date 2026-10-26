@@ -213,8 +213,8 @@ export type AiClaimInput={mode:"STOCK_REVIEW"|"HABITS";consented:true};
 export async function claimAiAnalysis(subject:string,mode:AiClaimInput["mode"]):Promise<{
   remainingDay:number;remainingMonth:number
 }>{
-  const result=await postS2("/internal/v1/ai/claim",subject,{mode,consented:true})
-    as {claimed?:boolean;remainingDay?:number;remainingMonth?:number};
+  const result=await postS2("/internal/v1/ai/claim",subject,{mode,consented:true}) as
+    {claimed?:boolean;remainingDay?:number;remainingMonth?:number};
   if(result?.claimed!==true || !Number.isInteger(result.remainingDay) ||
      !Number.isInteger(result.remainingMonth))throw new Error("AI_QUOTA_FAILED");
   return {remainingDay:result.remainingDay!,remainingMonth:result.remainingMonth!};

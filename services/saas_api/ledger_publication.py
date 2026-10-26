@@ -18,7 +18,7 @@ from uuid import UUID
 
 from services.saas_api.backfill_worker import _account_authorized
 from services.saas_api.reconciliation_store import _secret
-from services.saas_api.tiger_oauth import _scope
+from services.saas_api.identity import resolve
 
 _HEX = re.compile(r"^[0-9a-f]{64}$")
 _MAX_FILLS = 5000
@@ -70,6 +70,23 @@ def _approved(digest, signature):
     wanted = hmac.new(key, ("positionary:p4:publish:v1:" + digest).encode(),
                       hashlib.sha256).hexdigest()
     return hmac.compare_digest(wanted, signature)
+
+
+def _publication_scope(identity, publisher, subject):
+    """Re-resolve OWNER, require a separate non-bypass publication DB principal."""
+    user = resolve(identity, subject)
+    if not user or user["role"] != "OWNER":
+        raise PublicationRefused("NOT_FOUND")
+    flags = publisher.execute("""SELECT rolsuper,rolbypassrls,
+        pg_has_role(current_user,'saas_publication_runtime','USAGE'),
+        has_table_privilege(current_user,'saas_broker_ledger_publications','INSERT'),
+        has_table_privilege(current_user,'saas_verified_execution_stage','INSERT')
+        FROM pg_roles WHERE rolname=current_user""").fetchone()
+    if flags != (False,False,True,True,False):
+        raise PublicationRefused("PUBLICATION_DB_ROLE_REQUIRED")
+    publisher.execute("SELECT set_config('saas.workspace_id',%s,true)",
+                      (user["workspaceId"],))
+    return user["workspaceId"]
 
 
 def _candidate(broker, wid, account):
@@ -137,7 +154,7 @@ def release_verified_review(identity, broker, subject, account_id, version_num, 
     if isinstance(version_num, bool) or not isinstance(version_num, int) or version_num < 1:
         raise PublicationRefused("INVALID_VERSION")
     with broker.transaction():
-        wid = _scope(identity, broker, subject)
+        wid = _publication_scope(identity, broker, subject)
         lock = broker.execute("""SELECT id FROM saas_broker_accounts
           WHERE workspace_id=%s AND id=%s FOR UPDATE""", (wid, account)).fetchone()
         if not lock or not _account_authorized(broker, wid, account):

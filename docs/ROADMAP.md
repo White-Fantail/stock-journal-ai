@@ -106,4 +106,10 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [ ] Deploy the worker/API through the approved main-only release, inspect safe status counters on the actual Tiger account, and verify Prime eligibility, cursor support and fee field availability; this source-only change **has not exercised a live credential**.
 - [ ] Extend covered-range executions, provider-verified fees, funding/corporate actions and audit before step 2 FIFO portfolio publication.
 
-- [ ] **Deployment wiring:** Railway `positionary-tiger-personal` source is currently pinned to historical main commit `a83424d8`; a normal main push alone will not roll out the new probe. On the expressly approved main release, update the runner's source ref to follow `main` and verify its next single-run execution and safe status counters. Never copy the RSA key into code or logs.
+- [x] **Deployment wiring:** Railway `positionary-tiger-personal` source was unpinned from historical `a83424d8` and now follows `main`. Railway runner/API accepted deployed commit `06d798c` successfully. The *next runtime cron execution* and real Tiger transaction/fee outcomes are still unverified; do not confuse deployment success with ingestion success.
+
+### Step 1 · Phase 2 itemized fees + complete order paging (2026-10-26)
+- [x] Use Tiger's documented `get_order(account,id,show_charges=True)` alongside `get_transactions` on the same bounded order sample. Normalize category/type/after-discount amounts and independently verify category totals, order commission, transaction identity and source currency, with explicit UNAVAILABLE/DIFFERENCE/CURRENCY_UNKNOWN states. No allocation to fills, no inferred currency.
+- [x] Store fee evidence in existing owner-only encrypted P3 snapshot payloads (optional for backward compatibility); validate all totals and details at the signed ingress. Provide limited masked per-order charge detail on the owner-only trades screen.
+- [x] Fix historic `get_orders` to explicitly request pagination from its first call with `page_token=""` and reject conflicting order pages rather than overwriting observations.
+- [ ] Real-world Tiger read-only fee/transaction access, history completeness, source time zones, and actual charges must be verified in the next cron. P4 trusted ledger publication still blocked until fully independently reconciled.

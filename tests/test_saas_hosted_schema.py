@@ -42,6 +42,13 @@ class HostedSchemaPolicyTests(unittest.TestCase):
             self.assertNotIn(forbidden,sql.upper() if forbidden.startswith("DROP") else sql)
         self.assertEqual(len([x for x in manifest() if x[0]=="023_investment_strategy_plan.sql"]),1)
 
+    def test_ci_deploy_uses_approved_manifest_instead_of_a_stale_version_list(self):
+        workflow=(Path(__file__).resolve().parents[1]/
+                  ".github"/"workflows"/"saas.yml").read_text(encoding="utf-8")
+        self.assertIn("assert versions == reviewed_versions",workflow)
+        self.assertIn("assert set(versions) == APPROVED_AUTO_MIGRATIONS",workflow)
+        self.assertIn("from services.saas_api.schema_admin import APPROVED_AUTO_MIGRATIONS, manifest",workflow)
+
     def test_tiger_sync_health_is_append_only_and_owner_scoped(self):
         source=next(sql for name,_,sql in manifest()
                     if name=="022_personal_sync_health.sql")

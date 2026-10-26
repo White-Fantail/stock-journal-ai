@@ -32,6 +32,8 @@ test("price crossing NEVER emits a trade or price alert",()=>{
   assert.equal(signals.length,0);
   assert.ok(signals.every(x=>!x.kind.startsWith("PRICE_")));
   assert.equal(derivePersonalAlerts(personal(1),health(),[plan()],now).length,0);
+  assert.equal(derivePersonalAlerts(personal(1),health(),null,now)
+    .filter(x=>x.kind==="PLAN_MISSING").length,0);
 });
 test("only held symbols with a fresh snapshot and no plan receive a review suggestion",()=>{
   const signals=derivePersonalAlerts(personal(),health(),[],now);

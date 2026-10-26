@@ -65,7 +65,9 @@
 - [x] Implement an HMAC-authenticated, RLS-scoped `ledger-read` endpoint which revalidates the latest released review, original source evidence, current read-only grant and signed publication before returning bounded Decimal-string fills and position facts. Default off; no Tiger live data/publication is claimed.
 - [x] Add typed Next.js gateway and per-symbol **Tiger 검증 체결** panel in the private journal without overwriting user-authored notes or blending USER_ASSERTED and BROKER_VERIFIED. Partial/conflicted data returns no broker facts.
 - [ ] Confirm read API, TypeScript build and PostgreSQL A/B workflow are green; perform real two-Google-account browser checks and independent Tiger attestation before live activation.
-- [ ] Build opt-in user-authored journal-to-*individual-verified-fill* links with immutable, tenant-scoped FK validation and correction/supersession semantics. Symbol-only grouping is not a fill-specific association.
+- [x] Add a **separate, immutable** owner-authored per-fill TRADE_NOTE association (migration 018), signed/tenant-scoped backend guard and inline investor memo form. Every link pins the historical signed P4 publication and verified fill + ticker through composite FKs; user-authored text never becomes broker data.
+- [x] Preserve note history and export after a broker review becomes BLOCKED; do not show a link as currently verified unless the independently released source, account and revision still match.
+- [ ] Run actual PostgreSQL 18 A/B integration and Next.js TypeScript/build tests, then verify with two real Google accounts; Tiger live eligibility and independent source certifier remain required before enabling broker read.
 
 ## P5 — AI analysis and notifications (**planned**)
 - [ ] Opt-in consent, token/prompt minimization, ZDR/provider terms verification, per-workspace quotas and observability.

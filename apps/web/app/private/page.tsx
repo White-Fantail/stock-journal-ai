@@ -1,68 +1,140 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import type { Metadata } from "next";
-import { currentWorkspace } from "../../lib/require-workspace";
-import { tigerStatus, tigerPersonalRead, type TigerStatus } from "../../lib/tiger-api";
+import {redirect} from "next/navigation";
+import {auth} from "../../auth";
+import type {Metadata} from "next";
+import {currentWorkspace} from "../../lib/require-workspace";
+import {formatDecimal} from "../../lib/format-decimal";
+import {fetchJournal,fetchJournalPlans} from "../../lib/saas-trades-api";
+import {tigerStatus,tigerPersonalRead,type TigerStatus} from "../../lib/tiger-api";
 
-export const metadata: Metadata = {title:"내 대시보드"};
-export const dynamic = "force-dynamic";
+export const metadata:Metadata={title:"내 대시보드 · Positionary"};
+export const dynamic="force-dynamic";
 
-export default async function WorkspaceHome() {
-  const workspace = await currentWorkspace();
-  if (!workspace) redirect("/login");
-  const personal=await tigerPersonalRead();
-  let state: TigerStatus | null = null;
-  try {state = await tigerStatus();} catch { /* Distinguish unavailable state from disconnected. */ }
-  const connected = (state?.connections ?? []).filter(c => c.status === "CONNECTED").length;
-  const connectionLabel = personal?.accounts.length ? "개인 계좌 조회 연결됨" : !state ? "상태 확인 필요" : connected ? "계좌 연결됨" : state.enabled ? "연결 가능" : "연동 준비 중";
-  return <main>
-    <section className="dashboard-hero">
-      <div><span className="eyebrow">MY INVESTMENT WORKSPACE</span>
-        <h1>내 투자의 이유를 기록하는 곳</h1>
-        <p>매매했던 사실, 그때의 생각, 그리고 이후의 판단을 차곡차곡 정리하세요. Positionary는 기록의 출처와 맥락을 중요하게 생각합니다.</p>
-      </div><div className="dashboard-graphic" aria-hidden="true">↗</div>
-    </section>
-    <div className="dashboard-heading"><h2>내 공간 한눈에 보기</h2><span className="pill pill-neutral">개인 워크스페이스</span></div>
-    <div className="dashboard-grid">
-      <article className="dashboard-card">
-        <div className="icon-square" aria-hidden="true">◎</div>
-        <h3>증권사 연결</h3>
-        <span className={personal?.accounts.length || (state?.enabled && connected) ? "pill" : "pill pill-warning"}>{connectionLabel}</span>
-        <p style={{marginTop:14}}>{personal?.accounts.length ? "내 계정은 개인 Tiger API로 조회 중입니다. 다른 사용자는 공식 앱 승인 후 연결됩니다." : "Tiger 공식 앱 승인을 준비하고 있습니다."}</p>
-        <Link href="/private/brokers">연결 상태 확인 →</Link>
-      </article>
-      <article className="dashboard-card">
-        <div className="icon-square" aria-hidden="true">◈</div>
-        <h3>내 포트폴리오</h3>
-        <span className="pill pill-warning">검증 대기</span>
-        <p style={{marginTop:14}}>연결 계좌별 거래이력·수수료·보유수량 검증 상태를 확인합니다. 미확인 금액은 표시하지 않습니다.</p>
-        <Link href="/private/portfolio">포트폴리오 상태 보기 →</Link>
-      </article>
-      <article className="dashboard-card">
-        <div className="icon-square" aria-hidden="true">≡</div>
-        <h3>거래 기록</h3>
-        <span className="pill">직접 입력 이용 가능</span>
-        <p style={{marginTop:14}}>거래 기록을 출처별로 구분하여 관리합니다. 직접 확인한 체결은 사용자 입력 기록으로 남습니다.</p>
-        <Link href="/private/trades">거래 기록 보기 →</Link>
-      </article>
-      <article className="dashboard-card">
-        <div className="icon-square" aria-hidden="true">✎</div>
-        <h3>투자 일지</h3>
-        <span className="pill">기록 이용 가능</span>
-        <p style={{marginTop:14}}>매수 근거, 투자 전략과 복기를 내가 작성한 기록으로 남기는 공간입니다.</p>
-        <Link href="/private/journal">내 투자 일지 열기 →</Link>
-      </article>
-    </div>
-    <div className="dashboard-heading"><h2>이렇게 시작해 보세요</h2></div>
-    <div className="state-panel">
-      <div className="connection-steps">
-        <div className="connection-step">1 · 가입 완료<small>Google 계정으로 개인 공간 생성</small></div>
-        <div className="connection-step">2 · 연동 상태 확인<small>{personal?.accounts.length ? "내 계정에 Tiger 개인 조회 연결 완료" : "공식 승인 후 연결 가능"}</small></div>
-        <div className="connection-step">3 · 투자 기록 쌓기<small>투자 일지와 직접 거래 기록 작성</small></div>
+function observedAt(raw:string|null){
+  if(!raw)return "동기화 시각 미확인";
+  const date=new Date(raw);
+  return Number.isFinite(date.getTime())
+    ?new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(date)
+    :"동기화 시각 미확인";
+}
+function orderAt(raw:string|null){
+  if(!raw)return "시각 미확인";
+  const d=new Date(Number(raw));
+  return Number.isFinite(d.getTime())
+    ?new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(d)
+    :"시각 미확인";
+}
+const noteLabels:Record<string,string>={THESIS:"투자 논리",STRATEGY:"전략 변경",
+  REVIEW:"매매 복기",TRADE_NOTE:"체결 메모",WATCHLIST_ADD:"관심 추가",WATCHLIST_REMOVE:"관심 제외"};
+
+export default async function WorkspaceHome(){
+  const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
+  if(!workspace||!session?.user?.id) redirect("/login");
+  const results=await Promise.allSettled([
+    tigerPersonalRead(),tigerStatus(),
+    fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
+  ]);
+  const personal=results[0].status==="fulfilled"?results[0].value:null;
+  const tiger: TigerStatus|null=results[1].status==="fulfilled"?results[1].value:null;
+  const notes=results[2].status==="fulfilled"?results[2].value:null;
+  const plans=results[3].status==="fulfilled"?results[3].value:null;
+  const accounts=personal?.accounts??[];
+  const allPositions=accounts.flatMap(a=>a.positions.map(p=>({alias:a.alias,...p})));
+  const orders=accounts.flatMap(a=>a.orders.map(o=>({alias:a.alias,...o})))
+    .sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,4);
+  const recent=[
+    ...(notes??[]).map(n=>({ticker:n.ticker,type:noteLabels[n.kind]??"투자 기록",
+      title:n.content||noteLabels[n.kind]||"변경 이력",at:n.createdAt})),
+    ...(plans??[]).map(p=>({ticker:p.ticker,type:"투자 계획",
+      title:p.rationale,at:p.createdAt})),
+  ].sort((a,b)=>b.at.localeCompare(a.at)).slice(0,4);
+  const journalAvailable=notes!==null&&plans!==null;
+  const status=accounts.length>0?"Tiger 개인 조회 연결":tiger===null?"연결 확인 필요":
+    tiger.connections.some(c=>c.status==="CONNECTED")?"계좌 연결됨":"연결 대기";
+  return <main className="home-data">
+    <div className="page-intro home-data-heading">
+      <div>
+        <h1>대시보드</h1>
+        <p>내 투자 현황과 최근 기록을 확인하세요.</p>
       </div>
-      <p className="subtle">계좌 잔액·수익률은 검증된 데이터가 준비되기 전까지 표시하지 않습니다. 없는 데이터를 0으로 계산하지 않습니다.</p>
+      <div className="home-actions">
+        <Link className="btn btn-outline" href="/private/trades">거래 기록</Link>
+        <Link className="btn btn-primary" href="/private/journal/new">+ 투자 일지 작성</Link>
+      </div>
     </div>
-    <div className="info-strip"><span aria-hidden="true">ⓘ</span><div><strong>Positionary는 현재 베타 준비 단계입니다.</strong>
-      <p>브로커 인증, 체결내역 자동 동기화, 포트폴리오 분석은 단계적으로 검증하고 있습니다. 현재 이용 가능한 기능과 준비 중인 기능을 구분해 안내합니다.</p></div></div>
+
+    <div className="user-summary-grid">
+      <section className="user-summary-card">
+        <small>연결 상태</small>
+        <strong>{status}</strong>
+        <span>{accounts.length>0?accounts.length+"개 계좌 · 최근 보유 관측 기준":"증권사 데이터 수집 상태 확인"}</span>
+        <Link href="/private/brokers">계좌 관리 →</Link>
+      </section>
+      <section className="user-summary-card">
+        <small>관측된 보유 종목</small>
+        <strong>{accounts.length>0?allPositions.length:"—"}</strong>
+        <span>{accounts.length>0?"계좌별·통화별 원본 보유 수량":"계좌 조회 연결 후 표시"}</span>
+        <Link href="/private/portfolio">포트폴리오 →</Link>
+      </section>
+      <section className="user-summary-card">
+        <small>작성한 투자 기록</small>
+        <strong>{journalAvailable?(notes.length+plans.length):"—"}</strong>
+        <span>{journalAvailable?"현재 불러온 일지·계획 이력":"투자 기록 조회 불가"}</span>
+        <Link href="/private/journal">투자 일지 →</Link>
+      </section>
+    </div>
+
+    {accounts.length>0?<section className="user-panel">
+      <div className="user-panel-head">
+        <h2>계좌 요약</h2>
+        <Link href="/private/portfolio">전체 포트폴리오 →</Link>
+      </div>
+      <div className="account-summary-list">
+        {accounts.map(a=><article key={a.alias} className="account-summary-item">
+          <div className="account-summary-head"><strong>{a.alias}</strong><small>{observedAt(a.asOf)} (NZ)</small></div>
+          <div className="account-summary-values">
+            <div><small>순자산 · 계좌 표시 통화</small><strong>{formatDecimal(a.assets?.netLiquidation)}</strong></div>
+            <div><small>현금 · 계좌 표시 통화</small><strong>{formatDecimal(a.assets?.cashBalance)}</strong></div>
+            <div><small>보유 종목</small><strong>{a.positions.length}</strong></div>
+          </div>
+        </article>)}
+      </div>
+      <p className="user-footnote">계좌 금액의 통화가 아직 확인되지 않아 서로 합산하지 않습니다. 이 값은 조회 시점의 Tiger 관측값이며 검증된 손익률이 아닙니다.</p>
+    </section>:<section className="user-panel">
+      <div className="user-panel-head"><h2>연결된 계좌</h2><Link href="/private/brokers">연결 관리 →</Link></div>
+      <p>{tiger===null?"계좌 상태를 확인하지 못했습니다. 다시 확인해 주세요.":"조회 가능한 계좌가 아직 없습니다."}</p>
+    </section>}
+
+    <div className="home-two-columns">
+      <section className="user-panel">
+        <div className="user-panel-head"><h2>보유 종목</h2><Link href="/private/portfolio">전체 보기 →</Link></div>
+        {allPositions.length===0?<p className="user-empty">현재 조회된 보유 종목이 없습니다.</p>:
+          <div className="user-list">{allPositions.slice(0,6).map((p,i)=>
+            <Link className="user-list-row" href={"/private/journal?ticker="+encodeURIComponent(p.symbol)} key={p.alias+":"+p.symbol+":"+p.currency+":"+i}>
+              <div><strong>{p.symbol}</strong><small>{p.alias} · {p.currency}</small></div>
+              <div className="user-list-value"><strong>{formatDecimal(p.quantity)}주</strong><small>평가액 {formatDecimal(p.marketValue)} {p.currency}</small></div>
+            </Link>)}</div>}
+      </section>
+      <section className="user-panel">
+        <div className="user-panel-head"><h2>최근 투자 판단</h2><Link href="/private/journal">전체 일지 →</Link></div>
+        {!journalAvailable?<p className="user-empty">일지 조회 상태를 확인하지 못했습니다.</p>:
+          recent.length===0?<p className="user-empty">작성한 투자 기록이 없습니다. <Link href="/private/journal/new">첫 일지 작성 →</Link></p>:
+          <div className="user-list">{recent.map((n,i)=>
+            <Link className="user-list-row" href={"/private/journal?ticker="+encodeURIComponent(n.ticker)} key={n.ticker+":"+n.at+":"+i}>
+              <div><strong>{n.ticker} <span className="user-list-kind">{n.type}</span></strong><small>{n.title.length>75?n.title.slice(0,75)+"…":n.title}</small></div>
+              <time>{observedAt(n.at)}</time>
+            </Link>)}</div>}
+      </section>
+    </div>
+
+    {accounts.length>0&&<section className="user-panel">
+      <div className="user-panel-head"><h2>최근 Tiger 주문 관측</h2><Link href="/private/trades">주문 이력 전체 →</Link></div>
+      {orders.length===0?<p className="user-empty">현재 수집된 주문이 없습니다.</p>:
+      <div className="user-list">{orders.map((o,i)=><div className="user-list-row" key={o.sourceRef+":"+i}>
+        <div><strong>{o.symbol} · {o.side==="BUY"?"매수":"매도"}</strong><small>{orderAt(o.at)} · {o.status}</small></div>
+        <div className="user-list-value"><strong>{o.filled===null?"수량 재수집 필요":formatDecimal(o.filled)+"주"}</strong><small>{formatDecimal(o.price)} {o.currency}</small></div>
+      </div>)}</div>}
+      <p className="user-footnote">주문 단위 기록이며 개별 체결이나 전체 거래이력을 확정한 자료는 아닙니다.</p>
+    </section>}
   </main>;
 }

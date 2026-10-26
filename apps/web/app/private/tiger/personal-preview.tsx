@@ -11,34 +11,39 @@ const when=(raw:string|null)=> {
 };
 const viewNumber=(value:string|null)=>formatDecimal(value);
 
-/** Observed broker balances: never passed through the verified FIFO projector. */
-export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}) {
-  return <div>
-    <section className="state-panel">
-      <span className="pill">개인 Tiger 계좌 연결됨 · 조회 전용</span>
-      <h2>실제 Tiger 계좌 스냅샷</h2>
-      <p>본인 계정에서만 조회하는 Tiger API 원본 관측값이야. 조회 당시 가격·자산이며, 전 거래내역을 검증한 FIFO 취득원가/수익률이 아니야.</p>
-      <p>주문·체결 요청, 이체 또는 주문 변경 기능은 제공하지 않아.</p>
-    </section>
-    {data.accounts.length===0 && <section className="state-panel"><h2>아직 수집된 계좌가 없어</h2></section>}
-    {data.accounts.map(account=><section className="state-panel" key={account.alias}>
-      <h2>{account.alias}</h2>
-      <p>최근 관측: {account.asOf ? new Date(account.asOf).toLocaleString("ko-KR",{timeZone:"Pacific/Auckland"}):"미확인"}</p>
-      <p>순자산: {viewNumber(account.assets?.netLiquidation??null)} · 현금: {viewNumber(account.assets?.cashBalance??null)}
-      <small> (계좌 기준 통화 확인 필요)</small></p>
-      <div style={{overflowX:"auto"}}>
-        <table style={{width:"100%"}}>
-          <thead><tr><th>종목</th><th>보유 수량</th><th>평균 단가</th><th>시장 가치</th><th>미실현손익</th></tr></thead>
+/** Owner-only Tiger observation, never inferred FIFO or account-wide performance. */
+export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
+  return <div className="account-portfolio-list">
+    {data.accounts.map(account=><section className="user-panel" key={account.alias}>
+      <div className="user-panel-head">
+        <div><h2>{account.alias}</h2>
+          <small className="user-muted">최종 관측 {account.asOf?
+            new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(new Date(account.asOf)):"시각 미확인"} (NZ)</small>
+        </div>
+        <Link href="/private/trades">거래 기록 →</Link>
+      </div>
+      <div className="account-summary-values portfolio-account-values">
+        <div><small>순자산 · 계좌 표시 통화</small><strong>{viewNumber(account.assets?.netLiquidation??null)}</strong></div>
+        <div><small>현금 · 계좌 표시 통화</small><strong>{viewNumber(account.assets?.cashBalance??null)}</strong></div>
+        <div><small>보유 종목</small><strong>{account.positions.length}</strong></div>
+      </div>
+      <div className="user-panel-head portfolio-holdings-head">
+        <h3>보유 종목</h3><span className="user-muted">{account.positions.length}개 · Tiger 관측</span>
+      </div>
+      {account.positions.length===0?<p className="user-empty">현재 수집된 보유 종목이 없습니다. 전체 거래 이력의 부재를 의미하지 않습니다.</p>:
+      <div className="portfolio-verified-scroll">
+        <table className="portfolio-verified-table">
+          <thead><tr><th>종목</th><th>수량</th><th>평균 단가</th><th>시장 가치</th><th>미실현손익</th></tr></thead>
           <tbody>{account.positions.map(p=><tr key={p.symbol+":"+p.currency}>
-            <td><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></td>
-            <td>{viewNumber(p.quantity)}</td><td>{viewNumber(p.averageCost)} {p.currency}</td>
+            <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link><small className="user-muted portfolio-symbol-currency">{p.currency}</small></th>
+            <td>{viewNumber(p.quantity)}</td>
+            <td>{viewNumber(p.averageCost)} {p.currency}</td>
             <td>{viewNumber(p.marketValue)} {p.currency}</td>
-            <td>{viewNumber(p.unrealizedPnl)} {p.currency}</td>
+            <td className={p.unrealizedPnl?.startsWith("-")?"value-negative":"value-standard"}>{viewNumber(p.unrealizedPnl)} {p.currency}</td>
           </tr>)}</tbody>
         </table>
-      </div>
-      <p>{account.positions.length}개 보유 종목 · 통화별 계좌 표시 원본값이며, 독립 검증된 실현손익이 아니야.</p>
-      <Link href="/private/trades">Tiger 주문·거래 이력 보기 →</Link>
+      </div>}
+      <p className="user-footnote">평가액·미실현손익은 Tiger 조회 시점의 원본값입니다. 계좌 표시 통화가 확인되지 않은 금액을 통화 간 합산하거나 수익률로 계산하지 않습니다.</p>
     </section>)}
   </div>;
 }

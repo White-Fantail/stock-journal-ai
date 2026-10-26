@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import {formatDecimal} from "../../../lib/format-decimal";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { tigerPersonalRead } from "../../../lib/tiger-api";
-import { PersonalPortfolioBlock, PersonalOrderHistory } from "../tiger/personal-preview";
+import { PersonalPortfolioBlock } from "../tiger/personal-preview";
 import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
 
 export const metadata:Metadata={title:"포트폴리오 · Positionary"};
@@ -52,8 +52,7 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
       <div><span className="breadcrumb">Tiger Brokers · 독립 검증 원장</span><h2>{account.alias}</h2></div>
       <span className="pill pill-neutral">검증 버전 v{proof.version}</span>
     </div>
-    <p>체결이력과 증권사 증거를 대조해 공개한 <strong>과거 기준 시점의 원장</strong>입니다.
-      시세를 갱신한 현재 보유자산 평가액이나 계좌 총수익률이 아닙니다.</p>
+    <p>검증된 과거 원장 기준 값이며 현재 시세 기반 평가는 아닙니다.</p>
     <p className="sync-subtle">원장 기준 시각: {timeLabel(proof.asOf??null)} · FIFO · 종목별 원본 통화</p>
     <div className="portfolio-unknown-grid">
       <div><small>현재 평가액</small><strong>미확인</strong></div>
@@ -91,12 +90,14 @@ function AccountReadiness({account,connection,job,review}:{
       <div><span className="breadcrumb">Tiger Brokers</span><h2>{account.alias}</h2></div>
       <span className="pill pill-warning">{!connected?"연결 확인 필요": "데이터 검증 대기"}</span>
     </div>
-    <p>이 계좌의 보유수량과 수익률을 표시하려면 전체 체결이력, 수수료, 기업행동 및 증권사 보유현황 대조가 필요합니다.</p>
+    <p>이 계좌는 아직 검증된 평가 정보를 제공하지 않습니다. 수집·검증 현황은 아래에서 확인할 수 있습니다.</p>
     <div className="portfolio-unknown-grid">
       <div><small>보유 자산 평가액</small><strong>미확인</strong></div>
       <div><small>취득원가</small><strong>미확인</strong></div>
       <div><small>실현·미실현 손익</small><strong>미확인</strong></div>
     </div>
+    <details className="portfolio-readiness-details">
+      <summary>검증·수집 상태 자세히 보기</summary>
     <div className="portfolio-checks" aria-label="검증 요건">
       <span>전체 거래이력 <b>미검증</b></span>
       <span>수수료·통화 <b>미검증</b></span>
@@ -121,6 +122,7 @@ function AccountReadiness({account,connection,job,review}:{
           {" — "}{issueText[issue.code]??"추가로 확인해야 할 거래내역 검증 항목이 있습니다."}
         </li>)}</ul>}
     </div>}
+    </details>
     <Link href="/private/tiger/sync" className="btn btn-outline">수집 및 오류 상태 확인 →</Link>
   </section>;
 }
@@ -128,11 +130,15 @@ function AccountReadiness({account,connection,job,review}:{
 export default async function PortfolioPage() {
   if(!await currentWorkspace()) redirect("/login");
   const personal=await tigerPersonalRead();
-  if(personal && personal.accounts.length>0) return <main>
-    <div className="page-intro"><h1>내 포트폴리오</h1>
-      <p>개인 Tiger API에서 수집한 계좌 자산과 보유 종목을 볼 수 있어.</p></div>
+  if(personal && personal.accounts.length>0) return <main className="portfolio-data">
+    <div className="page-intro home-data-heading">
+      <div><h1>포트폴리오</h1><p>보유 종목과 계좌별 평가 정보를 확인하세요.</p></div>
+      <div className="home-actions">
+        <Link className="btn btn-outline" href="/private/trades">거래 기록</Link>
+        <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
+      </div>
+    </div>
     <PersonalPortfolioBlock data={personal}/>
-    <PersonalOrderHistory data={personal} compact/>
   </main>;
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
@@ -147,14 +153,10 @@ export default async function PortfolioPage() {
     if(!latestJob.has(job.accountId)) latestJob.set(job.accountId,job);
   }
   return <main>
-    <div className="page-intro"><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
-      <h1>내 포트폴리오</h1>
-      <p>계좌 연결 상태와 데이터 검증 준비 현황을 확인하세요. 확인되지 않은 거래 내역으로 잔고나 손익을 만들어 표시하지 않습니다.</p>
-    </div>
-    <div className="info-strip" role="status"><span aria-hidden="true">ⓘ</span><div>
-      <strong>현재 평가액·미실현손익·계좌 총수익률은 확인되지 않았습니다.</strong>
-      <p>독립 검증된 원장이 존재하는 계좌에서만 과거 기준의 수량·취득원가·실현손익을 보여줍니다. 현재 시세를 확인하지 않은 평가손익이나 예시 잔고는 표시하지 않습니다.</p>
-    </div></div>
+    <div className="page-intro home-data-heading"><div>
+      <span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
+      <h1>포트폴리오</h1><p>연결 계좌와 보유 현황을 확인합니다.</p>
+    </div><Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link></div>
     {accountState===null || historyState===null || reviewState===null ? <section className="state-panel" role="alert">
       <span className="pill pill-warning">조회 불가</span>
       <h2>포트폴리오 준비 상태를 확인할 수 없습니다.</h2>
@@ -163,7 +165,7 @@ export default async function PortfolioPage() {
     </section> : accounts.length===0 ? <section className="state-panel">
       <span className="pill pill-neutral">연결된 계좌 없음</span>
       <h2>연결된 계좌가 아직 없습니다.</h2>
-      <p>Tiger 공식 제3자 앱 승인과 조회 범위 검증을 마친 뒤 연결된 계좌의 상태를 이곳에 표시합니다.</p>
+      <p>계좌가 연결되면 여기에서 보유 현황을 확인할 수 있습니다.</p>
       <Link href="/private/tiger" className="btn btn-outline">Tiger 연동 상태 보기</Link>
     </section> : <>
       <div className="dashboard-heading"><h2>계좌별 검증 상태</h2><span className="pill pill-neutral">{accounts.length}개 계좌</span></div>
@@ -180,19 +182,6 @@ export default async function PortfolioPage() {
             job={latestJob.get(account.id)??null} review={latestReview.get(account.id)??null}/>;
       })}</div>
     </>}
-    <section className="state-panel">
-      <h2>투자 판단과 검증 체결을 함께 보기</h2>
-      <p>투자 일지에서는 직접 입력한 거래와 독립 검증된 Tiger 체결을 종목별로 구분해서 볼 수 있습니다. 아직 승인되지 않은 증권사 데이터는 표시하지 않습니다.</p>
-      <Link href="/private/journal" className="btn btn-outline">종목별 투자 일지 열기 →</Link>
-    </section>
-    <section className="state-panel">
-      <h2>포트폴리오 검증 절차</h2>
-      <div className="connection-steps">
-        <div className="connection-step">1 · 체결이력 수집<small>누락·중복·수수료 상태 확인</small></div>
-        <div className="connection-step">2 · 거래 대조<small>주문·현금활동·기업행동 검증</small></div>
-        <div className="connection-step">3 · 보유수량 대조<small>같은 기준 시각 증권사 스냅샷과 비교</small></div>
-        <div className="connection-step">4 · 검증된 손익 공개<small>승인된 원장에서만 산출</small></div>
-      </div>
-    </section>
+
   </main>;
 }

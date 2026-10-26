@@ -202,3 +202,55 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .journal-held-context{margin-top:16px!important;color:#326b54!important;font-size:.84rem!important}
 .journal-create-page{max-width:760px;margin:24px 0;padding:26px}
 @media(max-width:620px){.journal-create-page{padding:18px}}
+
+/* Authenticated dashboard and account-first portfolio */
+.home-data-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px}
+.home-data-heading h1{margin:0 0 7px}
+.home-data-heading p{margin:0}
+.home-actions{display:flex;gap:8px;flex-wrap:wrap}
+.user-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:22px 0 26px}
+.user-summary-card,.user-panel{background:#fff;border:1px solid var(--line);border-radius:19px;min-width:0}
+.user-summary-card{padding:22px;display:flex;flex-direction:column;gap:8px}
+.user-summary-card>small,.account-summary-values small{color:var(--muted);font-size:.8rem;font-weight:650}
+.user-summary-card>strong{font-size:1.4rem;color:var(--ink);letter-spacing:-.03em;overflow-wrap:anywhere}
+.user-summary-card>span{font-size:.78rem;color:var(--muted);min-height:22px}
+.user-summary-card>a{margin-top:6px;font-weight:750;font-size:.85rem}
+.user-panel{padding:24px;margin:18px 0}
+.user-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.user-panel-head h2,.user-panel-head h3{margin:0}
+.user-panel-head>a{font-size:.85rem;font-weight:750}
+.user-panel-head small,.user-muted{color:var(--muted);font-size:.78rem}
+.account-summary-list{display:grid;gap:12px}
+.account-summary-item{background:#f8fbf9;border:1px solid var(--line);padding:15px 18px;border-radius:14px}
+.account-summary-head{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.account-summary-head small{color:var(--muted);font-size:.77rem}
+.account-summary-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:15px}
+.account-summary-values>div{min-width:0}
+.account-summary-values small{display:block;margin-bottom:5px}
+.account-summary-values strong{font-size:1.27rem;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.user-footnote{font-size:.76rem;line-height:1.6;margin:12px 0 0!important;color:#7c9089!important}
+.home-two-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.home-two-columns>.user-panel{margin:0}
+.user-list{display:grid}
+.user-list-row{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);min-width:0}
+.user-list-row:last-child{border-bottom:0}
+.user-list-row>div{min-width:0}
+.user-list-row strong{display:block;font-size:.89rem;color:var(--ink)}
+.user-list-row small,.user-list-row time{font-size:.75rem;color:var(--muted);display:block;margin-top:5px;overflow-wrap:anywhere}
+.user-list-row time{white-space:nowrap}
+.user-list-value{text-align:right}
+.user-list-value strong{font-variant-numeric:tabular-nums}
+.user-list-kind{font-size:.73rem;color:#087d62;font-weight:600;margin-left:6px}
+.user-empty{padding:12px 0;font-size:.87rem}
+.account-portfolio-list{display:grid;gap:16px}
+.account-portfolio-list>.user-panel{margin:0}
+.portfolio-account-values{padding:18px 0 22px;border-bottom:1px solid var(--line)}
+.portfolio-holdings-head{margin-top:22px}
+.portfolio-symbol-currency{display:block;margin-top:5px}
+.value-negative{color:#b04b48}
+.value-standard{color:var(--ink)}
+.portfolio-readiness-details{padding:12px 0}
+.portfolio-readiness-details summary{cursor:pointer;font-weight:700}
+.journal-create-page{max-width:760px}
+@media(max-width:800px){.home-two-columns{grid-template-columns:1fr}}
+@media(max-width:640px){.user-summary-grid{grid-template-columns:1fr}.account-summary-values{grid-template-columns:repeat(2,minmax(0,1fr))}.user-panel{padding:18px}.user-list-row time{white-space:normal}}

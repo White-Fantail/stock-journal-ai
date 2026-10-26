@@ -29,9 +29,9 @@ test("money comparison is exact and not a signal engine",()=>{
 });
 test("price crossing NEVER emits a trade or price alert",()=>{
   const signals=derivePersonalAlerts(personal(),health(),[plan()],now);
-  assert.equal(signals.length,0);
+  assert.equal(signals.filter(x=>x.kind==="PLAN_INCOMPLETE").length,1);
   assert.ok(signals.every(x=>!x.kind.startsWith("PRICE_")));
-  assert.equal(derivePersonalAlerts(personal(1),health(),[plan()],now).length,0);
+  assert.equal(derivePersonalAlerts(personal(1),health(),[plan()],now).filter(x=>x.kind==="PLAN_INCOMPLETE").length,1);
   assert.equal(derivePersonalAlerts(personal(1),health(),null,now)
     .filter(x=>x.kind==="PLAN_MISSING").length,0);
 });
@@ -44,6 +44,15 @@ test("only held symbols with a fresh snapshot and no plan receive a review sugge
   const stale={...old,accounts:old.accounts.map(a=>({...a,asOf:iso(12*24*60)}))};
   assert.equal(derivePersonalAlerts(stale,health(),[],now)
     .filter(x=>x.kind==="PLAN_MISSING").length,0);
+});
+test("fully authored strategy removes incomplete check without prices",()=>{
+  const complete={...plan(),strategyType:"LONG_TERM",investmentHorizon:"OVER_THREE_YEARS",
+    invalidationCondition:"Change in business thesis",maxAllocationPct:"15.00",
+    reviewCadence:"QUARTERLY"} as JournalPlan;
+  const notices=derivePersonalAlerts(personal(),health(),[complete],now);
+  assert.equal(notices.filter(x=>x.kind==="PLAN_INCOMPLETE").length,0);
+  assert.equal(notices.filter(x=>x.kind==="PLAN_MISSING").length,0);
+  assert.ok(notices.every(x=>!x.kind.startsWith("PRICE_")));
 });
 test("failure, stale schedule, and partial orders never certify brokerage returns",()=>{
   const alerts=derivePersonalAlerts(personal(10,true),health("FAILED",2300),[],now);

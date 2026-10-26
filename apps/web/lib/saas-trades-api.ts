@@ -180,7 +180,7 @@ export async function fetchJournalPlans(subject:string):Promise<readonly Journal
        (p.invalidationCondition==null || (typeof p.invalidationCondition==="string" &&
           p.invalidationCondition.length>0 && p.invalidationCondition.length<=1500)) &&
        (p.maxAllocationPct==null || (typeof p.maxAllocationPct==="string" &&
-          /^(?:0|[1-9][0-9]?|100)(?:\\.[0-9]{1,2})?$/.test(p.maxAllocationPct) &&
+          /^(?:0|[1-9][0-9]?|100)(?:\.[0-9]{1,2})?$/.test(p.maxAllocationPct) &&
           Number(p.maxAllocationPct)>0 && Number(p.maxAllocationPct)<=100)) &&
        (p.reviewCadence==null || ["WEEKLY","MONTHLY","QUARTERLY",
           "SEMIANNUAL","ANNUAL","EVENT_DRIVEN"].includes(p.reviewCadence))))

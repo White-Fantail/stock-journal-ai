@@ -18,7 +18,7 @@ export default async function BrokerConnections() {
     <div className="broker-list">
       <section className="broker-card broker-card--highlight">
         <div className="broker-top"><span className="broker-logo" aria-hidden="true">T</span>
-          <span className={count ? "pill" : "pill pill-warning"}>{personal?.accounts.length ? "내 계좌 연결됨" : count ? "연결됨" : state?.enabled ? "연결 가능" : state ? "승인 준비 중" : "상태 확인 필요"}</span></div>
+          <span className={personal?.accounts.length || count ? "pill" : "pill pill-warning"}>{personal?.accounts.length ? "내 계좌 연결됨" : count ? "연결됨" : state?.enabled ? "연결 가능" : state ? "승인 준비 중" : "상태 확인 필요"}</span></div>
         <h2>Tiger Brokers</h2>
         <p>Positionary의 첫 번째 연동 대상입니다. {personal?.accounts.length ? "내 계정은 개인 API로 조회 중입니다. 다른 사용자는 공식 OAuth 승인 대기 상태입니다." : "공식 승인이 확인되면 Tiger 인증으로 조회 권한을 연결할 수 있습니다."}</p>
         <Link href="/private/tiger" className="btn btn-primary">연결 상태 자세히 보기 <span aria-hidden="true">→</span></Link>

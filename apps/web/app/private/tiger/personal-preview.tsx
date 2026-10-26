@@ -42,7 +42,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}) {
   </div>;
 }
 
-export function PersonalOrderHistory({data,compact=false}:{data:TigerPersonalRead,compact?:boolean}){
+export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPersonalRead,compact?:boolean,page?:number}){
   const rows=data.accounts.flatMap(account=>account.orders.map(o=>({alias:account.alias,...o})))
       .sort((a,b)=>Number(b.at??0)-Number(a.at??0));
   return <section className="state-panel">
@@ -50,7 +50,7 @@ export function PersonalOrderHistory({data,compact=false}:{data:TigerPersonalRea
     <p>증권사 API에서 수집한 실제 <strong>주문 단위</strong> 자료야. 주문 한 건은 여러 번 나누어 체결될 수 있으며, 수수료·시간·현금 거래의 완전성은 검증 전이야.
     거래 원장으로 확정하거나 자동 손익 계산에 사용하지 않아.</p>
     {data.accounts.some(a=>a.partial || a.truncated) && <p role="status">조회 누락 가능성이 있는 구간이 존재해. 표시된 자료를 전체 거래 이력으로 사용하지 마.</p>}
-    <p>수집 구간: {data.accounts.reduce((n,a)=>n+a.windowCount,0)}개 · 화면 표시: {rows.length}개
+    <p>수집 구간: {data.accounts.reduce((n,a)=>n+a.windowCount,0)}개 · 전체 관측 주문 {data.accounts.reduce((n,a)=>n+a.totalOrders,0)}건 · 현재 페이지 {page+1} · 표시: {rows.length}개
     {data.accounts.some(a=>a.truncated)?" · 표시 한도 적용":""}</p>
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
       <div style={{overflowX:"auto"}}>
@@ -67,5 +67,9 @@ export function PersonalOrderHistory({data,compact=false}:{data:TigerPersonalRea
         </table>
       </div>}
     {compact && rows.length>12 && <Link href="/private/trades">전체 관측 주문 보기 →</Link>}
+    {!compact && <div style={{display:"flex",gap:18,marginTop:14}}>
+      {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}
+      {data.accounts.some(a=>a.hasMore) && page<20 && <Link href={"/private/trades?page="+(page+1)}>다음 주문 기록 →</Link>}
+    </div>}
   </section>;
 }

@@ -97,8 +97,10 @@ def _send(subject,account,begin,end,part,parts,complete,orders,env):
 def _pages(client,account,begin,end):
     # Unlike get_filled_orders, get_orders supports a cursor.
     from tigeropen.common.consts import SecurityType
+    # Request a cursor from page one; omitting page_token returns a legacy
+    # list whose last page cannot be proven for a 100-record response.
     kwargs={"account":account,"sec_type":SecurityType.STK,
-            "start_time":begin,"end_time":end,"limit":100}
+            "start_time":begin,"end_time":end,"limit":100,"page_token":""}
     seen_tokens=set()
     orders={}
     complete=True
@@ -122,6 +124,11 @@ def _pages(client,account,begin,end):
             complete=False
         for raw in page:
             item=_order(raw,account)
+            previous=orders.get(item["id"])
+            if previous is not None and previous!=item:
+                # Cross-page changed order state is not a duplicate fill and
+                # must not silently overwrite the earlier version.
+                raise ValueError("CONFLICTING_ORDER_PAGES")
             orders[item["id"]]=item
         if not token:
             return list(orders.values()),complete

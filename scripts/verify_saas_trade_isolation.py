@@ -11,6 +11,7 @@ import psycopg
 
 from services.saas_api.identity import provision, resolve
 from services.saas_api.journal import create_note, list_notes, export_journal
+from services.saas_api.journal_plans import create_plan,list_plans
 from services.saas_api.account import delete_account
 from services.saas_api.request_security import consume_signed_request, RequestRejected
 from services.saas_api.trades import (
@@ -122,9 +123,28 @@ def main() -> None:
             pass
         else:
             raise AssertionError("Cross-tenant trade-note reference accepted")
+        plan={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
+              "targetPrice":"280.250","stopPrice":"120.500","priceCurrency":"USD",
+              "rationale":"Synthetic user-authored plan"}
+        planned=create_plan(identity,trade,a_sub,plan)
+        assert create_plan(identity,trade,a_sub,plan)["replayed"]
+        assert len(list_plans(identity,trade,a_sub)["plans"])==1
+        assert list_plans(identity,trade,b_sub)["plans"]==[]
+        try:
+            create_plan(identity,trade,a_sub,{**plan,"stopPrice":"100"})
+        except TradeConflict:
+            pass
+        else:
+            raise AssertionError("Plan idempotency collision silently rewrote data")
+        next_plan={**plan,"idempotencyKey":str(uuid4()),"stopPrice":None,
+                   "rationale":"Synthetic revised exit plan"}
+        create_plan(identity,trade,a_sub,next_plan)
+        assert len(list_plans(identity,trade,a_sub)["plans"])==2
         export = export_journal(identity,trade,a_sub)
         assert export["complete"] and len(export["journal"]) == 1 and len(export["trades"]) == 2
+        assert len(export["plans"])==2
         assert len(export_journal(identity,trade,b_sub)["journal"]) == 0
+        assert export_journal(identity,trade,b_sub)["plans"]==[]
 
         # Exercise actual SQL constraints as an underprivileged tenant-bound
         # role. This catches regressions even if Python input validation passes.
@@ -197,11 +217,29 @@ def main() -> None:
                 pass
             else:
                 raise AssertionError("Cross-tenant insert passed RLS")
+        # Target/stop plans cannot be forged across workspaces.
+        with trade.transaction():
+            trade.execute("SELECT set_config('saas.workspace_id',%s,true)",(a["workspaceId"],))
+            trade.execute("SELECT set_config('saas.user_id',%s,true)",(a["userId"],))
+            try:
+                with trade.transaction():
+                    trade.execute("""INSERT INTO saas_journal_plan_revisions
+                        (workspace_id,author_user_id,idempotency_key,request_hash,
+                         ticker,target_price,price_currency,rationale)
+                        VALUES (%s,%s,%s,%s,'TSLA',12,'USD','forged')""",
+                        (b["workspaceId"],b["userId"],str(uuid4()),"a"*64))
+            except psycopg.errors.InsufficientPrivilege:
+                pass
+            else:
+                raise AssertionError("Cross-tenant plan revision bypassed RLS")
+
         # No mutation permission even for a row inside one's own workspace.
         with trade.transaction():
             trade.execute("SELECT set_config('saas.workspace_id',%s,true)", (a["workspaceId"],))
             for statement in ("UPDATE saas_trade_events SET rationale='rewrite'",
-                              "DELETE FROM saas_trade_events"):
+                              "DELETE FROM saas_trade_events",
+                              "UPDATE saas_journal_plan_revisions SET rationale='rewrite'",
+                              "DELETE FROM saas_journal_plan_revisions"):
                 try:
                     with trade.transaction():
                         trade.execute(statement)

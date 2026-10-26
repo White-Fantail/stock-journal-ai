@@ -94,12 +94,43 @@ def main():
               "content":"Synthetic investment hypothesis","tradeEventId":None}
         code,_=request("/internal/v1/journal/create",{"subject":A,"entry":note})
         assert code==200,code
+        # Target/stop revisions are independent journal annotations, not broker
+        # orders or verified holdings. Signed HTTP access remains tenant scoped.
+        plan={"idempotencyKey":str(uuid4()),"ticker":"TSLA","targetPrice":"250.25",
+              "stopPrice":"175.50","priceCurrency":"USD",
+              "rationale":"Synthetic private plan only"}
+        code,created=request("/internal/v1/journal/plan/create",{"subject":A,"plan":plan})
+        assert code==200 and "id" in created,(code,created)
+        code,replayed=request("/internal/v1/journal/plan/create",{"subject":A,"plan":plan})
+        assert code==200 and replayed["replayed"],(code,replayed)
+        code,_=request("/internal/v1/journal/plan/create",{"subject":A,
+            "plan":{**plan,"targetPrice":"260.00"}})
+        assert code==409,code
+        code,plans=request("/internal/v1/journal/plans",{"subject":A})
+        assert code==200 and len(plans["plans"])==1,(code,plans)
+        assert plans["plans"][0]["targetPrice"]=="250.250000000000"
+        assert plans["plans"][0]["isBrokerOrder"] is False
+        assert plans["plans"][0]["provenance"]=="USER_AUTHORED"
+        code,other_plans=request("/internal/v1/journal/plans",{"subject":B})
+        assert code==200 and other_plans["plans"]==[],(code,other_plans)
+        code,_=request("/internal/v1/journal/plans",
+            {"subject":A,"workspaceId":"forged"})
+        assert code==400,code
+        second={**plan,"idempotencyKey":str(uuid4()),"targetPrice":"280.00",
+                "stopPrice":None,"rationale":"Synthetic revised target"}
+        code,revision=request("/internal/v1/journal/plan/create",
+            {"subject":A,"plan":second})
+        assert code==200 and revision["id"]!=created["id"]
+        code,versions=request("/internal/v1/journal/plans",{"subject":A})
+        assert code==200 and len(versions["plans"])==2
+        assert versions["plans"][0]["targetPrice"]=="280.000000000000"
         code,blist=request("/internal/v1/journal/list",{"subject":B})
         assert code==200 and blist["entries"]==[]
         code,out=request("/internal/v1/journal/export",{"subject":A})
         assert code==200 and out["complete"] and len(out["journal"])==1 and len(out["trades"])==1
+        assert len(out["plans"])==2 and out["plans"][0]["isBrokerOrder"] is False
         code,out=request("/internal/v1/journal/export",{"subject":B})
-        assert code==200 and out["journal"]==[] and out["trades"]==[]
+        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -116,12 +147,17 @@ def main():
                               (scope["workspaceId"],scope["userId"]))
         code,_=request("/internal/v1/journal/list",{"subject":B})
         assert code==404,code
+        code,_=request("/internal/v1/journal/plans",{"subject":B})
+        assert code==404,code
         code,_=request("/internal/v1/account/delete",{"subject":A,"confirmation":"not confirmed"})
         assert code==400,code
         code,out=request("/internal/v1/account/delete",{"subject":A,"confirmation":"DELETE_MY_ACCOUNT"})
         assert code==200 and out=={"deleted":True},(code,out)
         code,_=request("/internal/v1/resolve",{"subject":A})
         assert code==404
+        with psycopg.connect(dsn) as db:
+            assert db.execute("""SELECT count(*) FROM saas_journal_plan_revisions
+                WHERE ticker='TSLA'""").fetchone()[0]==0
         print("P1/P2 HTTP PASS: provision, replay, trade, journal, export, A/B denial, revocation, deletion")
     finally:
         p.terminate()

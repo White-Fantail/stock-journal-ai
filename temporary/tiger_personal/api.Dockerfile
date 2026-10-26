@@ -8,7 +8,9 @@ COPY services/tiger_sync/ /srv/services/tiger_sync/
 COPY db/saas/migrations/ /srv/db/saas/migrations/
 COPY temporary/ /srv/temporary/
 COPY tests/test_tiger_personal_*.py /srv/tests/
+COPY tests/test_tiger_owner_history.py /srv/tests/
 RUN python -m compileall -q /srv/temporary /srv/services/saas_api
 RUN python -m unittest discover -s /srv/tests -p "test_tiger_personal_*.py" -v
+RUN python -m unittest discover -s /srv/tests -p "test_tiger_owner_history.py" -v
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 CMD ["python","-m","services.saas_api.server"]

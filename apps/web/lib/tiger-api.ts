@@ -210,7 +210,7 @@ export type TigerPersonalAccount = Readonly<{
 export type TigerPersonalRead = Readonly<{
   coverage:"SNAPSHOT_ONLY";verified:false;accounts:TigerPersonalAccount[]
 }>;
-const personalDecimal=/^-?(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/;
+const personalDecimal=/^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
 const personalSymbol=/^[A-Z0-9.:-]{1,32}$/;
 function nullableNumber(v:unknown): v is string|null {
   return v===null || (typeof v==="string" && personalDecimal.test(v));

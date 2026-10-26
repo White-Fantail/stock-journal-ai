@@ -124,6 +124,18 @@ def main():
         code,versions=request("/internal/v1/journal/plans",{"subject":A})
         assert code==200 and len(versions["plans"])==2
         assert versions["plans"][0]["targetPrice"]=="280.000000000000"
+        # A signed request is NOT a broker publication certificate. This
+        # synthetic HTTP harness has no approved broker login or grant.
+        forged_note={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
+                     "content":"Synthetic forged source", "accountId":str(uuid4()),
+                     "sourceRef":"a"*64}
+        code,out=request("/internal/v1/journal/broker-note/create",
+                         {"subject":A,"brokerNote":forged_note,"workspaceId":str(uuid4())})
+        assert code==400,(code,out)
+        code,out=request("/internal/v1/journal/broker-note/create",
+                         {"subject":A,"brokerNote":forged_note})
+        assert code==503 and out.get("error")=="BROKER_DB_ROLE_NOT_CONFIGURED",(code,out)
+
         code,blist=request("/internal/v1/journal/list",{"subject":B})
         assert code==200 and blist["entries"]==[]
         code,out=request("/internal/v1/journal/export",{"subject":A})

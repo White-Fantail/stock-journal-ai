@@ -26,8 +26,21 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql",
                            "020_journal_tiger_observation_links.sql",
                            "021_ai_request_quotas.sql",
-                           "022_personal_sync_health.sql"])
+                           "022_personal_sync_health.sql",
+                           "023_investment_strategy_plan.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_strategy_plan_extension_is_nullable_append_only_and_forward_only(self):
+        sql=next(body for name,_,body in manifest()
+                 if name=="023_investment_strategy_plan.sql")
+        self.assertIn("ALTER TABLE saas_journal_plan_revisions",sql)
+        for field in ("strategy_type","investment_horizon","invalidation_condition",
+                      "max_allocation_pct","review_cadence"):
+            self.assertIn("ADD COLUMN "+field,sql)
+        for forbidden in ("DROP TABLE","DROP COLUMN","UPDATE saas_","DELETE FROM",
+                          "GRANT UPDATE","GRANT DELETE"):
+            self.assertNotIn(forbidden,sql.upper() if forbidden.startswith("DROP") else sql)
+        self.assertEqual(len([x for x in manifest() if x[0]=="023_investment_strategy_plan.sql"]),1)
 
     def test_tiger_sync_health_is_append_only_and_owner_scoped(self):
         source=next(sql for name,_,sql in manifest()

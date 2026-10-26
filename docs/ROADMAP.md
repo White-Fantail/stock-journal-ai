@@ -152,3 +152,16 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [ ] Email/push notifications, user-controlled opt-in preferences, quiet hours, alert deduplication over time, much more frequent market-session scheduling, explicit provider licensing and broker-authorized multi-user sync require independent deployment/consent controls. **Once-per-day read-only cron does not constitute live price monitoring.**
 - [ ] Full independent source reconciliation (historical transactions, fees, FX, transfers, corporate actions) remains blocked even with healthy automated sync. No real-money orders/stop-losses are created.
 
+
+
+### Personal long-horizon investment review track (2026-10-27)
+- [x] Remove observed-quote target/stop trigger logic from private review notifications. Keep authored plan target/stop values as annotations only, and retain Tiger sync/coverage alerts.
+- [x] Convert alert navigation to an investor review center: failed/stale sync, partial order history, and missing plans for recently observed held symbols. Suppress missing-plan suggestions if journal retrieval failed.
+- [x] Add a pure fixed-point long-position risk-budget calculator in a separate private route. It is illustrative only, cash capped, has no quotes, no storage, and places no orders.
+- [x] Add snapshot-only, per-account/per-currency invested-equity concentration proportions on portfolio page. Avoid cross-account/FX aggregation and decline unknown or stale position values. These are not audited returns or total NAV exposure.
+- [ ] Extend immutable per-ticker investment plans to include strategy type (long-term, technical entry, event-driven or other), planned horizon, invalidation thesis, personal maximum allocation, scheduled review cadence and append-only strategy revisions. Validate migration with the existing guarded rollout path and restricted tenant roles.
+- [ ] Add user-configured concentration limits and compare bounded snapshot exposure only when denominators and relevant cash/FX valuation are valid. Do not invent thresholds or treat the calculation as a sell instruction.
+- [ ] Create weekly/monthly review checklist and close-the-loop AI critique based on journal compliance (never quote/technical signals), with opt-in and quotas.
+- [ ] Introduce audited monthly contribution-adjusted long-term returns only after complete executed fills, fees, cash flows, corporate actions and FX integrity are evidenced. Do not claim live or guaranteed investment performance.
+- [ ] Verify GitHub CI (Next build, web tests) and authenticated production two-user separation before promoting the new features to main.
+- **Cost policy:** No real-time or delayed-price trade alerts, no background quote polling, no per-tick price database. Reuse existing account snapshots; recompute ephemeral review metrics at read time.

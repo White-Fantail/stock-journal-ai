@@ -10,7 +10,7 @@ export default async function RiskPage(){
    <div className="page-intro">
      <span className="breadcrumb"><Link href="/private/portfolio">← 포트폴리오</Link></span>
      <h1>투자 위험 예산 계산기</h1>
-     <p>주가 감시 없이 사전에 감수할 손실과 투자 규모를 비교합니다. 장기 보유를 위한 비중 관리와는 별도의 참고 계산입니다.</p>
+     <p>주가 감시 없이 사전에 감수할 손실과 투자 규모를 비교합니다. 초기 입력값은 계산 예시이며 권장 비율이 아닙니다. 장기 보유를 위한 비중 관리와는 별도입니다.</p>
    </div>
    <RiskCalculator/>
  </main>;

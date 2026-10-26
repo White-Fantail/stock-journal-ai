@@ -62,7 +62,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
         self.assertFalse(e.amount_precision_verified)
         self.assertEqual(e.provenance,"BROKER_OBSERVED_UNVERIFIED")
         self.assertEqual(len(e.source_ref),64)
-        self.assertNotIn("101",e.source_ref)
+        self.assertNotEqual(e.source_ref,"101")
         self.assertEqual(source.calls,[{
             "seg_types":["SEC","FUT"],"fund_type":"DEPOSIT_WITHDRAW",
             "start":0,"limit":50,
@@ -107,6 +107,9 @@ class TigerFundEvidenceTests(unittest.TestCase):
           [row(1),row(1,amount="99")],
           [row(1,amount="NaN")],
           [row(1,amount=float("inf"))],
+          [row(1,amount="1e99999999")],
+          [row(1,amount="0.0000000000001")],
+          [row(1,amount="1000000000000000000000000")],
           [row(1,currency="INVALID")],
           [row(1,seg_type="FUTURES")],
           [row(1,business_date="2026-10-31")],

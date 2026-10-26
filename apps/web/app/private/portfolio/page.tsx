@@ -5,6 +5,8 @@ import {formatDecimal} from "../../../lib/format-decimal";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { tigerPersonalRead } from "../../../lib/tiger-api";
 import { PersonalPortfolioBlock } from "../tiger/personal-preview";
+import {assessConcentration} from "../../../lib/portfolio-risk";
+import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
 
 export const metadata:Metadata={title:"포트폴리오 · Positionary"};
@@ -141,6 +143,41 @@ function AccountReadiness({account,connection,job,review}:{
   </section>;
 }
 
+/** Explicitly scoped to each account: do not combine different currencies or as-of dates. */
+function PortfolioConcentration({data}:{data:TigerPersonalRead}){
+  return <section className="user-panel" aria-label="보유 종목 집중도">
+    <div className="user-panel-head">
+      <h2>보유 종목 집중도</h2>
+      <Link href="/private/risk">투자 위험 계산기 →</Link>
+    </div>
+    <p className="user-footnote">기존 Tiger 계좌 스냅샷의 보유 종목 평가액만으로 계산한 참고 비중입니다.
+      현금·다른 계좌·다른 통화를 합산하지 않습니다. 수익률이나 매매 신호가 아닙니다.</p>
+    {data.readWarnings?.length?<p role="status">조회된 정보에 오류가 있어 집중도 계산을 보류합니다.</p>:
+      data.accounts.map((account,index)=>{
+        const result=assessConcentration(account);
+        return <div key={account.alias+":"+index} className="account-summary-item">
+          <div className="account-summary-head"><strong>{account.alias}</strong>
+            <small>{timeLabel(account.asOf)} 기준</small></div>
+          {result.status==="UNAVAILABLE"?<p className="user-footnote">{result.reason}</p>:<>
+            <div className="account-summary-values portfolio-account-values">
+              <div><small>최대 단일 종목 비중</small><strong>{result.largestPercent}%</strong></div>
+              <div><small>상위 두 종목 비중</small><strong>{result.topTwoPercent}%</strong></div>
+              <div><small>기준 통화</small><strong>{result.currency}</strong></div>
+            </div>
+            <div className="user-list">
+              {result.positions.map(position=><Link className="user-list-row" key={position.symbol}
+                href={"/private/journal?ticker="+encodeURIComponent(position.symbol)}>
+                <strong>{position.symbol}</strong><strong>{position.percent}%</strong>
+              </Link>)}
+            </div>
+            <p className="user-footnote">위 비중의 분모는 확인된 보유 주식의 평가액 합계입니다. 현금이나 순자산 대비 비중은 아닙니다.
+              집중도가 높다고 반드시 매도해야 하는 것은 아니며, 개인의 위험 한도에 비춰 검토해야 합니다.</p>
+          </>}
+        </div>;
+      })}
+  </section>;
+}
+
 export default async function PortfolioPage() {
   if(!await currentWorkspace()) redirect("/login");
   const personal=await tigerPersonalRead();
@@ -149,9 +186,11 @@ export default async function PortfolioPage() {
       <div><h1>포트폴리오</h1><p>보유 종목과 계좌별 평가 정보를 확인하세요.</p></div>
       <div className="home-actions">
         <Link className="btn btn-outline" href="/private/trades">거래 기록</Link>
+        <Link className="btn btn-outline" href="/private/risk">위험 계산기</Link>
         <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
       </div>
     </div>
+    <PortfolioConcentration data={personal}/>
     <PersonalPortfolioBlock data={personal}/>
   </main>;
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);

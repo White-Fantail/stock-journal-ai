@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {currentWorkspace} from "../../../lib/require-workspace";
-import {tigerPersonalRead} from "../../../lib/tiger-api";
+import {tigerPersonalRead,tigerPersonalDiagnostics} from "../../../lib/tiger-api";
 import {PersonalOrderHistory} from "../tiger/personal-preview";
 
 export const dynamic="force-dynamic";
@@ -15,6 +15,8 @@ export default async function TradesPage({
   const page=/^(?:0|[1-9][0-9]?)$/.test(query.page??"0")
     ?Math.min(20,Number(query.page??"0")):0;
   const personal=await tigerPersonalRead(page);
+  const diagnosis=personal?.accounts.length ? null : await tigerPersonalDiagnostics();
+  const hadTigerData=Boolean(diagnosis && (diagnosis.accountCount>0 || diagnosis.snapshotCounts.length>0));
   return <main style={{maxWidth:900,margin:"2rem auto",padding:"0 1rem"}}>
     <p><Link href="/private">← 대시보드</Link></p>
     <h1>거래 기록</h1>
@@ -25,7 +27,10 @@ export default async function TradesPage({
       ? <PersonalOrderHistory data={personal} page={page}/>
       : <section className="state-panel">
           <h2>Tiger 주문 관측 이력</h2>
-          <p>현재 이 계정에 표시 가능한 Tiger 주문 기록이 없습니다. 승인되지 않은 계정의 주문 정보는 표시되지 않습니다.</p>
+          <p>{hadTigerData
+            ? "기존 개인 Tiger 계좌의 저장 기록이 있지만 현재 주문 목록을 불러오지 못했습니다. 기존 거래 기록을 삭제하거나 재등록하지 마세요."
+            : "현재 이 계정에 표시 가능한 Tiger 주문 기록이 없습니다. 승인되지 않은 계정의 주문 정보는 표시되지 않습니다."}</p>
+          {hadTigerData && <p><Link href="/private/tiger/diagnostics">기존 데이터 저장 상태 점검 →</Link></p>}
           <Link href="/private/brokers">증권사 연결 상태 확인 →</Link>
         </section>}
   </main>;

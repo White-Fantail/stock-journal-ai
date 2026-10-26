@@ -50,4 +50,6 @@ test("future, invalid and capped histories never pretend to be complete",()=>{
  assert.equal(buildMonthlyProcessReport("not-a-month",[],[],[],now),null);
  assert.equal(buildMonthlyProcessReport("2026-10",
   Array.from({length:200},()=>note("X","REVIEW","2026-10-01T00:00:00Z")),[],[],now),null);
+ assert.equal(buildMonthlyProcessReport("2026-10",[],[],
+  Array.from({length:50},()=>trade("X","EXECUTION","2026-10-01T00:00:00Z")),now),null);
 });

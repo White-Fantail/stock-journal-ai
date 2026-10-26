@@ -67,6 +67,11 @@ def create_broker_note(identity, broker, trade, subject, raw):
     with trade.transaction():
         _runtime_safety(trade)
         _tenant_scope(trade,scope)
+        # Share P4's account-scoped transaction lock with independent release
+        # and reconciliation writers. No new review can slip between the
+        # final latest-version query and commit of this human-authored link.
+        trade.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                      (scope["workspaceId"]+":"+entry["accountId"],))
         # Never convert one journal idempotency key into another claim.
         old=trade.execute("""SELECT j.id,j.request_hash,l.account_id,l.source_key_hmac
             FROM saas_journal_records j

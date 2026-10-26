@@ -3,6 +3,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { auth } from "../auth";
 import { currentWorkspace } from "./require-workspace";
 import { saasAuthConfigured } from "./saas-auth-policy";
+import { parsePersonalRead } from "./tiger-personal-parse";
 
 export type TigerConnection = { id: string; status: string; expiresAt: string | null; lastSuccessAt: string | null };
 export type TigerAccount = { id: string; connectionId: string; alias: string };
@@ -230,85 +231,24 @@ export type TigerPersonalAccount = Readonly<{
   windowCount:number;partial:boolean;truncated:boolean;hasMore:boolean;totalOrders:number
 }>;
 export type TigerPersonalRead = Readonly<{
-  coverage:"SNAPSHOT_ONLY";verified:false;accounts:TigerPersonalAccount[]
+  coverage:"SNAPSHOT_ONLY";verified:false;accounts:TigerPersonalAccount[];
+  readWarnings?:readonly string[]
 }>;
-const personalDecimal=/^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
-const personalSymbol=/^[A-Z0-9.:-]{1,32}$/;
-function nullableNumber(v:unknown): v is string|null {
-  return v===null || (typeof v==="string" && personalDecimal.test(v));
-}
 export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> {
   if(!Number.isInteger(page) || page<0 || page>20) return null;
   try {
-    const result=await tigerCall("personal-view",{page:String(page)}) as TigerPersonalRead;
-    if(!result || result.coverage!=="SNAPSHOT_ONLY" || result.verified!==false ||
-       !Array.isArray(result.accounts) || result.accounts.length>5 ||
-       !result.accounts.every(a=>a && typeof a.alias==="string" &&
-         a.alias.length<=100 && (a.asOf===null || (typeof a.asOf==="string" && !Number.isNaN(Date.parse(a.asOf)))) &&
-         (a.assets===null || (a.assets && nullableNumber(a.assets.netLiquidation) &&
-           nullableNumber(a.assets.cashBalance) &&
-           (a.assets.currency===null || (typeof a.assets.currency==="string" &&
-             /^[A-Z]{3}$/.test(a.assets.currency))))) &&
-         Array.isArray(a.positions) && a.positions.length<=100 &&
-         a.positions.every(p=>p && typeof p.symbol==="string" && personalSymbol.test(p.symbol) &&
-           typeof p.currency==="string" && /^[A-Z]{3}$/.test(p.currency) &&
-           typeof p.quantity==="string" && personalDecimal.test(p.quantity) &&
-           nullableNumber(p.averageCost) && nullableNumber(p.marketValue) && nullableNumber(p.unrealizedPnl)) &&
-         Array.isArray(a.marketObservations) && a.marketObservations.length<=40 &&
-         a.marketObservations.every(q=>q && typeof q.symbol==="string" &&
-           /^[A-Z][A-Z0-9.]{0,13}$/.test(q.symbol) && q.currency==="USD" &&
-           typeof q.price==="string" && personalDecimal.test(q.price) &&
-           q.price!=="0" && typeof q.quoteAt==="string" && /^[0-9]{13}$/.test(q.quoteAt) &&
-           (q.mode==="US_DELAYED_15M" || q.mode==="REALTIME_PERMISSIONED") &&
-           typeof q.stale==="boolean" &&
-           nullableNumber(q.estimatedValue) &&
-           (q.estimatedUnrealized===null || (typeof q.estimatedUnrealized==="string" &&
-             /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(q.estimatedUnrealized))) &&
-           (q.estimatedReturnPct===null || (typeof q.estimatedReturnPct==="string" &&
-             /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(q.estimatedReturnPct)))) &&
-         Array.isArray(a.orders) && a.orders.length<=120 &&
-         a.orders.every(o=>o && /^[a-f0-9]{64}$/.test(o.sourceRef) &&
-           typeof o.symbol==="string" && personalSymbol.test(o.symbol) &&
-           typeof o.currency==="string" && /^[A-Z]{3}$/.test(o.currency) &&
-           (o.side==="BUY" || o.side==="SELL") &&
-           typeof o.status==="string" && /^[A-Z_]{3,32}$/.test(o.status) &&
-           nullableNumber(o.filled) &&
-           nullableNumber(o.price) && nullableNumber(o.fee) &&
-           (o.feeCurrency===null || (typeof o.feeCurrency==="string" && /^[A-Z]{3}$/.test(o.feeCurrency))) &&
-           (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
-         Array.isArray(a.feeObservations) && a.feeObservations.length<=30 &&
-         a.feeObservations.every(f=>f && /^[0-9a-f]{64}$/.test(f.sourceRef) &&
-           typeof f.symbol==="string" && personalSymbol.test(f.symbol) &&
-           (f.status==="MATCHED" || f.status==="CURRENCY_UNKNOWN") &&
-           typeof f.total==="string" && personalDecimal.test(f.total) &&
-           (f.currency===null || (typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency))) &&
-           (f.status==="MATCHED") === (f.currency!==null) &&
-           Array.isArray(f.details) && f.details.length>0 && f.details.length<=32 &&
-           f.details.every(d=>d && (d.category==="TIGER" || d.category==="THIRD_PARTY") &&
-             typeof d.type==="string" && /^[A-Z_]{2,40}$/.test(d.type) &&
-             typeof d.amount==="string" && personalDecimal.test(d.amount))) &&
-         Array.isArray(a.fillObservations) && a.fillObservations.length<=60 &&
-         a.fillObservations.every(f=>f && /^[0-9a-f]{64}$/.test(f.sourceRef) &&
-           typeof f.symbol==="string" && personalSymbol.test(f.symbol) &&
-           typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency) &&
-           (f.side==="BUY" || f.side==="SELL") &&
-           typeof f.quantity==="string" && personalDecimal.test(f.quantity) &&
-           typeof f.price==="string" && personalDecimal.test(f.price) &&
-           (f.timeRaw===null || (typeof f.timeRaw==="string" &&
-             /^(?:[0-9]{13}|[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})$/.test(f.timeRaw)))) &&
-         [a.fillProbeCount,a.fillProbeUnavailable,a.fillProbeDifference,a.fillProbePartial,
-          a.feeProbeMatched,a.feeProbeCurrencyUnknown,a.feeProbeDifference,a.feeProbeUnavailable].every(
-           v=>Number.isInteger(v) && v>=0) && typeof a.fillProbeTruncated==="boolean" &&
-         Number.isInteger(a.windowCount) && a.windowCount>=0 &&
-         Number.isInteger(a.totalOrders) && a.totalOrders>=0 &&
-         typeof a.hasMore==="boolean" &&
-         typeof a.partial==="boolean" && typeof a.truncated==="boolean")) {
-      console.warn("[tiger-personal] received an incompatible response shape");
+    const raw=await tigerCall("personal-view",{page:String(page)});
+    const parsed=parsePersonalRead(raw);
+    if(!parsed.value){
+      console.warn("[tiger-personal] invalid account response",parsed.warnings.join(","));
       return null;
     }
-    if(result.accounts.length===0) console.warn("[tiger-personal] authorized request returned no accounts");
-    return result;
-  } catch (error) {
+    if(parsed.warnings.length)
+      console.warn("[tiger-personal] partial response retained",parsed.warnings.join(","));
+    if(parsed.value.accounts.length===0)
+      console.warn("[tiger-personal] authorized read returned no accounts");
+    return parsed.value;
+  } catch(error) {
     const code=error instanceof Error && /^TIGER_[0-9]{3}$/.test(error.message)
       ? error.message : "UNAVAILABLE";
     if(code!=="TIGER_403") console.warn("[tiger-personal] owner read failed",code);

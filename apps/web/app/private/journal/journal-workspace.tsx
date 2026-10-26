@@ -339,7 +339,7 @@ export function JournalWorkspace({
                 <strong>{t.side==="BUY"?"매수":"매도"} {t.quantity}주 · {t.price} {t.currency}</strong>
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
-                <small>수수료 {t.fee} {t.currency} · BROKER_VERIFIED · 이 체결은 직접 입력 거래와 별도입니다.</small>
+                <small>수수료 {t.fee} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
               </div>
             </article>)}
             {brokerRead.readEnabled && <p className="journal-limit">

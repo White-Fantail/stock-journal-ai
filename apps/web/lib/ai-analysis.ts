@@ -22,7 +22,21 @@ const day=(v:string|null|undefined)=>{
   return Number.isNaN(d.valueOf())?"UNKNOWN":d.toISOString().slice(0,10);
 };
 const dateMillis=(v:string|null)=>v&&/^[0-9]{13}$/.test(v)?day(new Date(Number(v)).toISOString()):"UNKNOWN";
-const short=(s:string,max:number)=>s.trim().slice(0,max).replace(/\u0000/g,"");
+/** Best-effort scrub of secrets/account contacts accidentally pasted into
+ * user notes. Consent is STILL required: free prose can contain personal data.
+ */
+export function sanitizedExcerpt(value:string,max:number):string{
+  return value
+    .replace(/-----BEGIN [\s\S]*?-----END [A-Z ]+-----/g,"[개인키 삭제]")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,"[이메일 숨김]")
+    .replace(/https?:\/\/[^\s<>"']+/gi,"[링크 숨김]")
+    .replace(/\b(?:sk-|Bearer\s+)[A-Za-z0-9._-]{8,}\b/gi,"[토큰 숨김]")
+    .replace(/\b[A-Za-z0-9+/_-]{40,}={0,2}\b/g,"[긴 식별자 숨김]")
+    .replace(/\b(?:\d[\s-]?){12,}\d\b/g,"[숫자 식별자 숨김]")
+    .replace(/\u0000/g,"")
+    .trim().slice(0,max);
+}
+const short=sanitizedExcerpt;
 export function evidenceForAnalysis(
   mode:AnalysisMode,symbol:string|null,
   entries:readonly JournalEntry[],plans:readonly JournalPlan[],

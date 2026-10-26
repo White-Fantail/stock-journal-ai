@@ -76,6 +76,7 @@ def import_pilot(identity, broker, payload):
 
 def view_pilot(identity, broker, subject, page=0):
     from temporary.tiger_personal.history import load_orders
+    from temporary.tiger_personal.fill_probe import load_probes
     owner_only(subject)
     if type(page)!=int or not 0<=page<=20:
         raise PilotError("INVALID_PAGE")
@@ -105,5 +106,6 @@ def view_pilot(identity, broker, subject, page=0):
                         # Preserve the amount without inventing its unit.
                         item[key]={**item[key],"currency":item[key].get("currency")}
             item.update(load_orders(broker,wid,aid,page=page))
+            item.update(load_probes(broker,wid,aid))
             result.append(item)
     return {"coverage":"SNAPSHOT_ONLY","verified":False,"accounts":result}

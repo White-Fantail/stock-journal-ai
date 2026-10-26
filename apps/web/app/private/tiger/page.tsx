@@ -2,13 +2,38 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { tigerStatus, type TigerStatus } from "../../../lib/tiger-api";
+import { tigerStatus, tigerPersonalRead, type TigerStatus } from "../../../lib/tiger-api";
 
 export const metadata: Metadata = {title:"Tiger Brokers 연결"};
 export const dynamic = "force-dynamic";
 
 export default async function TigerConnections() {
   if (!await currentWorkspace()) redirect("/login");
+  const personal=await tigerPersonalRead();
+  if(personal && personal.accounts.length>0) return <main>
+    <div className="page-intro">
+      <span className="breadcrumb"><Link href="/private/brokers">← 증권사 목록</Link></span>
+      <h1>Tiger Brokers 계좌 연결</h1>
+      <p>이 계정에는 개인 Tiger API를 이용한 조회 전용 연결이 적용되어 있어.</p>
+    </div>
+    <section className="state-panel">
+      <span className="pill">개인 Tiger API 연결됨</span>
+      <h2>계좌 조회가 활성화되어 있어</h2>
+      <p>개인 RSA 인증은 현재 계정에만 연결되고 다른 사용자는 이용할 수 없어.
+      공식 제3자 OAuth 승인이 완료되면 계좌와 투자일지를 유지하면서 인증 방식만 전환할 계획이야.</p>
+      <p>현재 계좌 {personal.accounts.length}개 · 보유 종목 {personal.accounts.reduce((n,a)=>n+a.positions.length,0)}개 ·
+      주문 이력은 수집된 구간에 한정돼.</p>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        <Link className="btn btn-primary" href="/private/portfolio">내 포트폴리오 →</Link>
+        <Link className="btn btn-outline" href="/private/trades">Tiger 주문 이력 →</Link>
+        <Link className="btn btn-outline" href="/private/journal">투자일지 →</Link>
+      </div>
+    </section>
+    <div className="info-strip"><span aria-hidden="true">ⓘ</span><div>
+      <strong>조회 전용이며 주문·이체는 지원하지 않아.</strong>
+      <p>개인키 자체에는 거래 권한이 있을 수 있으므로 격리된 수집기에서만 사용해.</p>
+    </div></div>
+  </main>;
   let state: TigerStatus | null = null;
   try {state=await tigerStatus();} catch { /* No invented connected state. */ }
   return <main>

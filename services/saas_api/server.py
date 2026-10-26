@@ -32,6 +32,7 @@ try:
     from temporary.tiger_personal.fill_probe import import_probes
     from temporary.tiger_personal.market_quotes import import_quotes
     from temporary.tiger_personal.sync_health import import_health,view_health
+    from temporary.tiger_personal.diagnostics import view_diagnostics
 except ModuleNotFoundError as exc:
     if exc.name not in ("temporary", "temporary.tiger_personal", "temporary.tiger_personal.api"):
         raise
@@ -53,6 +54,8 @@ except ModuleNotFoundError as exc:
         raise PilotError()
     def view_health(*args):
         raise PilotError()
+    def view_diagnostics(*args):
+        raise PilotError()
 
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
     list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
@@ -73,7 +76,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/tiger/personal-transactions-import",
             "/internal/v1/tiger/personal-quotes-import",
             "/internal/v1/tiger/personal-health-import",
-            "/internal/v1/tiger/personal-health-view"}
+            "/internal/v1/tiger/personal-health-view",
+            "/internal/v1/tiger/personal-diagnostics"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -181,6 +185,7 @@ class Handler(BaseHTTPRequestHandler):
                      "/internal/v1/tiger/personal-quotes-import": {"subject","account","quotes"},
                      "/internal/v1/tiger/personal-health-import": {"subject","account","runId","assets","orders","fills"},
                      "/internal/v1/tiger/personal-health-view": {"subject"},
+                     "/internal/v1/tiger/personal-diagnostics": {"subject"},
                 }
                 if path == "/internal/v1/tiger/personal-view":
                     # Signed gateway chooses a bounded page; no tenant/account locator.
@@ -197,6 +202,8 @@ class Handler(BaseHTTPRequestHandler):
                             out=import_health(identity_conn,broker_conn,data)
                         elif path.endswith("/personal-health-view"):
                             out=view_health(identity_conn,broker_conn,data["subject"])
+                        elif path.endswith("/personal-diagnostics"):
+                            out=view_diagnostics(identity_conn,broker_conn,data["subject"])
                         elif path.endswith("/personal-quotes-import"):
                             out=import_quotes(identity_conn,broker_conn,data)
                         elif path.endswith("/personal-transactions-import"):

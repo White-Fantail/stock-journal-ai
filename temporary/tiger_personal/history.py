@@ -144,6 +144,10 @@ def load_orders(broker,wid,aid,maximum=100,page=0):
                 seen[item["id"]]={"sourceRef":hashlib.sha256(
                      (str(aid)+":"+item["id"]).encode()).hexdigest(),
                      **{k:v for k,v in item.items() if k not in ("id","filled","filledScale")},
+                     # Pre-2026-10-26 sealed order snapshots have no feeCurrency.
+                     # Missing currency means UNKNOWN, not zero fees or assumed USD.
+                     # Normalize the read projection only; NEVER rewrite evidence.
+                     "feeCurrency":item.get("feeCurrency"),
                      "filled":_display_filled(item)}
     result=sorted(seen.values(),key=lambda x:int(x["at"] or 0),reverse=True)
     start=page*maximum

@@ -122,3 +122,12 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [ ] Verify deployed quote entitlements using the private Railway runner and its next safe log counters; historic complete fill/fee/cash/FX reconciliation and verified per-account FIFO basis remain prerequisites to **audited** unrealized P&L/total returns.
 - [ ] Official Tiger SaaS OAuth quote entitlements, licensing for redistribution, validated cross-market quote currencies, proper FX conversion and verified account/ledger valuations remain for later phases.
 
+
+### Roadmap priority 4 · Tiger investment journal linking (2026-10-27, dev implementation)
+- [x] Existing author-created ticker thesis and immutable target/stop plan revisions are reused: no inline form in the order list, and no automatic broker order or stop/limit order is created.
+- [x] Add a standalone authenticated observed order/fill review creation page reached from each user's private Tiger trade list and journal observations. Client-supplied refs are opaque, exact symbol and kind; server resolves the Google subject, workspace OWNER privilege, non-BYPASSRLS broker role, and actual encrypted account-scoped order/fill evidence **before** writing a note. No client account/workspace can be chosen.
+- [x] Add forward-only 020 journal observation association table, append-only writer role, composite author+symbol FK and account+workspace FK, FORCE RLS, immutable explicit `OBSERVED_NOT_VERIFIED`. No new fake broker execution, verified ledger publication or manual trade assertion.
+- [x] Notes in the existing authored journal history and export include a separate `observationRef`; journal workspace shows Tiger observed trades with author notes alongside the independent plan/thesis timeline. Existing P4 `brokerRef` links continue to require independently verified releases.
+- [x] Preserve old notes, source separation, idempotency conflict behavior, strict input bounds and origin. Never infer a user's trade reason from the broker order.
+- [ ] Validate real owner Tiger observations and complete origin coverage in production; no claimed accounting-grade fill provenance until reconciliation. The new 020 migration and journal linkage are **dev only** pending explicit fast-forward merge and controlled deployment.
+

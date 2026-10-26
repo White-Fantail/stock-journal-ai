@@ -205,12 +205,18 @@ export type TigerPersonalFill = Readonly<{
   sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
   quantity:string;price:string;timeRaw:string|null
 }>;
+export type TigerPersonalFee = Readonly<{
+  sourceRef:string;symbol:string;status:"MATCHED"|"CURRENCY_UNKNOWN";
+  total:string;currency:string|null;
+  details:ReadonlyArray<{category:"TIGER"|"THIRD_PARTY";type:string;amount:string}>
+}>;
 export type TigerPersonalAccount = Readonly<{
   alias:string;asOf:string|null;
   assets:{netLiquidation:string|null;cashBalance:string|null;currency:string|null}|null;
   positions:TigerPersonalPosition[];
   orders:TigerPersonalOrder[];
   fillObservations:TigerPersonalFill[];
+  feeObservations:TigerPersonalFee[];
   fillProbeCount:number;fillProbeUnavailable:number;fillProbeDifference:number;
   fillProbePartial:number;fillProbeTruncated:boolean;
   feeProbeMatched:number;feeProbeCurrencyUnknown:number;
@@ -252,6 +258,17 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
            nullableNumber(o.price) && nullableNumber(o.fee) &&
            (o.feeCurrency===null || (typeof o.feeCurrency==="string" && /^[A-Z]{3}$/.test(o.feeCurrency))) &&
            (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
+         Array.isArray(a.feeObservations) && a.feeObservations.length<=30 &&
+         a.feeObservations.every(f=>f && /^[0-9a-f]{64}$/.test(f.sourceRef) &&
+           typeof f.symbol==="string" && personalSymbol.test(f.symbol) &&
+           (f.status==="MATCHED" || f.status==="CURRENCY_UNKNOWN") &&
+           typeof f.total==="string" && personalDecimal.test(f.total) &&
+           (f.currency===null || (typeof f.currency==="string" && /^[A-Z]{3}$/.test(f.currency))) &&
+           (f.status==="MATCHED") === (f.currency!==null) &&
+           Array.isArray(f.details) && f.details.length>0 && f.details.length<=32 &&
+           f.details.every(d=>d && (d.category==="TIGER" || d.category==="THIRD_PARTY") &&
+             typeof d.type==="string" && /^[A-Z_]{2,40}$/.test(d.type) &&
+             typeof d.amount==="string" && personalDecimal.test(d.amount))) &&
          Array.isArray(a.fillObservations) && a.fillObservations.length<=60 &&
          a.fillObservations.every(f=>f && /^[0-9a-f]{64}$/.test(f.sourceRef) &&
            typeof f.symbol==="string" && personalSymbol.test(f.symbol) &&

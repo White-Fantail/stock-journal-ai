@@ -97,7 +97,7 @@ def import_orders(identity,broker,value):
               (wid,aid[0],sha,seal(envelope,wid+":"+account_id+":TRANSACTIONS")))
     return {"saved":True,"source":"PERSONAL_ORDER_OBSERVATION","count":len(orders)}
 
-def load_orders(broker,wid,aid,maximum=120):
+def load_orders(broker,wid,aid,maximum=100,page=0):
     # Historical order data is never called a verified fill or complete history.
     records=broker.execute("""SELECT encrypted_payload FROM saas_tiger_source_snapshots
       WHERE workspace_id=%s AND account_id=%s AND kind='TRANSACTIONS'
@@ -118,5 +118,7 @@ def load_orders(broker,wid,aid,maximum=120):
                 seen[item["id"]]={"sourceRef":hashlib.sha256(
                      (str(aid)+":"+item["id"]).encode()).hexdigest(),**{k:v for k,v in item.items() if k!="id"}}
     result=sorted(seen.values(),key=lambda x:int(x["at"] or 0),reverse=True)
-    return {"orders":result[:maximum],"truncated":len(result)>maximum or len(records)>=600,
+    start=page*maximum
+    return {"orders":result[start:start+maximum],"truncated":len(records)>=600,
+            "hasMore":len(result)>start+maximum,"totalOrders":len(result),
             "windowCount":len(windows),"partial":partial or len(records)>=600}

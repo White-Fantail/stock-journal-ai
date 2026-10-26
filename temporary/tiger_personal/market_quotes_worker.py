@@ -12,6 +12,7 @@ import re
 import time
 import urllib.request
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import uuid4
 
 from temporary.tiger_personal.sync_ready import _endpoint, amount
@@ -36,7 +37,7 @@ def _quote(row, symbols, price_field, time_field, mode, now_ms):
     price=amount(row.get(price_field))
     stamp=row.get(time_field)
     if (not isinstance(symbol,str) or symbol not in symbols
-        or price is None or float(price)<=0 or type(stamp)!=int
+        or price is None or Decimal(price)<=0 or type(stamp)!=int
         or not 1_500_000_000_000<=stamp<=now_ms+300000
         or now_ms-stamp>14*86400000):
         raise ValueError("INVALID_MARKET_QUOTE")

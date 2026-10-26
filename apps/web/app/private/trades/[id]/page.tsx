@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { auth } from "../../../../auth";
 import { currentWorkspace } from "../../../../lib/require-workspace";
 import { fetchTradeDetail } from "../../../../lib/saas-trades-api";
+import { formatDecimal } from "../../../../lib/format-decimal";
 
 export const dynamic = "force-dynamic";
 
@@ -16,20 +17,21 @@ export default async function TradeDetail({params}:{
   try {trade=await fetchTradeDetail(session.user.id,id);}
   catch {notFound();}
   return <main style={{maxWidth:700,margin:"2rem auto",padding:"0 1rem"}}>
-    <p><Link href="/private/trades">← 거래 원장</Link></p>
+    <p><Link href="/private/trades/manual">← 직접 입력 거래</Link></p>
     <h1>{trade.ticker ?? "거래 정정"} · {trade.kind === "EXECUTION" ? "체결 기록" : "취소 기록"}</h1>
     <dl>
       <dt>출처</dt><dd>사용자가 직접 확인한 기록 · 증권사 확인과 별개</dd>
       <dt>구분</dt><dd>{trade.side === "BUY" ? "매수" : trade.side === "SELL" ? "매도" : "—"}</dd>
-      <dt>체결 수량</dt><dd>{trade.quantity ?? "—"}</dd>
-      <dt>체결가</dt><dd>{trade.price ?? "—"} {trade.currency ?? ""}</dd>
-      <dt>수수료</dt><dd>{trade.fee ?? "미확인"}</dd>
+      <dt>체결 수량</dt><dd>{formatDecimal(trade.quantity,"—")}</dd>
+      <dt>체결가</dt><dd>{formatDecimal(trade.price,"—")} {trade.currency ?? ""}</dd>
+      <dt>수수료</dt><dd>{formatDecimal(trade.fee,"미확인")}</dd>
       <dt>체결 시각</dt><dd>{trade.executedAt ?? "—"}</dd>
       <dt>작성 시각</dt><dd>{trade.createdAt}</dd>
       <dt>변경 이력</dt><dd>{trade.voidsEventId ? <Link href={"/private/trades/" + trade.voidsEventId}>취소 대상 원본 보기</Link> : "원본 기록"}</dd>
       <dt>매매 이유/정정 사유</dt><dd style={{whiteSpace:"pre-wrap"}}>{trade.rationale ?? "미기록"}</dd>
     </dl>
     {trade.kind==="EXECUTION" && <p><Link className="btn btn-outline" href="/private/journal">투자 일지에서 매매 이유와 복기 작성 →</Link></p>}
-    <p>원본 체결은 수정하지 않습니다. 정정하려면 원장 목록에서 취소 이벤트를 추가하고 정확한 체결을 다시 기록하세요.</p>
+    {trade.kind==="EXECUTION"&&<p><Link className="btn btn-outline" href={"/private/trades/"+trade.id+"/correct"}>이 체결 정정하기 →</Link></p>}
+    <p>원본 체결은 수정하지 않습니다. 잘못된 경우 별도 정정 페이지에서 취소 이벤트를 추가한 후 정확한 체결을 다시 등록하세요.</p>
   </main>;
 }

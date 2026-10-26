@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
+import {formatDecimal} from "../../../lib/format-decimal";
 
 const when=(raw:string|null)=> {
   if(!raw) return "시각 미확인";
@@ -8,7 +9,7 @@ const when=(raw:string|null)=> {
     ?new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"short",timeStyle:"short"}).format(t)
     :"시각 미확인";
 };
-const viewNumber=(value:string|null)=>value??"미제공";
+const viewNumber=(value:string|null)=>formatDecimal(value);
 
 /** Observed broker balances: never passed through the verified FIFO projector. */
 export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}) {
@@ -30,7 +31,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}) {
           <thead><tr><th>종목</th><th>보유 수량</th><th>평균 단가</th><th>시장 가치</th><th>미실현손익</th></tr></thead>
           <tbody>{account.positions.map(p=><tr key={p.symbol+":"+p.currency}>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></td>
-            <td>{p.quantity}</td><td>{viewNumber(p.averageCost)} {p.currency}</td>
+            <td>{viewNumber(p.quantity)}</td><td>{viewNumber(p.averageCost)} {p.currency}</td>
             <td>{viewNumber(p.marketValue)} {p.currency}</td>
             <td>{viewNumber(p.unrealizedPnl)} {p.currency}</td>
           </tr>)}</tbody>
@@ -52,6 +53,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
     {data.accounts.some(a=>a.partial || a.truncated) && <p role="status">조회 누락 가능성이 있는 구간이 존재해. 표시된 자료를 전체 거래 이력으로 사용하지 마.</p>}
     <p>수집 구간: {data.accounts.reduce((n,a)=>n+a.windowCount,0)}개 · 전체 관측 주문 {data.accounts.reduce((n,a)=>n+a.totalOrders,0)}건 · 현재 페이지 {page+1} · 표시: {rows.length}개
     {data.accounts.some(a=>a.truncated)?" · 표시 한도 적용":""}</p>
+    {rows.some(o=>o.filled===null) && <p role="status">이전 수집 자료에는 Tiger의 소수점 수량 정보가 빠져 있어. 잘못된 수량을 표시하지 않고 재수집 후에 보여줄게.</p>}
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%"}}>
@@ -60,7 +62,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
             <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
-            <td>{o.filled}</td>
+            <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
             <td>{viewNumber(o.fee)} {o.currency}</td>
           </tr>)}</tbody>

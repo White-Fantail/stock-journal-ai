@@ -42,15 +42,20 @@ def _order(item,account):
     if status not in ("FILLED","PARTIALLY_FILLED","CANCELLED","EXPIRED","REJECTED",
                       "HELD","PENDING","NEW","SUBMITTED","INACTIVE","UNKNOWN"):
         status="UNKNOWN"
+    # Tiger represents fractional filled shares as an integer plus filled_scale.
+    # Keep BOTH fields as source evidence. Scaling without the provider's scale
+    # would silently turn 179.211 shares into 179211 shares.
+    scale=getattr(item,"filled_scale",None)
     filled=amount(getattr(item,"filled",None))
-    if filled is None or Decimal(filled)<0:
-        raise ValueError("INVALID_ORDER")
+    if (type(scale) is not int or not 0<=scale<=12 or filled is None
+        or Decimal(filled)<0 or Decimal(filled)!=Decimal(filled).to_integral_value()):
+        raise ValueError("INVALID_ORDER_SCALE")
     raw_time=getattr(item,"trade_time",None) or getattr(item,"order_time",None)
     at=str(int(raw_time)) if raw_time is not None else None
     if at is not None and not re.fullmatch(r"[0-9]{13}",at):
         raise ValueError("INVALID_ORDER_TIME")
     return {"id":str(ident),"symbol":str(symbol),"currency":currency,"side":side,
-            "status":status,"filled":filled,
+            "status":status,"filled":filled,"filledScale":scale,
             "price":amount(getattr(item,"avg_fill_price",None)),
             "fee":amount(getattr(item,"commission",None)),
             "at":at}

@@ -198,7 +198,7 @@ export type TigerPersonalPosition = Readonly<{
 }>;
 export type TigerPersonalOrder = Readonly<{
   sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
-  status:string;filled:string;price:string|null;fee:string|null;at:string|null
+  status:string;filled:string|null;price:string|null;fee:string|null;at:string|null
 }>;
 export type TigerPersonalAccount = Readonly<{
   alias:string;asOf:string|null;
@@ -236,7 +236,7 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
            typeof o.currency==="string" && /^[A-Z]{3}$/.test(o.currency) &&
            (o.side==="BUY" || o.side==="SELL") &&
            typeof o.status==="string" && /^[A-Z_]{3,32}$/.test(o.status) &&
-           typeof o.filled==="string" && personalDecimal.test(o.filled) &&
+           nullableNumber(o.filled) &&
            nullableNumber(o.price) && nullableNumber(o.fee) &&
            (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
          Number.isInteger(a.windowCount) && a.windowCount>=0 &&

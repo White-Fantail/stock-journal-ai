@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import {formatDecimal} from "../../../lib/format-decimal";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { tigerPersonalRead } from "../../../lib/tiger-api";
 import { PersonalPortfolioBlock, PersonalOrderHistory } from "../tiger/personal-preview";
@@ -65,9 +66,9 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
           <th scope="col">남은 취득원가</th><th scope="col">누적 실현손익</th></tr></thead>
         <tbody>{positions.map(p=><tr key={p.symbol+":"+p.currency}>
           <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></th>
-          <td>{p.quantity}주</td>
-          <td>{p.costBasis} {p.currency}</td>
-          <td>{p.realizedPnl} {p.currency}</td>
+          <td>{formatDecimal(p.quantity)}주</td>
+          <td>{formatDecimal(p.costBasis)} {p.currency}</td>
+          <td>{formatDecimal(p.realizedPnl)} {p.currency}</td>
         </tr>)}</tbody>
       </table>
     </div> : <p className="sync-subtle">현재 표시 가능한 검증 포지션이 없습니다. 계좌 자산이 0이라는 의미는 아닙니다.</p>}

@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime,timezone
 from types import SimpleNamespace
 from unittest.mock import patch
-from temporary.tiger_personal.history import _payload, PilotError
+from temporary.tiger_personal.history import _payload, _display_filled, PilotError
 from temporary.tiger_personal.history_sync import _order, _pages
 from temporary.tiger_personal.api import owner_only
 
@@ -45,18 +45,39 @@ class TigerOwnerHistoryPolicy(unittest.TestCase):
 
     def test_order_observation_is_not_fill(self):
         o=SimpleNamespace(account="12345678",id=111,action="BUY",status="FILLED",
-            filled=4,avg_fill_price=12.5,commission=1.25,trade_time=1764547200000,
+            filled=4,filled_scale=0,avg_fill_price=12.5,commission=1.25,trade_time=1764547200000,
             contract=SimpleNamespace(symbol="TSLA",currency="USD"))
         data=_order(o,"12345678")
         self.assertEqual(data["filled"],"4")
+        self.assertEqual(data["filledScale"],0)
         self.assertEqual(data["status"],"FILLED")
         self.assertNotIn("executedAtUtc",data)
         with self.assertRaises(ValueError): _order(o,"11111111")
 
+    def test_fractional_filled_quantity_exact_scale(self):
+        order=SimpleNamespace(account="12345678",id=222,action="BUY",status="FILLED",
+            filled=179211,filled_scale=3,avg_fill_price=16.74,commission=2.01,
+            trade_time=1764547200000,contract=SimpleNamespace(symbol="PLTR",currency="USD"))
+        raw=_order(order,"12345678")
+        self.assertEqual(raw["filled"],"179211")
+        self.assertEqual(raw["filledScale"],3)
+        self.assertEqual(_display_filled(raw),"179.211")
+        self.assertEqual(_display_filled({"filled":"12345678901","filledScale":5}),"123,456.78901".replace(",",""))
+        self.assertIsNone(_display_filled({"filled":"179211"}))
+        self.assertEqual(_display_filled({"filled":"0"}),"0")
+        with patch.dict(os.environ,_ENV,clear=True):
+            request=self.example()
+            request["orders"]=[{**request["orders"][0],**{"filled":"179211","filledScale":3}}]
+            self.assertEqual(_payload(request)[-1][0]["filledScale"],3)
+            request["orders"][0]["filledScale"]=13
+            with self.assertRaises(PilotError): _payload(request)
+        order.filled_scale=None
+        with self.assertRaises(ValueError): _order(order,"12345678")
+
     def test_capped_page_without_cursor_is_partial(self):
         def order(i):
             return SimpleNamespace(account="12345678",id=i,action="BUY",
-                status="FILLED",filled=1,avg_fill_price=2,commission=None,
+                status="FILLED",filled=1,filled_scale=0,avg_fill_price=2,commission=None,
                 order_time=1764547200000,contract=SimpleNamespace(symbol="AAPL",currency="USD"))
         class Client:
             def get_orders(self,**kwargs):

@@ -9,6 +9,7 @@ import hmac
 import json
 import re
 from datetime import datetime, timezone
+from decimal import Decimal
 from temporary.tiger_personal.api import owner_only, number, PilotError
 from services.saas_api.tiger_oauth import _scope, _key, seal, unseal
 
@@ -42,8 +43,9 @@ def _payload(value):
         raise PilotError("INVALID_HISTORY")
     result=[]
     seen=set()
+    expected={"id","symbol","currency","side","status","filled","price","fee","at"}
     for item in items:
-        if not isinstance(item,dict) or set(item)!={"id","symbol","currency","side","status","filled","price","fee","at"}:
+        if not isinstance(item,dict) or set(item) not in (expected,expected|{"filledScale"}):
             raise PilotError("INVALID_ORDER")
         order_id=item["id"]
         if not isinstance(order_id,str) or not _ID.fullmatch(order_id) or order_id in seen:
@@ -57,6 +59,13 @@ def _payload(value):
             or item["status"] not in _ALLOWED):
             raise PilotError("INVALID_ORDER")
         filled=number(item["filled"])
+        scale=item.get("filledScale")
+        # Old encrypted observations had no scale. Preserve them as historical
+        # evidence but NEVER treat their raw filled integer as a share count.
+        if "filledScale" in item and (type(scale) is not int or not 0<=scale<=12):
+            raise PilotError("INVALID_ORDER_SCALE")
+        if "filledScale" in item and Decimal(filled)!=Decimal(filled).to_integral_value():
+            raise PilotError("INVALID_ORDER_SCALE")
         price=number(item["price"],True)
         fee=number(item["fee"],True)
         if float(filled)<0 or (price is not None and float(price)<0):
@@ -66,6 +75,7 @@ def _payload(value):
             raise PilotError("INVALID_ORDER")
         result.append({"id":order_id,"symbol":item["symbol"],"currency":item["currency"],
                        "side":item["side"],"status":item["status"],"filled":filled,
+                       **({"filledScale":scale} if "filledScale" in item else {}),
                        "price":price,"fee":fee,"at":at})
     return account,begin,end,part,parts,value["complete"],result
 
@@ -97,6 +107,18 @@ def import_orders(identity,broker,value):
               (wid,aid[0],sha,seal(envelope,wid+":"+account_id+":TRANSACTIONS")))
     return {"saved":True,"source":"PERSONAL_ORDER_OBSERVATION","count":len(orders)}
 
+def _display_filled(item):
+    """Convert raw Tiger filled + filledScale into shares exactly, no floats.
+
+    Unscaled legacy values cannot be safely reconstructed. A zero value is
+    always zero; nonzero legacy values require a new Tiger API observation.
+    """
+    raw=item["filled"]
+    scale=item.get("filledScale")
+    if scale is None:
+        return "0" if raw=="0" else None
+    return number(format(Decimal(raw).scaleb(-scale),"f"))
+
 def load_orders(broker,wid,aid,maximum=100,page=0):
     # Historical order data is never called a verified fill or complete history.
     records=broker.execute("""SELECT encrypted_payload FROM saas_tiger_source_snapshots
@@ -116,7 +138,9 @@ def load_orders(broker,wid,aid,maximum=100,page=0):
             if item["id"] not in seen:
                 # Key by provider order ID, never symbol and timestamp.
                 seen[item["id"]]={"sourceRef":hashlib.sha256(
-                     (str(aid)+":"+item["id"]).encode()).hexdigest(),**{k:v for k,v in item.items() if k!="id"}}
+                     (str(aid)+":"+item["id"]).encode()).hexdigest(),
+                     **{k:v for k,v in item.items() if k not in ("id","filled","filledScale")},
+                     "filled":_display_filled(item)}
     result=sorted(seen.values(),key=lambda x:int(x["at"] or 0),reverse=True)
     start=page*maximum
     return {"orders":result[start:start+maximum],"truncated":len(records)>=600,

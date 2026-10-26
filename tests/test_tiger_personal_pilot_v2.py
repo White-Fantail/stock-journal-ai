@@ -17,7 +17,13 @@ class PilotUnitTests(unittest.TestCase):
                   "assets":{"netLiquidation":"100","cashBalance":None},
                   "positions":[{"symbol":"TSLA","currency":"USD","quantity":"1.5",
                     "averageCost":"12","marketValue":None,"unrealizedPnl":None}]}
-            a,_,p=api.verify_payload(data)
+            a,assets,p=api.verify_payload(data)
+            self.assertIsNone(assets["currency"])
+            revised={**data,"assets":{**data["assets"],"currency":"USD"}}
+            _,revised_assets,_=api.verify_payload(revised)
+            self.assertEqual(revised_assets["currency"],"USD")
+            with self.assertRaises(api.PilotError):
+                api.verify_payload({**data,"assets":{**data["assets"],"currency":"U$D"}})
             self.assertEqual(a,"U12345678")
             self.assertEqual(p[0]["quantity"],"1.5")
             for n in ("NaN","Infinity","1e4","1.1234567890123"):

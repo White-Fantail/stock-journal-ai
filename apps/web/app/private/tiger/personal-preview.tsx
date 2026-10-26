@@ -23,8 +23,8 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
         <Link href="/private/trades">거래 기록 →</Link>
       </div>
       <div className="account-summary-values portfolio-account-values">
-        <div><small>순자산 · 계좌 표시 통화</small><strong>{viewNumber(account.assets?.netLiquidation??null)}</strong></div>
-        <div><small>현금 · 계좌 표시 통화</small><strong>{viewNumber(account.assets?.cashBalance??null)}</strong></div>
+        <div><small>순자산</small><strong>{viewNumber(account.assets?.netLiquidation??null)} <span className="account-currency">{account.assets?.currency??"통화 미확인"}</span></strong></div>
+        <div><small>현금</small><strong>{viewNumber(account.assets?.cashBalance??null)} <span className="account-currency">{account.assets?.currency??"통화 미확인"}</span></strong></div>
         <div><small>보유 종목</small><strong>{account.positions.length}</strong></div>
       </div>
       <div className="user-panel-head portfolio-holdings-head">
@@ -43,7 +43,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
           </tr>)}</tbody>
         </table>
       </div>}
-      <p className="user-footnote">평가액·미실현손익은 Tiger 조회 시점의 원본값입니다. 계좌 표시 통화가 확인되지 않은 금액을 통화 간 합산하거나 수익률로 계산하지 않습니다.</p>
+      <p className="user-footnote">평가액·미실현손익은 Tiger 조회 시점의 원본값입니다. 서로 다른 통화를 임의로 합산하지 않습니다.</p>
     </section>)}
   </div>;
 }

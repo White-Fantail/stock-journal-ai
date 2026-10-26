@@ -44,9 +44,15 @@ def verify_payload(payload):
     if not isinstance(account,str) or not _ACC.fullmatch(account):
         raise PilotError("INVALID_ACCOUNT")
     assets=payload["assets"]
-    if not isinstance(assets,dict) or set(assets)!={"netLiquidation","cashBalance"}:
+    expected={"netLiquidation","cashBalance"}
+    if not isinstance(assets,dict) or set(assets) not in (expected,expected|{"currency"}):
         raise PilotError("INVALID_SNAPSHOT")
-    clean_assets={k:number(v,True) for k,v in assets.items()}
+    currency=assets.get("currency")
+    if currency is not None and (type(currency) is not str
+        or not re.fullmatch(r"[A-Z]{3}",currency)):
+        raise PilotError("INVALID_CURRENCY")
+    clean_assets={k:number(assets[k],True) for k in expected}
+    clean_assets["currency"]=currency
     rows=payload["positions"]
     if not isinstance(rows,list) or len(rows)>100:
         raise PilotError("INVALID_SNAPSHOT")
@@ -94,6 +100,10 @@ def view_pilot(identity, broker, subject, page=0):
                     if not isinstance(snap,dict) or snap.get("source")!="PERSONAL_SNAPSHOT_ONLY":
                         raise PilotError("INVALID_SOURCE")
                     item[key]=snap["data"]
+                    if key=="assets":
+                        # Older encrypted snapshots have no currency.
+                        # Preserve the amount without inventing its unit.
+                        item[key]={**item[key],"currency":item[key].get("currency")}
             item.update(load_orders(broker,wid,aid,page=page))
             result.append(item)
     return {"coverage":"SNAPSHOT_ONLY","verified":False,"accounts":result}

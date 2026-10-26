@@ -93,13 +93,13 @@ export default async function WorkspaceHome(){
         {accounts.map(a=><article key={a.alias} className="account-summary-item">
           <div className="account-summary-head"><strong>{a.alias}</strong><small>{observedAt(a.asOf)} (NZ)</small></div>
           <div className="account-summary-values">
-            <div><small>순자산 · 계좌 표시 통화</small><strong>{formatDecimal(a.assets?.netLiquidation)}</strong></div>
-            <div><small>현금 · 계좌 표시 통화</small><strong>{formatDecimal(a.assets?.cashBalance)}</strong></div>
+            <div><small>순자산</small><strong>{formatDecimal(a.assets?.netLiquidation)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
+            <div><small>현금</small><strong>{formatDecimal(a.assets?.cashBalance)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
             <div><small>보유 종목</small><strong>{a.positions.length}</strong></div>
           </div>
         </article>)}
       </div>
-      <p className="user-footnote">계좌 금액의 통화가 아직 확인되지 않아 서로 합산하지 않습니다. 이 값은 조회 시점의 Tiger 관측값이며 검증된 손익률이 아닙니다.</p>
+      <p className="user-footnote">Tiger 조회 시점의 계좌 자산입니다. 서로 다른 통화나 통화 미확인 금액은 합산하지 않습니다.</p>
     </section>:<section className="user-panel">
       <div className="user-panel-head"><h2>연결된 계좌</h2><Link href="/private/brokers">연결 관리 →</Link></div>
       <p>{tiger===null?"계좌 상태를 확인하지 못했습니다. 다시 확인해 주세요.":"조회 가능한 계좌가 아직 없습니다."}</p>

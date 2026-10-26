@@ -202,7 +202,7 @@ export type TigerPersonalOrder = Readonly<{
 }>;
 export type TigerPersonalAccount = Readonly<{
   alias:string;asOf:string|null;
-  assets:{netLiquidation:string|null;cashBalance:string|null}|null;
+  assets:{netLiquidation:string|null;cashBalance:string|null;currency:string|null}|null;
   positions:TigerPersonalPosition[];
   orders:TigerPersonalOrder[];
   windowCount:number;partial:boolean;truncated:boolean;hasMore:boolean;totalOrders:number
@@ -224,7 +224,9 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
        !result.accounts.every(a=>a && typeof a.alias==="string" &&
          a.alias.length<=100 && (a.asOf===null || (typeof a.asOf==="string" && !Number.isNaN(Date.parse(a.asOf)))) &&
          (a.assets===null || (a.assets && nullableNumber(a.assets.netLiquidation) &&
-           nullableNumber(a.assets.cashBalance))) &&
+           nullableNumber(a.assets.cashBalance) &&
+           (a.assets.currency===null || (typeof a.assets.currency==="string" &&
+             /^[A-Z]{3}$/.test(a.assets.currency))))) &&
          Array.isArray(a.positions) && a.positions.length<=100 &&
          a.positions.every(p=>p && typeof p.symbol==="string" && personalSymbol.test(p.symbol) &&
            typeof p.currency==="string" && /^[A-Z]{3}$/.test(p.currency) &&

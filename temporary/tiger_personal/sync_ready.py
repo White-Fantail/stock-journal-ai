@@ -56,8 +56,17 @@ def normalize(assets,positions):
         summary=seg.get("S") if isinstance(seg,dict) else None
     if summary is None:
         raise ValueError("NO_ASSET_PROOF")
+    # Prime Segment.currency is the unit for net liquidation and cash.
+    # Never infer it from a position's trading currency.
+    currency=getattr(summary,"currency",None)
+    if hasattr(currency,"value"):
+        currency=currency.value
+    if currency is not None and (not isinstance(currency,str)
+        or not re.fullmatch(r"[A-Z]{3}",currency)):
+        raise ValueError("INVALID_ACCOUNT_CURRENCY")
     asset={"netLiquidation":amount(getattr(summary,"net_liquidation",None)),
-           "cashBalance":amount(getattr(summary,"cash",getattr(summary,"cash_balance",None)))}
+           "cashBalance":amount(getattr(summary,"cash",getattr(summary,"cash_balance",None))),
+           "currency":currency}
     rows=[]
     for p in positions:
         contract=getattr(p,"contract",None)

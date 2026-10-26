@@ -23,6 +23,15 @@ test("trade and journal editing use independent pages, no forms in list workspac
   assert.ok(!ui.includes("&accountId="));
   assert.ok(!ui.includes("&sourceRef="));
 });
+test("account currency comes from Tiger summary rather than stock currencies",()=>{
+  const home=read("../app/private/page.tsx");
+  const portfolio=read("../app/private/tiger/personal-preview.tsx");
+  const client=read("../lib/tiger-api.ts");
+  assert.ok(home.includes("a.assets?.currency"));
+  assert.ok(portfolio.includes("account.assets?.currency"));
+  assert.ok(client.includes("currency:string|null"));
+  assert.ok(!home.includes('??"USD"'));
+});
 test("home and portfolio use real scoped records instead of onboarding cards",()=>{
   const home=read("../app/private/page.tsx");
   const portfolio=read("../app/private/portfolio/page.tsx");

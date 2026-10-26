@@ -165,6 +165,11 @@ def main() -> int:
             raise SchemaRefused("Malformed dedicated broker runtime secret")
         if os.environ.get("TIGER_PARTNER_OAUTH_APPROVED") == "1" and not broker_password:
             raise SchemaRefused("Tiger approved but broker runtime login is not configured")
+        publisher_password = os.environ.get("SAAS_PUBLICATION_RUNTIME_PASSWORD", "")
+        if publisher_password and not re.fullmatch(r"[0-9a-f]{64}", publisher_password):
+            raise SchemaRefused("Malformed restricted publication runtime secret")
+        if os.environ.get("SAAS_P4_PUBLICATION_ENABLED") == "1" and not publisher_password:
+            raise SchemaRefused("Publication enabled without dedicated runtime secret")
 
     # Import lazily so pure, dependency-free validation tests can run in CI.
     import psycopg
@@ -245,6 +250,17 @@ def main() -> int:
                           END
                           $login$""")
                         c.execute("SELECT set_config('saas.dispatch_login_secret','',true)")
+                if args.deploy and "017_broker_ledger_publication.sql" in final_versions:
+                    secret = os.environ.get("SAAS_PUBLICATION_RUNTIME_PASSWORD", "")
+                    if secret:
+                        c.execute("SELECT set_config('saas.publish_login_secret',%s,true)",(secret,))
+                        c.execute("""DO $publish_login$
+                            BEGIN
+                              EXECUTE format('ALTER ROLE saas_publication_app PASSWORD %L',
+                                current_setting('saas.publish_login_secret'));
+                            END
+                            $publish_login$""")
+                        c.execute("SELECT set_config('saas.publish_login_secret','',true)")
                 if "005_remove_csv_imports.sql" in final_versions:
                     if {"saas_csv_import_batches", "saas_csv_import_rows"} & tables:
                         raise SchemaRefused("Removed CSV tables unexpectedly remain")

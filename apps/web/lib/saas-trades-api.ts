@@ -138,16 +138,30 @@ export async function fetchTradeDetail(subject:string,id:string):Promise<ManualT
   return result.event;
 }
 
-/** Prices are a full user-authored plan revision, NEVER a broker order. */
+/** Full user-authored plan revision, NEVER a brokerage or price-triggered order.
+ * Legacy six-field snapshots have unset strategy values.
+ */
+export type InvestmentStrategyType="LONG_TERM"|"TECHNICAL"|"EVENT_DRIVEN"|"OTHER";
+export type InvestmentHorizon="UNDER_3_MONTHS"|"THREE_TO_TWELVE_MONTHS"|
+  "ONE_TO_THREE_YEARS"|"OVER_THREE_YEARS"|"OPEN_ENDED";
+export type ReviewCadence="WEEKLY"|"MONTHLY"|"QUARTERLY"|
+  "SEMIANNUAL"|"ANNUAL"|"EVENT_DRIVEN";
+export type JournalStrategyFields={
+  strategyType?:InvestmentStrategyType|null;
+  investmentHorizon?:InvestmentHorizon|null;
+  invalidationCondition?:string|null;
+  maxAllocationPct?:string|null;
+  reviewCadence?:ReviewCadence|null;
+};
 export type JournalPlan = Readonly<{
   id:string; ticker:string; targetPrice:string|null; stopPrice:string|null;
   priceCurrency:string|null; rationale:string; createdAt:string;
   provenance:"USER_AUTHORED"; isBrokerOrder:false;
-}>;
+} & JournalStrategyFields>;
 export type JournalPlanInput = {
   idempotencyKey:string; ticker:string; targetPrice:string|null;
   stopPrice:string|null; priceCurrency:string|null; rationale:string;
-};
+} & JournalStrategyFields;
 export async function fetchJournalPlans(subject:string):Promise<readonly JournalPlan[]> {
   const result=await postS2("/internal/v1/journal/plans",subject) as {
     plans?:JournalPlan[]; source?:string;
@@ -159,7 +173,17 @@ export async function fetchJournalPlans(subject:string):Promise<readonly Journal
        typeof p.rationale==="string" && typeof p.createdAt==="string" &&
        (p.targetPrice===null || typeof p.targetPrice==="string") &&
        (p.stopPrice===null || typeof p.stopPrice==="string") &&
-       (p.priceCurrency===null || typeof p.priceCurrency==="string")))
+       (p.priceCurrency===null || typeof p.priceCurrency==="string") &&
+       (p.strategyType==null || ["LONG_TERM","TECHNICAL","EVENT_DRIVEN","OTHER"].includes(p.strategyType)) &&
+       (p.investmentHorizon==null || ["UNDER_3_MONTHS","THREE_TO_TWELVE_MONTHS",
+          "ONE_TO_THREE_YEARS","OVER_THREE_YEARS","OPEN_ENDED"].includes(p.investmentHorizon)) &&
+       (p.invalidationCondition==null || (typeof p.invalidationCondition==="string" &&
+          p.invalidationCondition.length>0 && p.invalidationCondition.length<=1500)) &&
+       (p.maxAllocationPct==null || (typeof p.maxAllocationPct==="string" &&
+          /^(?:0|[1-9][0-9]?|100)(?:\\.[0-9]{1,2})?$/.test(p.maxAllocationPct) &&
+          Number(p.maxAllocationPct)>0 && Number(p.maxAllocationPct)<=100)) &&
+       (p.reviewCadence==null || ["WEEKLY","MONTHLY","QUARTERLY",
+          "SEMIANNUAL","ANNUAL","EVENT_DRIVEN"].includes(p.reviewCadence))))
     throw new Error("Invalid plan history response");
   return result.plans;
 }

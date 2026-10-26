@@ -53,7 +53,7 @@ class AiQuotaTests(unittest.TestCase):
             self.assertEqual(broker.counts["MONTH"],LIMIT_DAY)
             self.assertEqual(confirmed.call_count,LIMIT_DAY+1)
             self.assertEqual(tenant.call_count,LIMIT_DAY+1)
-            self.assertTrue(all(x[0]["workspaceId"]==scope["workspaceId"] for x in tenant.call_args_list))
+            self.assertTrue(all(x.args[1]["workspaceId"]==scope["workspaceId"] for x in tenant.call_args_list))
             self.assertEqual(LIMIT_MONTH,60)
 
     def test_revoked_membership_blocks_before_database_write(self):

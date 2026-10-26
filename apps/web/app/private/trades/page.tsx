@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { fetchManualTrades, submitManualTrade } from "../../../lib/saas-trades-api";
+import { tigerPersonalRead } from "../../../lib/tiger-api";
+import { PersonalOrderHistory } from "../tiger/personal-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +77,7 @@ export default async function ManualTradesPage({
     auth(), currentWorkspace(), searchParams,
   ]);
   if (!workspace || !session?.user?.id) redirect("/login");
+  const personal=await tigerPersonalRead();
   let events: Awaited<ReturnType<typeof fetchManualTrades>>["events"] = [];
   let unavailable = false;
   try {
@@ -89,6 +92,7 @@ export default async function ManualTradesPage({
     <main style={{maxWidth:900,margin:"2rem auto",padding:"0 1rem"}}>
       <p><Link href="/private">← 대시보드</Link></p>
       <h1>내 거래 기록</h1>
+      {personal && personal.accounts.length>0 && <PersonalOrderHistory data={personal}/>}
       <p>내가 직접 확인해 입력한 거래는 증권사에서 제공한 거래 사실과 구분됩니다. 모든 기록은 내 계정의 비공개 공간에 속합니다.</p>
       {unavailable ? (
         <p role="alert">거래 원장 서비스를 사용할 수 없습니다. 기존 기록은 변경하지 않았습니다.</p>

@@ -110,7 +110,8 @@ class Handler(BaseHTTPRequestHandler):
             # Korean rationale can be up to 3,000 characters (multibyte UTF-8).
             # Retain tighter request bounds on identity and read-only routes.
             max_body = (24576 if path in ("/internal/v1/tiger/personal-import",
-                           "/internal/v1/tiger/personal-orders-import")
+                           "/internal/v1/tiger/personal-orders-import",
+                             "/internal/v1/tiger/personal-transactions-import")
                         else 32768 if path == "/internal/v1/journal/broker-note/create"
                         else 16384 if path in ("/internal/v1/trades/create",
                                                 "/internal/v1/journal/create",
@@ -125,7 +126,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(404,{"error":"NOT_FOUND"})
             key = (os.environ.get("POSITIONARY_PERSONAL_BRIDGE_SECRET","")
                    if path in ("/internal/v1/tiger/personal-import",
-                               "/internal/v1/tiger/personal-orders-import")
+                               "/internal/v1/tiger/personal-orders-import",
+                             "/internal/v1/tiger/personal-transactions-import")
                    else os.environ.get("SAAS_INTERNAL_SECRET",""))
             if not authorized("POST",path,body,self.headers,key):
                 return self.reply(401,{"error":"UNAUTHORIZED"})

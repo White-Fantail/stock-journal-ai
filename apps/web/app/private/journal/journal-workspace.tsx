@@ -386,9 +386,9 @@ export function JournalWorkspace({
                   </form>}
               </div>
             </article>)}
-            {brokerRead.readEnabled && <p className="journal-limit">
+            {brokerRead?.readEnabled && <p className="journal-limit">
               독립 검증 후 공개된 최근 체결만 표시합니다.
-              {brokerRead.truncated?" 100건 상한에 도달해 일부 거래가 목록에 없을 수 있습니다.":""}
+              {brokerRead?.truncated?" 100건 상한에 도달해 일부 거래가 목록에 없을 수 있습니다.":""}
               메모는 사용자가 직접 해당 체결을 선택하여 연결할 때만 귀속됩니다.
             </p>}
           </div>}

@@ -3,7 +3,7 @@ import {randomUUID} from "node:crypto";
 import {redirect,notFound} from "next/navigation";
 import {auth} from "../../../../auth";
 import {currentWorkspace} from "../../../../lib/require-workspace";
-import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJournalPlan,submitBrokerFillNote,submitTigerObservationNote,type JournalKind} from "../../../../lib/saas-trades-api";
+import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJournalPlan,submitBrokerFillNote,submitTigerObservationNote,type JournalKind,type InvestmentStrategyType,type InvestmentHorizon,type ReviewCadence} from "../../../../lib/saas-trades-api";
 import {tigerLedgerRead,tigerPersonalRead} from "../../../../lib/tiger-api";
 import {JournalSymbolPicker} from "./symbol-picker";
 import {formatDecimal} from "../../../../lib/format-decimal";
@@ -106,6 +106,11 @@ async function addPlan(form:FormData) {
       targetPrice:target,stopPrice:stop,
       priceCurrency:target||stop?field(form,"priceCurrency").toUpperCase():null,
       rationale:field(form,"rationale"),
+      strategyType:(field(form,"strategyType")||null) as InvestmentStrategyType|null,
+      investmentHorizon:(field(form,"investmentHorizon")||null) as InvestmentHorizon|null,
+      invalidationCondition:field(form,"invalidationCondition")||null,
+      maxAllocationPct:field(form,"maxAllocationPct")||null,
+      reviewCadence:(field(form,"reviewCadence")||null) as ReviewCadence|null,
     });
   }catch{
     redirect("/private/journal/new?error=unavailable");
@@ -148,7 +153,12 @@ export default async function JournalNewPage({searchParams}:{
   ]);
   const manual=results[0].status==="fulfilled"?results[0].value.events:[];
   const entries=results[1].status==="fulfilled"?results[1].value:[];
-  const plans=results[2].status==="fulfilled"?results[2].value:[];
+  const planHistoryAvailable=results[2].status==="fulfilled";
+  const plans=planHistoryAvailable?results[2].value:[];
+  const existingPlan=mode==="plan"&&safeTicker
+    ?[...plans].filter(p=>p.ticker===safeTicker)
+      .sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0]??null
+    :null;
   const accounts=results[3].status==="fulfilled"?(results[3].value?.accounts??[]):[];
   if(mode==="observed" && (!safeTicker || observedPage<0 || !sourceKind ||
     !/^[0-9a-f]{64}$/.test(sourceRef) ||
@@ -186,11 +196,11 @@ export default async function JournalNewPage({searchParams}:{
   return <main className="journal-page">
     <div className="page-intro">
       <span className="breadcrumb"><Link href={back}>← {safeTicker||"투자 일지"}</Link></span>
-      <h1>{mode==="plan"?"목표·손절 계획 변경":
+      <h1>{mode==="plan"?"투자 전략·계획 변경":
         mode==="broker"?"체결 복기 작성":mode==="observed"?"Tiger 매매 관측 복기 작성":"투자 판단 작성"}</h1>
       <p>{mode==="observed"?"선택한 Tiger 주문 또는 개별 체결 관측값에 매매 이유를 기록합니다. 미검증 원본이며 실제 주문은 생성되지 않습니다.":
         mode==="broker"?"증권사가 확인한 체결에 내 판단을 연결합니다. 실제 주문은 생성되지 않습니다.":
-        mode==="plan"?"투자 계획과 변경 근거를 기록합니다. 실제 주문은 생성되지 않습니다.":
+        mode==="plan"?"투자 전략과 위험 기준을 기록합니다. 시세 알림과 실제 주문은 생성되지 않습니다.":
         "종목별 투자 논리, 판단 변화, 매매 복기를 직접 기록합니다."}</p>
     </div>
     {params.error&&<p role="alert">입력 내용을 확인해 주세요. 저장 여부가 불확실하면 기존 기록부터 확인하세요.</p>}
@@ -227,18 +237,90 @@ export default async function JournalNewPage({searchParams}:{
         <label>이 체결의 매매 근거와 복기<textarea name="content" rows={7} maxLength={6000} required placeholder="진입·청산 근거, 잘한 점, 다음에 보완할 점"/></label>
         <button type="submit" className="btn btn-primary journal-save">복기 저장</button>
       </form>
+    :mode==="plan"&&!planHistoryAvailable?
+      <div className="state-panel" role="alert">
+        <h2>현재 투자계획 이력을 읽을 수 없습니다.</h2>
+        <p>이전에 작성한 전략이나 목표 가격을 실수로 덮어쓰지 않도록 새 계획 저장을 잠시 제한합니다.</p>
+        <Link href={back} className="btn btn-outline">투자일지로 돌아가기</Link>
+      </div>
+    :mode==="plan"&&!safeTicker?
+      <form method="get" action="/private/journal/new" className="journal-compose-form">
+        <input type="hidden" name="mode" value="plan"/>
+        <JournalSymbolPicker symbols={tickerOptions} initialTicker="" />
+        <p className="journal-form-hint">먼저 종목을 선택하면 이 종목의 가장 최근 계획을 불러옵니다. 다른 종목의 계획을 가져오지 않습니다.</p>
+        <button type="submit" className="btn btn-primary journal-save">종목 선택 후 계획 작성 →</button>
+      </form>
     :mode==="plan"?
       <form action={addPlan} className="journal-compose-form">
         <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
-        <JournalSymbolPicker symbols={tickerOptions} initialTicker={safeTicker} />
-        <div className="journal-form-three">
-          <label>목표가<input name="targetPrice" inputMode="decimal" pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
-          <label>손절가<input name="stopPrice" inputMode="decimal" pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
-          <label>통화<input name="priceCurrency" defaultValue="USD" required maxLength={3} pattern="[A-Za-z]{3}"/></label>
+        <input type="hidden" name="ticker" value={safeTicker}/>
+        <p className="journal-form-hint"><strong>선택한 종목: {safeTicker}</strong> · 이 종목의 새 불변 계획 이력을 작성합니다.
+          다른 종목을 관리하려면 <Link href="/private/journal/new?mode=plan">종목 선택</Link>으로 이동하세요.</p>
+        <div className="journal-form-two">
+          <label>투자 전략 유형
+            <select name="strategyType" defaultValue={existingPlan?.strategyType??""}>
+              <option value="">미정</option>
+              <option value="LONG_TERM">장기 투자</option>
+              <option value="TECHNICAL">기술적 근거 진입</option>
+              <option value="EVENT_DRIVEN">이벤트·실적 기반</option>
+              <option value="OTHER">기타 전략</option>
+            </select>
+          </label>
+          <label>예상 투자 기간
+            <select name="investmentHorizon" defaultValue={existingPlan?.investmentHorizon??""}>
+              <option value="">미정</option>
+              <option value="UNDER_3_MONTHS">3개월 미만</option>
+              <option value="THREE_TO_TWELVE_MONTHS">3개월~1년</option>
+              <option value="ONE_TO_THREE_YEARS">1~3년</option>
+              <option value="OVER_THREE_YEARS">3년 이상</option>
+              <option value="OPEN_ENDED">장기·종료 시점 미정</option>
+            </select>
+          </label>
         </div>
-        <p className="journal-form-hint">두 가격을 모두 비우면 기존 계획을 해제하는 이력을 남깁니다.</p>
-        <label>계획을 정하거나 변경하는 이유<textarea name="rationale" rows={6} maxLength={3000} required/></label>
-        <button type="submit" className="btn btn-primary journal-save">계획 저장</button>
+        <label>투자 논리가 무효화되는 조건
+          <textarea name="invalidationCondition" rows={3} maxLength={1500}
+            defaultValue={existingPlan?.invalidationCondition??""}
+            placeholder="예: 시장 지지 논리가 깨지거나 사업 가정이 훼손되는 경우. 단순 주가 변동 알림은 하지 않습니다."/>
+        </label>
+        <div className="journal-form-two">
+          <label>단일 종목 최대 보유 비중 (%) · 선택 사항
+            <input name="maxAllocationPct" inputMode="decimal" type="text"
+              defaultValue={existingPlan?.maxAllocationPct??""}
+              pattern="(?:[0-9]{1,3}(?:[.][0-9]{1,2})?)"
+              placeholder="예: 15"/>
+          </label>
+          <label>정기 점검 주기
+            <select name="reviewCadence" defaultValue={existingPlan?.reviewCadence??""}>
+              <option value="">미정</option>
+              <option value="WEEKLY">매주</option>
+              <option value="MONTHLY">매월</option>
+              <option value="QUARTERLY">분기마다</option>
+              <option value="SEMIANNUAL">6개월마다</option>
+              <option value="ANNUAL">매년</option>
+              <option value="EVENT_DRIVEN">기업 공시·사건 발생 시</option>
+            </select>
+          </label>
+        </div>
+        <details className="data-disclosure">
+          <summary>목표가·손절가 계획 (선택 사항 · 실제 주문 아님)</summary>
+          <div className="journal-form-three">
+            <label>목표가<input name="targetPrice" inputMode="decimal"
+              defaultValue={existingPlan?.targetPrice??""}
+              pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
+            <label>손절가<input name="stopPrice" inputMode="decimal"
+              defaultValue={existingPlan?.stopPrice??""}
+              pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
+            <label>통화<input name="priceCurrency" defaultValue={existingPlan?.priceCurrency??"USD"}
+              maxLength={3} pattern="[A-Za-z]{3}"/></label>
+          </div>
+          <p className="journal-form-hint">가격 두 개를 모두 비우면 가격 계획을 해제합니다. 투자 전략·검토 주기는 그대로 독립적으로 기록됩니다.</p>
+        </details>
+        <label>계획을 새로 정하거나 변경한 이유
+          <textarea name="rationale" rows={5} maxLength={3000} required
+            placeholder="기존 계획과 달라진 부분, 이번 판단의 근거를 기록하세요."/>
+        </label>
+        <p className="journal-form-hint">새 계획을 저장하면 기존 기록을 수정하지 않고 변경 이력을 추가합니다. 목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다.</p>
+        <button type="submit" className="btn btn-primary journal-save">새 투자 계획 저장</button>
       </form>
     :<form action={addJournal} className="journal-compose-form">
       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>

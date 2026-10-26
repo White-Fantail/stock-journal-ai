@@ -18,6 +18,8 @@ from services.saas_api.tiger_oauth import TigerError, _scope
 from services.saas_api.ledger_publication import (
     PublicationRefused, _candidate, _publication_scope, release_verified_review,
 )
+from services.saas_api.ledger_read import private_ledger
+
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
 assert os.environ.get("SAAS_TEST_DB_ACK")=="YES_DISPOSABLE_SAAS_DB"
@@ -202,6 +204,25 @@ with psycopg.connect(dsn) as identity:
             assert broker.execute("SELECT count(*) FROM saas_broker_ledger_publications WHERE workspace_id=%s",(scoped_b,)).fetchone()[0]==0
 
         broker.execute("SET ROLE saas_broker_app")
+        # Gateway stays disabled without explicit opt-in; no preview money.
+        os.environ["SAAS_P4_LEDGER_READ_ENABLED"]="0"
+        hidden=private_ledger(identity,broker,a[0])
+        assert hidden["readEnabled"] is False and not hidden["executions"],hidden
+        assert hidden["coverage"]=="UNVERIFIED"
+        os.environ["SAAS_P4_LEDGER_READ_ENABLED"]="1"
+        visible=private_ledger(identity,broker,a[0])
+        assert visible["readEnabled"] and visible["coverage"]=="VERIFIED_ACCOUNTS_ONLY"
+        assert len(visible["executions"])==1 and len(visible["positions"])==1,visible
+        fill=visible["executions"][0]
+        assert fill["sourceRef"]==staged_key and fill["symbol"]=="TEST"
+        assert fill["provenance"]=="BROKER_VERIFIED" and fill["price"]=="10"
+        assert fill["accountId"]==str(a[3])
+        assert "PRIVATE_PROVIDER_FILL" not in str(visible)
+        # Tenant B cannot see A's approved fills even when private reading is ON.
+        second=private_ledger(identity,broker,b[0])
+        assert not second["executions"] and not second["positions"],second
+        assert len(second["accounts"])==1 and second["accounts"][0]["state"]=="NOT_VERIFIED"
+
         assert broker.execute("""SELECT has_table_privilege(
             current_user,'saas_broker_ledger_publications','INSERT')""").fetchone()[0] is False
 
@@ -268,6 +289,10 @@ with psycopg.connect(dsn) as identity:
         assert "SOURCE_EVIDENCE_CONFLICT" in conflict["issues"],conflict
         latest=review_status(identity,broker,a[0])["accounts"][0]
         assert latest["state"]=="BLOCKED" and latest["version"]==5,latest
+        # Previously valid release is immutable audit only, not readable data.
+        blocked_view=private_ledger(identity,broker,a[0])
+        assert blocked_view["executions"]==[] and blocked_view["positions"]==[]
+        assert blocked_view["accounts"][0]["state"]=="NOT_VERIFIED"
         assert any(issue["category"]=="INTEGRITY" for issue in latest["issues"])
         # Conflicting origins are not attached as individually trusted links.
         assert latest["sourceEvidenceCount"]==0

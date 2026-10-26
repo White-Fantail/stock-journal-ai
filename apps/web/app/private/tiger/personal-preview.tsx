@@ -99,6 +99,10 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
     <p>수집 구간: {data.accounts.reduce((n,a)=>n+a.windowCount,0)}개 · 전체 관측 주문 {data.accounts.reduce((n,a)=>n+a.totalOrders,0)}건 · 현재 페이지 {page+1} · 표시: {rows.length}개
     {data.accounts.some(a=>a.truncated)?" · 표시 한도 적용":""}</p>
     {rows.some(o=>o.filled===null) && <p role="status">일부 과거 주문의 소수점 수량이 미확인이라 임의로 표시하지 않습니다.</p>}
+    {!compact && <nav className="record-pagination record-pagination-top" aria-label="목록 위 주문 페이지 이동">
+      {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}
+      {data.accounts.some(a=>a.hasMore) && page<20 && <Link href={"/private/trades?page="+(page+1)}>다음 페이지 →</Link>}
+    </nav>}
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
       <><div className="mobile-data-cards" aria-label="Tiger 주문 모바일 목록">
         {rows.slice(0,compact?12:120).map((o,i)=>

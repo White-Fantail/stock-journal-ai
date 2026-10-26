@@ -363,8 +363,7 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .portfolio-unknown-grid{grid-template-columns:1fr 1fr}
   .app-shell .portfolio-unknown-grid strong{font-size:1rem}
   .app-shell .portfolio-checks{grid-template-columns:1fr}
-  .app-shell .app-shell dl{grid-template-columns:1fr}
-  .app-shell dl{grid-template-columns:1fr;gap:2px}
+    .app-shell dl{grid-template-columns:1fr;gap:2px}
   .app-shell dd{margin-bottom:12px}
   .app-shell .responsive-table.desktop-data-table,.app-shell .desktop-data-table{display:none}
   .app-shell .mobile-data-cards{display:grid;gap:10px}
@@ -381,4 +380,33 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .journal-metrics{grid-template-columns:1fr 1fr}
   .app-shell .journal-metrics>div:last-child{grid-column:1/-1}
   .mobile-data-card-fields{grid-template-columns:1fr 1fr}
+}
+
+/* Financial detail layouts and paging are legible at touch widths. */
+.record-pagination{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:20px}
+.record-pagination a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:11px;font-size:.88rem;font-weight:750}
+.app-shell .mobile-data-card-fields{display:grid}
+.app-shell .mobile-data-card-fields dt{display:block;margin:0}
+.app-shell .mobile-data-card-fields dd{margin:2px 0 0;line-height:1.5}
+.app-shell .mobile-data-card-fields>div{min-width:0}
+.app-shell .mobile-data-card-action a{white-space:normal}
+@media(max-width:760px){
+  .app-shell dl.mobile-data-card-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .app-shell dl.mobile-data-card-fields>div{min-width:0}
+  .app-shell dl.mobile-data-card-fields dd{margin:3px 0 0}
+  .app-shell .responsive-table{display:block;overflow-x:auto;max-width:100%}
+  .app-shell .responsive-table:not(.desktop-data-table):before{content:"표를 좌우로 이동해 자세히 볼 수 있습니다";display:block;font-size:.76rem;color:var(--muted);padding:4px 0 9px}
+  .app-shell .desktop-data-table{display:none}
+  .app-shell .portfolio-verified-scroll.desktop-data-table{display:none}
+  .record-pagination{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .record-pagination a{font-size:.84rem;text-align:center}
+  .app-shell .user-list-row strong{overflow-wrap:anywhere}
+  .app-shell .account-summary-item{padding:12px}
+  .app-shell .user-list-value strong{line-height:1.35}
+  .app-shell .journal-current-grid>div:first-child{grid-column:1/-1}
+  .app-shell .journal-current-top{flex-direction:column}
+}
+@media(max-width:390px){
+  .app-shell .mobile-data-card-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell .home-actions .btn{font-size:.78rem}
 }

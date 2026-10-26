@@ -35,7 +35,9 @@ function displayTime(value:string):string{
     : "날짜 확인 필요";
 }
 function planPrice(value:string|null,currency:string|null){
-  return value!==null ? `${value} ${currency??""}` : "미설정";
+  if(value===null) return "미설정";
+  const compact=value.replace(/(\\.\\d*?[1-9])0+$/,"$1").replace(/\\.0+$/,"");
+  return `${compact} ${currency??""}`;
 }
 function contentPreview(value:string,max=115){
   return value.length>max?value.slice(0,max)+"…":value;

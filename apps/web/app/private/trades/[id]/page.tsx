@@ -30,6 +30,7 @@ export default async function TradeDetail({params}:{
       <dt>변경 이력</dt><dd>{trade.voidsEventId ? <Link href={"/private/trades/" + trade.voidsEventId}>취소 대상 원본 보기</Link> : "원본 기록"}</dd>
       <dt>매매 이유/정정 사유</dt><dd style={{whiteSpace:"pre-wrap"}}>{trade.rationale ?? "미기록"}</dd>
     </dl>
+    {trade.kind==="EXECUTION" && <p><Link className="btn btn-outline" href="/private/journal">투자 일지에서 매매 이유와 복기 작성 →</Link></p>}
     <p>원본 체결은 수정하지 않습니다. 정정하려면 원장 목록에서 취소 이벤트를 추가하고 정확한 체결을 다시 기록하세요.</p>
   </main>;
 }

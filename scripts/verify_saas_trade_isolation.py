@@ -140,9 +140,31 @@ def main() -> None:
                    "rationale":"Synthetic revised exit plan"}
         create_plan(identity,trade,a_sub,next_plan)
         assert len(list_plans(identity,trade,a_sub)["plans"])==2
+        # New P1 long-horizon strategy fields remain immutable and tenant-scoped.
+        strategic={**next_plan,"idempotencyKey":str(uuid4()),
+            "targetPrice":None,"priceCurrency":None,
+            "strategyType":"LONG_TERM","investmentHorizon":"OVER_THREE_YEARS",
+            "invalidationCondition":"Synthetic business assumption invalidated",
+            "maxAllocationPct":"15.25","reviewCadence":"QUARTERLY",
+            "rationale":"Synthetic strategic revision"}
+        created_strategy=create_plan(identity,trade,a_sub,strategic)
+        assert not created_strategy["replayed"]
+        assert create_plan(identity,trade,a_sub,strategic)["replayed"]
+        mine=list_plans(identity,trade,a_sub)["plans"]
+        assert len(mine)==3 and mine[0]["strategyType"]=="LONG_TERM"
+        assert mine[0]["maxAllocationPct"]=="15.25"
+        assert mine[1]["strategyType"] is None # historical values stay unset
+        assert list_plans(identity,trade,b_sub)["plans"]==[]
+        try:
+            create_plan(identity,trade,a_sub,{**strategic,"reviewCadence":"WEEKLY"})
+        except TradeConflict:
+            pass
+        else:
+            raise AssertionError("Strategy idempotency collision changed immutable history")
         export = export_journal(identity,trade,a_sub)
         assert export["complete"] and len(export["journal"]) == 1 and len(export["trades"]) == 2
-        assert len(export["plans"])==2
+        assert len(export["plans"])==3
+        assert export["plans"][-1]["maxAllocationPct"]=="15.25"
         assert len(export_journal(identity,trade,b_sub)["journal"]) == 0
         assert export_journal(identity,trade,b_sub)["plans"]==[]
 

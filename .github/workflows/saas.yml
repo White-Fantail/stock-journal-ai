@@ -19,6 +19,7 @@ on:
       - 'tests/test_broker_fifo_projection.py'
       - 'tests/test_broker_reconciliation.py'
       - 'tests/test_saas_reconciliation_store.py'
+      - 'tests/test_saas_ledger_publication.py'
       - 'scripts/verify_saas_reconciliation_store.py'
       - 'tests/test_broker_worker_contract.py'
       - 'tests/test_broker_paged_contract.py'
@@ -99,6 +100,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_broker_reconciliation.py' -v
       - name: Validate P4 attestation, fingerprint and money precision gates
         run: python -m unittest discover -s tests -p 'test_saas_reconciliation_store.py' -v
+      - name: Validate append-only broker ledger publication gate
+        run: python -m unittest discover -s tests -p 'test_saas_ledger_publication.py' -v
       - name: Validate Tiger hosted OAuth policy and AEAD vault
         run: python -m unittest discover -s tests -p 'test_tiger_oauth_policy.py' -v
       - name: Validate offline worker source contract is fail closed
@@ -151,7 +154,7 @@ jobs:
                              env=env, check=True)
           with psycopg.connect(env["SAAS_DATABASE_URL"]) as c:
               versions = [r[0] for r in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql", "008_tiger_oauth.sql", "009_tiger_runtime_login.sql", "010_broker_backfill_staging.sql", "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql", "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql", "016_journal_plan_revisions.sql"]
+              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql", "008_tiger_oauth.sql", "009_tiger_runtime_login.sql", "010_broker_backfill_staging.sql", "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql", "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql", "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql"]
               assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
@@ -181,7 +184,7 @@ jobs:
           from services.saas_api.schema_admin import manifest
           suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
           sources = manifest()
-          assert len(sources) == 16
+          assert len(sources) == 17
           with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
               for name, _ in suites:
                   c.execute("CREATE DATABASE " + name)
@@ -226,7 +229,7 @@ jobs:
               assert (result.returncode != 0) if occupied else (result.returncode == 0)
               with psycopg.connect(dsn) as c:
                   names = [v[0] for v in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-                  assert len(names) == (4 if occupied else 16), names
+                  assert len(names) == (4 if occupied else 17), names
                   assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None
                   if occupied:
                       assert c.execute("SELECT count(*) FROM saas_csv_import_batches").fetchone()[0] == 1

@@ -13,6 +13,7 @@ import secrets
 import sys
 import time
 import urllib.request
+from uuid import uuid4
 from decimal import Decimal, InvalidOperation
 from temporary.tiger_personal.runner import configuration
 
@@ -81,7 +82,7 @@ def submit(subject,account,asset,positions,env):
     if len(body)>24576:
         raise ValueError("SNAPSHOT_TOO_LARGE")
     stamp=str(int(time.time()))
-    nonce=secrets.token_hex(16)
+    nonce=str(uuid4())
     signature=hmac.new(secret.encode(),f"{stamp}\n{nonce}\nPOST\n{_PATH}\n".encode()+body,hashlib.sha256).hexdigest()
     request=urllib.request.Request(base+_PATH,method="POST",data=body,headers={
         "Content-Type":"application/json",

@@ -160,9 +160,20 @@ def load_probes(broker,wid,aid):
                           "symbol":f["symbol"],"currency":f["currency"],
                           "side":f["side"],"quantity":f["quantity"],
                           "price":f["price"],"timeRaw":f["timeRaw"]})
+    fee_observations=[]
+    for p in orders.values():
+        fee=p.get("feeReview")
+        if not fee or fee["status"] not in ("MATCHED","CURRENCY_UNKNOWN"):
+            continue
+        fee_observations.append({
+            "sourceRef":hashlib.sha256((str(aid)+":"+p["orderId"]).encode()).hexdigest(),
+            "symbol":p["symbol"],"status":fee["status"],
+            "total":fee["total"],"currency":fee["currency"],
+            "details":fee["details"]})
     # These are observed transactions, not validated history, accounting inputs
     # or individual commission allocations.
-    return {"fillObservations":fills[:60], "fillProbeCount":len(orders),
+    return {"feeObservations":fee_observations[:30],
+            "fillObservations":fills[:60], "fillProbeCount":len(orders),
             "feeProbeMatched":sum(p.get("feeReview",{}).get("status")=="MATCHED" for p in orders.values()),
             "feeProbeCurrencyUnknown":sum(p.get("feeReview",{}).get("status")=="CURRENCY_UNKNOWN" for p in orders.values()),
             "feeProbeDifference":sum(p.get("feeReview",{}).get("status")=="DIFFERENCE" for p in orders.values()),
@@ -170,4 +181,4 @@ def load_probes(broker,wid,aid):
             "fillProbeUnavailable":sum(p["status"]=="UNAVAILABLE" for p in orders.values()),
             "fillProbeDifference":sum(p["status"]=="DIFFERENCE" for p in orders.values()),
             "fillProbePartial":sum(p["status"]=="PARTIAL" for p in orders.values()),
-            "fillProbeTruncated":len(records)>=600 or len(fills)>60}
+            "fillProbeTruncated":len(records)>=600 or len(fills)>60 or len(fee_observations)>30}

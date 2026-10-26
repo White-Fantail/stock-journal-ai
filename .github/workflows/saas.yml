@@ -82,6 +82,16 @@ jobs:
           npm ci --ignore-scripts --no-audit
           npm run typecheck
           npm run test:security
+      - name: Build Next.js using synthetic CI-only OAuth configuration
+        working-directory: apps/web
+        env:
+          AUTH_SECRET: synthetic_ci_auth_secret_no_customer_data_0123456789abcdef0123456789
+          AUTH_GOOGLE_ID: synthetic-ci-google-client
+          AUTH_GOOGLE_SECRET: synthetic-ci-google-secret
+          AUTH_URL: https://positionary.example.invalid
+          SAAS_INTERNAL_API_URL: https://internal.example.invalid
+          SAAS_INTERNAL_SECRET: synthetic_ci_internal_hmac_secret_without_prod_data_0123456789
+        run: npm run build
       - name: Fail if personal portfolio or broker files are tracked
         run: python scripts/check_public_repo.py
       - name: Validate offline Google claims and HMAC request checks

@@ -230,6 +230,12 @@ with psycopg.connect(dsn) as identity:
         # runtime principal. No Tiger provider ID or personal real data.
         with psycopg.connect(dsn,autocommit=True) as trade:
             trade.execute("SET ROLE saas_trade_app")
+            assert trade.execute("""SELECT
+              has_column_privilege(current_user,'saas_verified_execution_stage','symbol','SELECT'),
+              has_column_privilege(current_user,'saas_verified_execution_stage','price','SELECT'),
+              has_table_privilege(current_user,'saas_tiger_grants','SELECT'),
+              has_table_privilege(current_user,'saas_broker_ledger_publications','INSERT')
+              """).fetchone() == (True,False,False,False)
             annotation={"idempotencyKey":str(uuid4()),"ticker":"TEST",
                         "content":"Synthetic independent fill rationale",
                         "accountId":str(a[3]),"sourceRef":staged_key}

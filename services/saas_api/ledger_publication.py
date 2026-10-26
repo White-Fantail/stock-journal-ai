@@ -133,6 +133,8 @@ def _candidate(broker, wid, account):
          FROM saas_projection_position_stage
          WHERE workspace_id=%s AND account_id=%s AND version_id=%s
          ORDER BY symbol,currency""", (wid, account, vid)).fetchall()
+    if expected and not positions:
+        raise PublicationRefused("STAGED_POSITION_INCOMPLETE")
     digest = _digest(wid, account, vid, number, review_hmac, as_of, fills, positions)
     return vid, number, as_of, fills, positions, digest
 

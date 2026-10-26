@@ -18,7 +18,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
+export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);

@@ -14,7 +14,10 @@ from services.saas_api.reconciliation_store import (
     AuditRefused, _input_digest, _bound_digest, record_reconciliation,review_status,
 )
 from services.broker_connectors.backfill import source_key
-from services.saas_api.tiger_oauth import TigerError
+from services.saas_api.tiger_oauth import TigerError, _scope
+from services.saas_api.ledger_publication import (
+    PublicationRefused, _candidate, release_verified_review,
+)
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
 assert os.environ.get("SAAS_TEST_DB_ACK")=="YES_DISPOSABLE_SAAS_DB"
@@ -117,6 +120,46 @@ with psycopg.connect(dsn) as identity:
         repeated=record_reconciliation(identity,broker,a[0],good,attestation=sig)
         assert repeated["replayed"] and repeated["version"]==4
 
+        # New P4 release is a second, independently signed boundary. The
+        # production setting remains OFF: these are disposable synthetic roles.
+        os.environ["SAAS_P4_PUBLICATION_KEY"]="d"*64
+        os.environ["SAAS_P4_PUBLICATION_ENABLED"]="0"
+        with broker.transaction():
+            scoped=_scope(identity,broker,a[0])
+            proposed=_candidate(broker,scoped,a[3])[-1]
+        approval=hmac.new(bytes.fromhex(os.environ["SAAS_P4_PUBLICATION_KEY"]),
+            ("positionary:p4:publish:v1:"+proposed).encode(),
+            hashlib.sha256).hexdigest()
+        try:
+            release_verified_review(identity,broker,a[0],a[3],4,
+                                    independent_signature=approval)
+        except PublicationRefused as exc:
+            assert str(exc)=="INDEPENDENT_PUBLICATION_REQUIRED"
+        else:
+            raise AssertionError("Publication bypassed explicit enable switch")
+        os.environ["SAAS_P4_PUBLICATION_ENABLED"]="1"
+        try:
+            release_verified_review(identity,broker,a[0],a[3],3,
+                                    independent_signature=approval)
+        except PublicationRefused as exc:
+            assert str(exc)=="STALE_REVIEW"
+        else:
+            raise AssertionError("Old review was released")
+        promoted=release_verified_review(identity,broker,a[0],a[3],4,
+                                         independent_signature=approval)
+        assert promoted=={"state":"RELEASED","version":4,
+                         "sourceCount":1,"replayed":False},promoted
+        replay=release_verified_review(identity,broker,a[0],a[3],4,
+                                       independent_signature=approval)
+        assert replay["replayed"] and replay["sourceCount"]==1,replay
+        try:
+            release_verified_review(identity,broker,b[0],a[3],4,
+                                    independent_signature=approval)
+        except PublicationRefused as exc:
+            assert str(exc)=="ACCOUNT_NOT_AUTHORIZED"
+        else:
+            raise AssertionError("Cross-workspace publication was allowed")
+
         # Tenant RLS, immutable stage and issue history must be real in PG.
         with broker.transaction():
             broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(a[2]),))
@@ -127,6 +170,8 @@ with psycopg.connect(dsn) as identity:
             assert broker.execute("SELECT count(*) FROM saas_projection_position_stage").fetchone()[0]==1
             assert broker.execute("""SELECT count(*) FROM saas_reconciliation_issues""").fetchone()[0]>=5
             assert broker.execute("SELECT count(*) FROM saas_reconciliation_source_links").fetchone()[0]==2
+            assert broker.execute("SELECT count(*) FROM saas_broker_ledger_publications").fetchone()[0]==1
+            assert broker.execute("SELECT count(*) FROM saas_broker_ledger_sources").fetchone()[0]==1
             metadata=broker.execute("""SELECT code,category,severity,evidence_scope
                 FROM saas_reconciliation_issues
                 WHERE code='FEE_UNKNOWN' ORDER BY version_id LIMIT 1""").fetchone()
@@ -139,6 +184,8 @@ with psycopg.connect(dsn) as identity:
             assert broker.execute("SELECT count(*) FROM saas_verified_execution_stage").fetchone()[0]==0
             assert broker.execute("SELECT count(*) FROM saas_projection_position_stage").fetchone()[0]==0
             assert broker.execute("SELECT count(*) FROM saas_reconciliation_source_links").fetchone()[0]==0
+            assert broker.execute("SELECT count(*) FROM saas_broker_ledger_publications").fetchone()[0]==0
+            assert broker.execute("SELECT count(*) FROM saas_broker_ledger_sources").fetchone()[0]==0
 
         # The runtime principal cannot rewrite or remove past decisions.
         with broker.transaction():
@@ -179,6 +226,13 @@ with psycopg.connect(dsn) as identity:
         assert any(issue["category"]=="INTEGRITY" for issue in latest["issues"])
         # Conflicting origins are not attached as individually trusted links.
         assert latest["sourceEvidenceCount"]==0
+        try:
+            release_verified_review(identity,broker,a[0],a[3],4,
+                                    independent_signature=approval)
+        except PublicationRefused as exc:
+            assert str(exc)=="REVIEW_NOT_RELEASEABLE"
+        else:
+            raise AssertionError("Prior publication remained active after a blocked revision")
 
         try:
             record_reconciliation(identity,broker,a[0],evidence(b[2],b[3]),
@@ -197,4 +251,4 @@ with psycopg.connect(dsn) as identity:
         else:
             raise AssertionError("Revoked owner read review status")
         assert review_status(identity,broker,b[0])["accounts"]==[]
-print("P4 append-only A/B audit, signed staging, versioned issue resolution PASS")
+print("P4 A/B audit, independently signed private ledger release and stale-review fencing PASS")

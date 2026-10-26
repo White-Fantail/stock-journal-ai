@@ -187,3 +187,59 @@ export async function tigerLedgerRead():Promise<TigerLedgerRead> {
     throw new Error("INVALID_TIGER_LEDGER_READ");
   return data;
 }
+
+/** Owner-only personal Tiger observed data. Never claim verified fills/returns.
+ * Server requires the immutable Google subject + tenant RLS for every request.
+ * Other signed-in accounts get null and retain the official approval UI.
+ */
+export type TigerPersonalPosition = Readonly<{
+  symbol:string;currency:string;quantity:string;averageCost:string|null;
+  marketValue:string|null;unrealizedPnl:string|null
+}>;
+export type TigerPersonalOrder = Readonly<{
+  sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
+  status:string;filled:string;price:string|null;fee:string|null;at:string|null
+}>;
+export type TigerPersonalAccount = Readonly<{
+  alias:string;asOf:string|null;
+  assets:{netLiquidation:string|null;cashBalance:string|null}|null;
+  positions:TigerPersonalPosition[];
+  orders:TigerPersonalOrder[];
+  windowCount:number;partial:boolean;truncated:boolean
+}>;
+export type TigerPersonalRead = Readonly<{
+  coverage:"SNAPSHOT_ONLY";verified:false;accounts:TigerPersonalAccount[]
+}>;
+const personalDecimal=/^-?(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/;
+const personalSymbol=/^[A-Z0-9.:-]{1,32}$/;
+function nullableNumber(v:unknown): v is string|null {
+  return v===null || (typeof v==="string" && personalDecimal.test(v));
+}
+export async function tigerPersonalRead():Promise<TigerPersonalRead|null> {
+  try {
+    const result=await tigerCall("personal-view") as TigerPersonalRead;
+    if(!result || result.coverage!=="SNAPSHOT_ONLY" || result.verified!==false ||
+       !Array.isArray(result.accounts) || result.accounts.length>5 ||
+       !result.accounts.every(a=>a && typeof a.alias==="string" &&
+         a.alias.length<=100 && (a.asOf===null || (typeof a.asOf==="string" && !Number.isNaN(Date.parse(a.asOf)))) &&
+         (a.assets===null || (a.assets && nullableNumber(a.assets.netLiquidation) &&
+           nullableNumber(a.assets.cashBalance))) &&
+         Array.isArray(a.positions) && a.positions.length<=100 &&
+         a.positions.every(p=>p && typeof p.symbol==="string" && personalSymbol.test(p.symbol) &&
+           typeof p.currency==="string" && /^[A-Z]{3}$/.test(p.currency) &&
+           typeof p.quantity==="string" && personalDecimal.test(p.quantity) &&
+           nullableNumber(p.averageCost) && nullableNumber(p.marketValue) && nullableNumber(p.unrealizedPnl)) &&
+         Array.isArray(a.orders) && a.orders.length<=120 &&
+         a.orders.every(o=>o && /^[a-f0-9]{64}$/.test(o.sourceRef) &&
+           typeof o.symbol==="string" && personalSymbol.test(o.symbol) &&
+           typeof o.currency==="string" && /^[A-Z]{3}$/.test(o.currency) &&
+           (o.side==="BUY" || o.side==="SELL") &&
+           typeof o.status==="string" && /^[A-Z_]{3,32}$/.test(o.status) &&
+           typeof o.filled==="string" && personalDecimal.test(o.filled) &&
+           nullableNumber(o.price) && nullableNumber(o.fee) &&
+           (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
+         Number.isInteger(a.windowCount) && a.windowCount>=0 &&
+         typeof a.partial==="boolean" && typeof a.truncated==="boolean")) return null;
+    return result;
+  } catch {return null;}
+}

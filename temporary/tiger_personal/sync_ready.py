@@ -44,7 +44,7 @@ def normalize(assets,positions):
     if summary is None:
         raise ValueError("NO_ASSET_PROOF")
     asset={"netLiquidation":amount(getattr(summary,"net_liquidation",None)),
-           "cashBalance":amount(getattr(summary,"cash_balance",None))}
+           "cashBalance":amount(getattr(summary,"cash",getattr(summary,"cash_balance",None)))}
     rows=[]
     for p in positions:
         contract=getattr(p,"contract",None)
@@ -113,12 +113,18 @@ def run(env=None):
     cfg.tiger_id=tiger_id
     cfg.account=account
     cfg.private_key=key
-    cfg.license=env.get("POSITIONARY_PERSONAL_LICENSE","TBKIWI")
+    cfg.license=env.get("POSITIONARY_PERSONAL_LICENSE","TBNZ")
     cfg.timeout=10
     cfg.retry_max_tries=1
     client=TradeClient(cfg)
-    asset,rows=normalize(client.get_assets(account=account),
-                         client.get_positions(account=account))
+    asset_reader = client.get_assets if account.startswith("U") else client.get_prime_assets
+    assets = asset_reader(account=account)
+    positions = client.get_positions(account=account)
+    for record in list(assets)+list(positions):
+        observed_account = getattr(record, "account", None)
+        if observed_account is not None and str(observed_account) != account:
+            raise ValueError("BROKER_ACCOUNT_MISMATCH")
+    asset,rows=normalize(assets, positions)
     return submit(env["POSITIONARY_PERSONAL_GOOGLE_SUBJECT"],account,asset,rows,env)
 
 def main():

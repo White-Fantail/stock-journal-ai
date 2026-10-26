@@ -215,7 +215,7 @@ with psycopg.connect(dsn) as identity:
         assert len(visible["executions"])==1 and len(visible["positions"])==1,visible
         fill=visible["executions"][0]
         assert fill["sourceRef"]==staged_key and fill["symbol"]=="TEST"
-        assert fill["provenance"]=="BROKER_VERIFIED" and fill["price"]=="10"
+        assert fill["provenance"]=="BROKER_VERIFIED" and Decimal(fill["price"])==Decimal("10")
         assert fill["accountId"]==str(a[3])
         assert "PRIVATE_PROVIDER_FILL" not in str(visible)
         # Tenant B cannot see A's approved fills even when private reading is ON.

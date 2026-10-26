@@ -142,7 +142,9 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             ORDER BY j.created_at,j.id LIMIT %s
         """, (_LIMIT + 1,)).fetchall()
         plans = trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
-            price_currency,rationale,created_at FROM saas_journal_plan_revisions
+            price_currency,rationale,created_at,
+            strategy_type,investment_horizon,invalidation_condition,
+            max_allocation_pct,review_cadence FROM saas_journal_plan_revisions
             ORDER BY created_at,id LIMIT %s""",(_LIMIT+1,)).fetchall()
         if len(trades) > _LIMIT or len(notes) > _LIMIT or len(plans) > _LIMIT:
             raise TradeConflict("Export exceeds safe complete bound; paginated export required")

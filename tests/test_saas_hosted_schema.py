@@ -25,6 +25,15 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "016_journal_plan_revisions.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
+    def test_saas_docker_packages_every_broker_module_import_root(self):
+        from pathlib import Path
+        docker=(Path(__file__).resolve().parents[1] /
+                "services/saas_api/Dockerfile").read_text()
+        for package in ("services/saas_api/","services/broker_connectors/",
+                        "services/tiger_sync/"):
+            self.assertIn("COPY "+package,docker,
+                          msg="SaaS container missing a runtime dependency")
+
     def test_journal_plan_revisions_are_append_only_and_tenant_scoped(self):
         source=next(sql for name,_,sql in manifest()
                     if name=="016_journal_plan_revisions.sql")

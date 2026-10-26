@@ -169,6 +169,9 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
         wid=_scope(identity,broker,subject)
         if wid!=str(account.workspace_id):
             raise AuditRefused("ACCOUNT_NOT_AUTHORIZED")
+        # Serialize reviews and independently signed releases per account.
+        broker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                       (str(wid)+":"+str(account.account_id),))
         row=broker.execute("""SELECT a.id FROM saas_broker_accounts a
           JOIN saas_broker_connections c ON c.workspace_id=a.workspace_id
            AND c.id=a.connection_id

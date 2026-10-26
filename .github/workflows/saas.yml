@@ -47,6 +47,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: saas-ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   saas-postgres-isolation:
     runs-on: ubuntu-latest

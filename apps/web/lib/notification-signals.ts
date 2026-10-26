@@ -13,7 +13,7 @@ export function compareAmounts(a:string,b:string):number{
   if(!MONEY.test(a)||!MONEY.test(b))throw new Error("INVALID_DECIMAL");
   const exact=(v:string)=>{
     const [units,decimals=""]=v.split(".");
-    return BigInt(units)*10n**12n+BigInt(decimals.padEnd(12,"0"));
+    return BigInt(units)*BigInt(10)**BigInt(12)+BigInt(decimals.padEnd(12,"0"));
   };
   const x=exact(a),y=exact(b);
   return x<y?-1:x>y?1:0;

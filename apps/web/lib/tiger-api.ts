@@ -151,7 +151,7 @@ export type TigerLedgerRead = Readonly<{
   truncated:boolean;
 }>;
 
-const ledgerDecimal=/^(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/;
+const ledgerDecimal=/^(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
 const ledgerSymbol=/^[A-Z0-9.:-]{1,32}$/;
 const ledgerUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const validLedgerTime=(v:unknown)=>typeof v==="string" && v.length<=64 && Number.isFinite(Date.parse(v));
@@ -178,7 +178,7 @@ export async function tigerLedgerRead():Promise<TigerLedgerRead> {
      !data.positions.every(p=>p && ledgerUuid.test(p.accountId) &&
        ledgerSymbol.test(p.symbol) && /^[A-Z]{3}$/.test(p.currency) &&
        [p.quantity,p.costBasis].every(v=>typeof v==="string" && ledgerDecimal.test(v)) &&
-       typeof p.realizedPnl==="string" && /^-?(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/.test(p.realizedPnl) &&
+       typeof p.realizedPnl==="string" && /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(p.realizedPnl) &&
        validLedgerTime(p.asOf) && Number.isInteger(p.reviewVersion) &&
        p.reviewVersion>0 && p.provenance==="BROKER_VERIFIED" &&
        data.accounts.some(a=>a.accountId===p.accountId && a.state==="VERIFIED" && a.version===p.reviewVersion)) ||

@@ -23,8 +23,16 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql",
                           "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql",
                           "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql",
-                          "018_journal_broker_fill_links.sql"])
+                          "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_quoted_evidence_kind_extends_existing_rls_table_without_data_rewrite(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="019_tiger_market_quotes.sql")
+        self.assertIn("'QUOTES'",source)
+        self.assertIn("saas_tiger_source_snapshots",source)
+        self.assertNotIn("DROP TABLE",source)
+        self.assertNotIn("UPDATE saas_",source)
 
     def test_saas_docker_packages_every_broker_module_import_root(self):
         from pathlib import Path

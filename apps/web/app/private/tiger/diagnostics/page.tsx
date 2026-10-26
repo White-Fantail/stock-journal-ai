@@ -32,6 +32,7 @@ export default async function TigerDiagnosticsPage(){
         <p>저장된 원본 스냅샷 {total}개 · 그중 거래 관측 자료 {observed}개</p>
         <p>현재 화면 응답: {personal===null?"읽기 실패 또는 응답 검증 실패":
           personal.accounts.length===0?"계좌 0개":personal.accounts.length+"개 계좌 반환"}</p>
+        {!!personal?.readWarnings?.length && <p role="status">일부 세부 자료 형식 검사 문제: {personal.readWarnings.join(", ")}. 검증 가능한 나머지 정보만 부분 표시합니다.</p>
         {observed>0 && (personal===null || personal.accounts.length===0) &&
           <p role="status">데이터베이스에 Tiger 거래 관측 자료가 남아 있습니다.
             기존 기록을 초기화하지 마세요. 계좌 연결 상태나 응답 검증 문제를 조사해야 합니다.</p>}

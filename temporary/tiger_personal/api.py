@@ -6,7 +6,6 @@ import re
 from decimal import Decimal, InvalidOperation
 from services.saas_api.tiger_oauth import _scope, unseal
 from temporary.tiger_personal.snapshot_store import save_snapshot
-from temporary.tiger_personal.history import load_orders
 
 _SUB = re.compile(r"^[0-9]{3,255}$")
 _ACC = re.compile(r"^[A-Za-z0-9]{5,25}$")
@@ -70,6 +69,7 @@ def import_pilot(identity, broker, payload):
     return save_snapshot(identity,broker,payload["subject"],account,assets,positions)
 
 def view_pilot(identity, broker, subject):
+    from temporary.tiger_personal.history import load_orders
     owner_only(subject)
     with broker.transaction():
         wid=_scope(identity,broker,subject)

@@ -16,6 +16,8 @@ const trade=(ticker:string,kind:ManualTradeEvent["kind"],createdAt:string)=>({
 test("calendar uses Christchurch NZ boundaries and DST, not UTC months",()=>{
  assert.equal(monthWindow("2026-10")?.start,Date.parse("2026-09-30T11:00:00Z"));
  assert.equal(monthWindow("2026-09")?.start,Date.parse("2026-08-31T12:00:00Z"));
+ assert.equal(monthWindow("2029-04")?.start,Date.parse("2029-03-31T11:00:00Z"));
+ assert.equal(monthWindow("2029-05")?.start,Date.parse("2029-04-30T12:00:00Z"));
  assert.equal(currentNzMonth(new Date("2026-09-30T12:00:00Z")),"2026-10");
  assert.equal(stepMonth("2026-12",1),"2027-01");
  assert.equal(stepMonth("2027-01",-1),"2026-12");

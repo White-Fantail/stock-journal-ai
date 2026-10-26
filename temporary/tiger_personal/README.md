@@ -88,3 +88,31 @@ A separate signed `/internal/v1/tiger/personal-quotes-import` HMAC endpoint stor
 When the Tiger snapshot and price are sufficiently recent, the server calculates **reference-only** value and unrealized P/L from `position_qty`, the broker-observed `average_cost`, and the source quote price using Python Decimal. These are not externally attested cost basis or real account returns; fees, opening stock transfers, FX, past executions, distributions, shorts, and corporate actions may invalidate the snapshot average cost. Each field carries quote timestamp, real-time-permissioned vs US-delayed source and a staleness flag. If cost/price is missing, old, or currencies do not match, leave the estimate unknown. Different currencies are never aggregated.
 
 The Railway cron remains daily. Neither the future quote feed latency, a paid real-time entitlement, nor a full brokerage valuation is implied. Before enabling the `dev` feature in production, validate Postgres migration 019, main branch deployments and genuine US delayed/real-time API responses. Official SaaS/OAuth quotation redisplay and any market-data license/redistribution requirements must be approved independently.
+
+## Read-only fund-detail shape probe (dev; explicit opt-in only)
+
+A separate CLI-only `python -m temporary.tiger_personal.fund_probe_worker` uses
+the same isolated RSA runner configuration to call Tiger's documented
+`get_fund_details` for three fixed filters: `DEPOSIT_WITHDRAW`, `FOREX`,
+`CORPORATE_ACTION`. It requests the **exact account from runner configuration**
+on every call, not the ambient SDK default. It probes exactly the last seven
+complete UTC days, with end_date one day before the exclusive upper bound.
+The collector validates pagination, source IDs, dates, numeric safety and
+currency/segment shape. Only categorical status, aggregate row count and page
+count can appear in the runner's private logs. It does not emit transaction
+amounts, account numbers, raw IDs, credentials or source payloads.
+
+This diagnostic is deliberately **not part of the scheduled daily sync**.
+The operator must add `POSITIONARY_PERSONAL_FUND_PROBE_ENABLED=1` to the
+**private Railway credential runner only** and explicitly launch the module
+once. No parameter selects an arbitrary account, host, date range or method.
+The probe uses an ephemeral source HMAC and temporary UUIDs because source
+references are never exported or persisted; it cannot be used for permanent
+deduplication or accounting. Every result remains `UNVERIFIED` even if all
+three shapes match. Empty pages are considered `NO_ROWS_UNVERIFIED`, not
+proof of an account with no financial activity. No new API route, DB table,
+secret-sharing path, trade functionality or automated quote polling exists.
+
+Only after independently verifying live entitlement, approved account binding,
+complete pagination, original exact monetary precision and encrypted tenant
+source provenance may a future separate worker be enabled for storage.

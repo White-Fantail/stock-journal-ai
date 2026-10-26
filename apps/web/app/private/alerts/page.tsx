@@ -24,7 +24,7 @@ export default async function NotificationsPage(){
   ]);
   const accountHealth=health.status==="fulfilled"?health.value:null;
   const holdings=personal.status==="fulfilled"?personal.value:null;
-  const myPlans=plans.status==="fulfilled"?plans.value:[];
+  const myPlans=plans.status==="fulfilled"?plans.value:null;
   const alerts=derivePersonalAlerts(holdings,accountHealth,myPlans);
   return <main className="journal-page">
     <div className="page-intro journal-page-heading">
@@ -48,8 +48,7 @@ export default async function NotificationsPage(){
     </section>
     <section className="state-panel">
       <h2>현재 확인이 필요한 사항</h2>
-      {alerts.length===0?<p>현재 확인된 수집 실패·지연 또는 최근 관측 가격 도달 조건이 없습니다.
-        실제 문제가 없거나 앞으로 가격이 도달하지 않는다는 뜻은 아닙니다.</p>:
+      {alerts.length===0?<p>현재 확인된 동기화 문제나 미작성 투자 계획이 없습니다. 거래내역의 완전성이나 미래 시장 위험이 없다는 의미는 아닙니다.</p>:
         <div style={{display:"grid",gap:14}}>
           {alerts.map(alert=><article key={alert.id} className="journal-entry">
             <div className="journal-entry-content">
@@ -60,9 +59,9 @@ export default async function NotificationsPage(){
           </article>)}
         </div>}
       {plans.status!=="fulfilled"&&<p role="alert">투자 계획을 가져오지 못해 미작성 계획 점검을 생략했습니다.</p>}
-      <p className="journal-limit">이 알림은 페이지 조회 시 생성되는 앱 내부 안내이며, 휴대폰 푸시나 이메일로 자동 전송되지 않습니다.
-        계획 가격 알림은 동일 USD 통화·최근 보유 정보·45분 이내 시세 관측일 때만 표시합니다.
-        하루 한 번 수집으로는 장중 가격 변화를 지속 감시할 수 없습니다. 가격 조건은 실제 주문이 아닙니다.</p>
+      <p className="journal-limit">이 안내는 화면을 열 때 저장된 Tiger 정보와 내 투자 계획만으로 계산합니다.
+        주가 조회·가격 도달 감시·매매 알림·자동 주문·휴대폰 푸시를 하지 않습니다.
+        투자 계획 미작성 안내는 최근 보유 관측에만 기반하며 매매 권고가 아닙니다.</p>
       <Link href="/private/journal" className="btn btn-outline">투자 계획 관리 →</Link>
     </section>
   </main>;

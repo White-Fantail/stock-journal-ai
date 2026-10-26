@@ -2,7 +2,8 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
-import {fetchJournalPlans} from "../../../lib/saas-trades-api";
+import {fetchJournal,fetchJournalPlans} from "../../../lib/saas-trades-api";
+import {dueInvestmentReviews} from "../../../lib/review-schedule";
 import {tigerPersonalRead,tigerPersonalHealth} from "../../../lib/tiger-api";
 import {derivePersonalAlerts} from "../../../lib/notification-signals";
 
@@ -19,13 +20,16 @@ function timeLabel(value:string|null){
 export default async function NotificationsPage(){
   const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
   if(!workspace||!session?.user?.id)redirect("/login");
-  const [health,personal,plans]=await Promise.allSettled([
+  const [health,personal,plans,notes]=await Promise.allSettled([
     tigerPersonalHealth(),tigerPersonalRead(),fetchJournalPlans(session.user.id),
+    fetchJournal(session.user.id),
   ]);
   const accountHealth=health.status==="fulfilled"?health.value:null;
   const holdings=personal.status==="fulfilled"?personal.value:null;
   const myPlans=plans.status==="fulfilled"?plans.value:null;
   const alerts=derivePersonalAlerts(holdings,accountHealth,myPlans);
+  const reviews=myPlans!==null&&notes.status==="fulfilled"
+    ?dueInvestmentReviews(myPlans,notes.value):null;
   return <main className="journal-page">
     <div className="page-intro journal-page-heading">
       <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
@@ -45,6 +49,28 @@ export default async function NotificationsPage(){
         <small>자산 {a.latest?.assets??"보고 없음"} / 주문 {a.latest?.orders??"보고 없음"} /
           개별 체결 {a.latest?.fills??"보고 없음"}</small>
       </div>):<p>현재 이 계정에 수집 실행 보고가 없습니다. 새로운 보고가 저장되면 여기서 확인할 수 있습니다.</p>}
+    </section>
+    <section className="state-panel">
+      <div className="user-panel-head">
+        <h2>나의 정기 투자 점검</h2>
+        <Link href="/private/journal">투자일지 →</Link>
+      </div>
+      {reviews===null?<p role="alert">투자 계획이나 복기 기록을 불러오지 못해 점검 일정을 계산하지 않습니다.</p>:
+        reviews.length===0?<p>예약된 주기별 점검 항목이 없습니다. 투자계획에 점검 주기를 등록하면 표시됩니다.
+          기업 공시·사건 발생 시 점검 계획은 날짜를 임의로 정하지 않습니다.</p>:
+        <div className="user-list">
+          {reviews.slice(0,12).map(task=><div key={task.ticker} className="user-list-row">
+            <div>
+              <strong>{task.ticker} · {task.state==="DUE"?"정기 점검 시점 도래":"다음 정기 점검"}</strong>
+              <small>{timeLabel(task.nextDueAt)} 이후 · 내 마지막 계획/복기 기준</small>
+            </div>
+            <Link href={"/private/journal/new?mode=note&ticker="+encodeURIComponent(task.ticker)}>
+              투자 복기 작성 →
+            </Link>
+          </div>)}
+        </div>}
+      <p className="journal-limit">점검 예정일은 사용자가 작성한 계획 시점과 최근 매매 복기 날짜로만 계산합니다.
+        알림을 보내거나 자동 매매하지 않으며, 복기 기록은 단순히 작성 여부만 반영합니다.</p>
     </section>
     <section className="state-panel">
       <h2>현재 확인이 필요한 사항</h2>

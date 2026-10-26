@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime,timezone
 from types import SimpleNamespace
 from unittest.mock import patch
-from temporary.tiger_personal.history import _payload, _display_filled, PilotError
+from temporary.tiger_personal.history import _payload, _display_filled, load_orders, PilotError
 from temporary.tiger_personal.history_sync import _order, _pages
 from temporary.tiger_personal.api import owner_only
 
@@ -73,6 +73,63 @@ class TigerOwnerHistoryPolicy(unittest.TestCase):
             with self.assertRaises(PilotError): _payload(request)
         order.filled_scale=None
         with self.assertRaises(ValueError): _order(order,"12345678")
+
+
+    def test_legacy_471_orders_survive_schema_expansion_without_reimport(self):
+        """Historic encrypted order evidence has neither feeCurrency nor filledScale."""
+        from temporary.tiger_personal import history
+        class ReadOnlyBroker:
+            def __init__(self, rows):
+                self.rows=rows
+                self.queries=[]
+            def execute(self, sql, args):
+                self.queries.append(sql)
+                if not sql.lstrip().startswith("SELECT "):
+                    raise AssertionError("history read must never mutate stored snapshots")
+                return SimpleNamespace(fetchall=lambda:self.rows)
+
+        docs=[]
+        for start in range(0,471,25):
+            orders=[{"id":str(i+1),"symbol":"TEST","currency":"USD",
+                     "side":"BUY","status":"FILLED","filled":"179211",
+                     "price":"1.25","fee":"0.4","at":"1764547200000"}
+                    for i in range(start,min(start+25,471))]
+            docs.append({"source":"PERSONAL_ORDER_OBSERVATION",
+                         "from":str(1764547200000+start*1000),
+                         "to":str(1767139200000+start*1000),
+                         "complete":True,"orders":orders})
+        # Returned rows are newest first; the sealed payloads are untouched.
+        broker=ReadOnlyBroker([(i,) for i in range(len(docs))])
+        def decrypt(index,aad):
+            self.assertEqual(aad,"workspace:account:TRANSACTIONS")
+            return docs[index]
+        with patch.object(history,"unseal",side_effect=decrypt):
+            first=load_orders(broker,"workspace","account")
+            second=load_orders(broker,"workspace","account",page=1)
+        self.assertEqual(first["totalOrders"],471)
+        self.assertTrue(first["hasMore"])
+        self.assertEqual(len(first["orders"]),100)
+        self.assertEqual(len(second["orders"]),100)
+        self.assertTrue(all(o["feeCurrency"] is None for o in first["orders"]))
+        self.assertTrue(all(o["filled"] is None for o in first["orders"]))
+        self.assertTrue(all(o["sourceRef"] and len(o["sourceRef"])==64 for o in first["orders"]))
+        self.assertEqual(len(broker.queries),2)
+
+    def test_recent_order_keeps_documented_fee_currency_and_scaled_quantity(self):
+        from temporary.tiger_personal import history
+        doc={"source":"PERSONAL_ORDER_OBSERVATION","from":"1764547200000",
+             "to":"1767139200000","complete":True,
+             "orders":[{"id":"200","symbol":"TEST","currency":"USD","side":"BUY",
+                        "status":"FILLED","filled":"179211","filledScale":3,
+                        "price":"12.5","fee":"0.25","feeCurrency":"USD",
+                        "at":"1764547200000"}]}
+        class Broker:
+            def execute(self,sql,args):
+                return SimpleNamespace(fetchall=lambda:[("encrypted",)])
+        with patch.object(history,"unseal",return_value=doc):
+            response=load_orders(Broker(),"workspace","account")
+        self.assertEqual(response["orders"][0]["feeCurrency"],"USD")
+        self.assertEqual(response["orders"][0]["filled"],"179.211")
 
     def test_capped_page_without_cursor_is_partial(self):
         def order(i):

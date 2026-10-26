@@ -184,3 +184,12 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 @media(max-width:1000px){.journal-layout{grid-template-columns:220px minmax(0,1fr)}.journal-sidebar{padding:15px}.journal-current-grid{grid-template-columns:1fr 1fr}.journal-current-grid>div:first-child{grid-column:1/-1}}
 @media(max-width:760px){.journal-metrics{grid-template-columns:1fr 1fr}.journal-metrics>div:last-child{grid-column:1/-1}.journal-layout{grid-template-columns:1fr}.journal-sidebar{position:static}.journal-symbol-list{display:flex;overflow-x:auto;max-height:none;gap:7px;padding-bottom:4px}.app-shell .journal-symbol{min-width:135px;width:auto}.journal-symbol-arrow{display:none}.journal-form-three{grid-template-columns:1fr 1fr}.journal-form-three label:last-child{grid-column:1/-1}.journal-current,.journal-compose,.journal-history{padding:21px}}
 @media(max-width:520px){.journal-metrics{grid-template-columns:1fr}.journal-metrics>div:last-child{grid-column:auto}.journal-form-two,.journal-form-three,.journal-current-grid{grid-template-columns:1fr}.journal-current-grid>div:first-child,.journal-form-three label:last-child{grid-column:auto}.journal-mode{width:100%}.app-shell .journal-mode .btn{flex:1}.journal-entry-meta{display:block}.journal-entry-meta time{display:block;margin-top:3px}}
+
+/* Certified historical broker FIFO rows: never style as live pricing. */
+.portfolio-verified-scroll{width:100%;overflow-x:auto;margin:18px 0 12px}
+.portfolio-verified-table{width:100%;min-width:540px;border-collapse:collapse;font-size:.9rem}
+.portfolio-verified-table th,.portfolio-verified-table td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.portfolio-verified-table th:first-child,.portfolio-verified-table td:first-child{text-align:left}
+.portfolio-verified-table thead th{font-size:.8rem;color:var(--muted);font-weight:650;background:#f7faf8}
+.portfolio-verified-table tbody th{font-weight:750}
+.portfolio-verified-table tbody tr:last-child th,.portfolio-verified-table tbody tr:last-child td{border-bottom:none}

@@ -195,27 +195,32 @@ def sync_history(env=None, client_factory=None):
     return {"windows":windows,"orders":total,"partialWindows":partial,
             "rangeComplete":cursor>=now and partial==0}
 
+
 def main():
+    """Independent stages never turn an incomplete cron into verified history."""
+    assets_status="FAILED"
+    orders_status="FAILED"
+    fills_status="UNAVAILABLE"
     try:
-        # Snapshot remains independent of order-history API failures.
-        from temporary.tiger_personal.sync_ready import run as sync_snapshot, PilotStepError
-        sync_snapshot()
+        from temporary.tiger_personal.sync_ready import run as sync_snapshot
+        count=sync_snapshot()
+        assets_status="OK"
         print("PERSONAL_ASSETS_SYNC_OK")
     except Exception:
         print("PERSONAL_ASSETS_SYNC_FAILED")
     try:
         value=sync_history()
+        orders_status="OK" if value["rangeComplete"] else "PARTIAL"
         print("PERSONAL_ORDER_HISTORY_STAGED windows="+str(value["windows"])+
               " orders="+str(value["orders"])+
               " partial_windows="+str(value["partialWindows"]))
     except Exception as exc:
-        # Only an allowlisted failure phase, never user/provider exception text.
-        phase = str(exc) if type(exc) is RuntimeError and str(exc) in ("QUERY","UPLOAD") else "CONFIG_OR_SDK"
+        phase=str(exc) if type(exc) is RuntimeError and str(exc) in ("QUERY","UPLOAD") else "CONFIG_OR_SDK"
         print("PERSONAL_ORDER_HISTORY_UNAVAILABLE step="+phase)
-        raise SystemExit(1)
     try:
         from temporary.tiger_personal.fill_probe_worker import sync_probe
         result=sync_probe()
+        fills_status="OK" if result["queryUnavailable"]==0 and result["ordersProbed"]>0 else "PARTIAL"
         print("PERSONAL_TRANSACTION_PROBE_STAGED orders="+str(result["ordersProbed"])+
               " matched="+str(result["matchedSamples"])+
               " unavailable="+str(result["queryUnavailable"])+
@@ -224,8 +229,15 @@ def main():
               " fees_difference="+str(result["feeDifference"])+
               " fees_unavailable="+str(result["feeUnavailable"]))
     except Exception:
-        # Do not leak Tiger API response text; order sync remains independent.
         print("PERSONAL_TRANSACTION_PROBE_UNAVAILABLE")
+    health_reported=False
+    try:
+        from temporary.tiger_personal.sync_health_worker import send_health
+        health_reported=send_health(os.environ,assets_status,orders_status,fills_status)
+        print("PERSONAL_RUN_HEALTH_STAGED")
+    except Exception:
+        print("PERSONAL_RUN_HEALTH_UNAVAILABLE")
+    if assets_status!="OK" or orders_status!="OK" or fills_status=="UNAVAILABLE" or not health_reported:
         raise SystemExit(1)
 
 if __name__=="__main__":

@@ -11,8 +11,9 @@ from services.broker_connectors.contracts import BrokerPosition
 from services.broker_connectors.fifo_projection import VerifiedExecution
 from services.broker_connectors.reconciliation import AccountEvidence,CertifiedWindow,PositionEvidence
 from services.saas_api.reconciliation_store import (
-    AuditRefused, _input_digest,record_reconciliation,review_status,
+    AuditRefused, _input_digest, _bound_digest, record_reconciliation,review_status,
 )
+from services.broker_connectors.backfill import source_key
 from services.saas_api.tiger_oauth import TigerError
 
 dsn=os.environ.get("SAAS_DATABASE_URL","")
@@ -34,8 +35,9 @@ def evidence(wid,account,*,fee="1"):
         PositionEvidence(end,(BrokerPosition("TEST",Decimal("2"),"USD"),),True),
         True,True,True)
 
-def signature(account):
-    digest=_input_digest(account,bytes.fromhex(os.environ["SAAS_SOURCE_HMAC_KEY"]))
+def signature(account,links):
+    secret=bytes.fromhex(os.environ["SAAS_SOURCE_HMAC_KEY"])
+    digest=_bound_digest(_input_digest(account,secret),links,secret)
     return hmac.new(bytes.fromhex(os.environ["SAAS_P4_ATTESTATION_KEY"]),
                     ("positionary:p4:v1:"+digest).encode(),hashlib.sha256).hexdigest()
 
@@ -81,28 +83,54 @@ with psycopg.connect(dsn) as identity:
         assert blocked["version"]==2 and blocked["state"]=="BLOCKED"
         assert blocked["issues"]==["INDEPENDENT_ATTESTATION_REQUIRED"]
 
+        # The proof must refer to exactly one persisted, tenant-scoped
+        # encrypted original-fill record; a guessed/absent row cannot stage.
+        staged_key=source_key(bytes.fromhex(os.environ["SAAS_SOURCE_HMAC_KEY"]),
+                              "TIGER",a[3],"FILL","PRIVATE_PROVIDER_FILL")
+        job=identity.execute("""INSERT INTO saas_broker_backfill_jobs
+            (workspace_id,account_id,idempotency_key,start_utc,end_utc)
+            VALUES (%s,%s,%s,%s,%s) RETURNING id""",
+            (a[2],a[3],"7"*64,begin,end)).fetchone()[0]
+        window=identity.execute("""INSERT INTO saas_broker_backfill_windows
+            (workspace_id,job_id,account_id,ordinal,start_utc,end_utc)
+            VALUES (%s,%s,%s,0,%s,%s) RETURNING id""",
+            (a[2],job,a[3],begin,end)).fetchone()[0]
+        stage=identity.execute("""INSERT INTO saas_broker_source_stage
+            (workspace_id,window_id,account_id,kind,source_key_hmac,evidence_sha256,
+             encrypted_payload)
+            VALUES (%s,%s,%s,'FILL',%s,%s,%s) RETURNING id""",
+            (a[2],window,a[3],staged_key,"f"*64,b"x"*40)).fetchone()[0]
+        identity.commit()
+        links=((stage,staged_key,"f"*64),)
+
         # Explicitly signed evidence still cannot stage until official
         # provider approval and inquiry-only scope certification exist.
-        sig=signature(good)
-        assert record_reconciliation(identity,broker,a[0],good,attestation=sig)["replayed"]
+        sig=signature(good,links)
+        without_approval=record_reconciliation(identity,broker,a[0],good,attestation=sig)
+        assert without_approval["version"]==3 and without_approval["state"]=="BLOCKED"
         os.environ["TIGER_PARTNER_OAUTH_APPROVED"]="1"
         os.environ["TIGER_READ_ONLY_GRANT_VERIFIED"]="1"
         assert record_reconciliation(identity,broker,a[0],good,attestation="0"*64)["state"]=="BLOCKED"
         success=record_reconciliation(identity,broker,a[0],good,attestation=sig)
-        assert success=={"state":"STAGED","version":3,"replayed":False,
+        assert success=={"state":"STAGED","version":4,"replayed":False,
                          "issues":[],"published":False},success
         repeated=record_reconciliation(identity,broker,a[0],good,attestation=sig)
-        assert repeated["replayed"] and repeated["version"]==3
+        assert repeated["replayed"] and repeated["version"]==4
 
         # Tenant RLS, immutable stage and issue history must be real in PG.
         with broker.transaction():
             broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(a[2]),))
             versions=broker.execute("""SELECT state,version_num FROM saas_reconciliation_versions
               WHERE workspace_id=%s ORDER BY version_num""",(a[2],)).fetchall()
-            assert versions==[("BLOCKED",1),("BLOCKED",2),("STAGED",3)],versions
+            assert versions==[("BLOCKED",1),("BLOCKED",2),("BLOCKED",3),("STAGED",4)],versions
             assert broker.execute("SELECT count(*) FROM saas_verified_execution_stage").fetchone()[0]==1
             assert broker.execute("SELECT count(*) FROM saas_projection_position_stage").fetchone()[0]==1
-            assert broker.execute("""SELECT count(*) FROM saas_reconciliation_issues""").fetchone()[0]==2
+            assert broker.execute("""SELECT count(*) FROM saas_reconciliation_issues""").fetchone()[0]>=5
+            assert broker.execute("SELECT count(*) FROM saas_reconciliation_source_links").fetchone()[0]==2
+            metadata=broker.execute("""SELECT code,category,severity,evidence_scope
+                FROM saas_reconciliation_issues
+                WHERE code='FEE_UNKNOWN' ORDER BY version_id LIMIT 1""").fetchone()
+            assert metadata==("FEE_UNKNOWN","FEES","BLOCKER","EXECUTION"),metadata
             row=broker.execute("SELECT source_key_hmac FROM saas_verified_execution_stage").fetchone()[0]
             assert len(row)==64 and "PRIVATE_PROVIDER_FILL" not in row
         with broker.transaction():
@@ -110,6 +138,7 @@ with psycopg.connect(dsn) as identity:
             assert broker.execute("SELECT count(*) FROM saas_reconciliation_versions").fetchone()[0]==0
             assert broker.execute("SELECT count(*) FROM saas_verified_execution_stage").fetchone()[0]==0
             assert broker.execute("SELECT count(*) FROM saas_projection_position_stage").fetchone()[0]==0
+            assert broker.execute("SELECT count(*) FROM saas_reconciliation_source_links").fetchone()[0]==0
 
         # The runtime principal cannot rewrite or remove past decisions.
         with broker.transaction():
@@ -127,14 +156,15 @@ with psycopg.connect(dsn) as identity:
             else:
                 raise AssertionError("Issue DELETE was allowed")
         report=review_status(identity,broker,a[0])
-        assert len(report["accounts"])==1 and report["accounts"][0]["version"]==3
+        assert len(report["accounts"])==1 and report["accounts"][0]["version"]==4
         assert report["accounts"][0]["issues"]==[] and report["published"] is False
+        assert report["accounts"][0]["sourceEvidenceCount"]==1
         assert "PRIVATE_PROVIDER_FILL" not in str(report)
         assert review_status(identity,broker,b[0])["accounts"]==[]
 
         try:
             record_reconciliation(identity,broker,a[0],evidence(b[2],b[3]),
-                                  attestation=signature(evidence(b[2],b[3])))
+                                  attestation=signature(evidence(b[2],b[3]),()))
         except AuditRefused as exc:
             assert str(exc)=="ACCOUNT_NOT_AUTHORIZED"
         else:

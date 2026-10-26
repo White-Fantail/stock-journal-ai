@@ -115,7 +115,7 @@ export function parsePersonalRead(raw:unknown):PersonalReadParseResult {
     if(typeof a.partial!=="boolean" || typeof a.truncated!=="boolean" ||
        typeof a.hasMore!=="boolean") warnings.add("PAGINATION_INVALID");
     accounts.push({
-      alias:a.alias,asOf,assets,positions,orders,marketObservations,
+      alias:a.alias as string,asOf,assets,positions,orders,marketObservations,
       fillObservations,feeObservations,
       fillProbeCount:positive("fillProbeCount"),fillProbeUnavailable:positive("fillProbeUnavailable"),
       fillProbeDifference:positive("fillProbeDifference"),fillProbePartial:positive("fillProbePartial"),

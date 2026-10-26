@@ -4,7 +4,7 @@ on:
     branches: [dev, main]
     paths:
       - 'temporary/**'
-      - 'tests/test_tiger_personal_pilot_v2.py'
+      - 'tests/test_tiger_personal_*.py'
       - 'tests/test_tiger_owner_history.py'
       - 'services/saas_api/server.py'
       - 'apps/web/app/private/tiger/personal/**'

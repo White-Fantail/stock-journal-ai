@@ -256,3 +256,11 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 @media(max-width:640px){.user-summary-grid{grid-template-columns:1fr}.account-summary-values{grid-template-columns:repeat(2,minmax(0,1fr))}.user-panel{padding:18px}.user-list-row time{white-space:normal}}
 
 .account-currency{font-size:.77rem;color:var(--muted);font-weight:650;white-space:nowrap;letter-spacing:0}
+
+/* Journal overview actions: inputs remain on their own independent route. */
+.journal-current-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:8px}
+.journal-current-actions .btn{font-size:.8rem;padding:9px 12px}
+.journal-plan-edit-link{display:inline-block;margin-top:9px;font-size:.78rem;font-weight:750}
+.journal-current-grid>div{display:flex;flex-direction:column;align-items:flex-start}
+.journal-current-grid>div .journal-plan-edit-link{margin-top:auto;padding-top:12px}
+@media(max-width:760px){.journal-current-actions{justify-content:flex-start}.journal-current-top{flex-direction:column}}

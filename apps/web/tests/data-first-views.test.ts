@@ -44,3 +44,17 @@ test("home and portfolio use real scoped records instead of onboarding cards",()
   assert.ok(!portfolio.includes("PersonalOrderHistory"));
   assert.ok(!portfolio.includes("포트폴리오 검증 절차"));
 });
+
+test("a selected stock displays actionable target and stop controls",()=>{
+  const ui=read("../app/private/journal/journal-workspace.tsx");
+  const create=read("../app/private/journal/new/page.tsx");
+  assert.ok(ui.includes("목표·손절 설정"));
+  assert.ok(ui.includes("목표가 {active.plan?"));
+  assert.ok(ui.includes("손절가 {active.plan?"));
+  assert.ok(ui.includes("/private/journal/new?mode=plan&ticker="));
+  assert.ok(create.includes("action={addPlan}"));
+  assert.ok(create.includes('name="targetPrice"'));
+  assert.ok(create.includes('name="stopPrice"'));
+  assert.ok(create.includes('name="rationale"'));
+  assert.ok(!ui.includes("<form"));
+});

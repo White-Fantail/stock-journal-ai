@@ -167,7 +167,11 @@ export function JournalWorkspace({
               <h2>{active?.ticker??"기록할 종목을 선택하세요"}</h2>
               <p>{active?"투자 근거와 가장 최근 계획":"일지 작성 버튼으로 새로운 종목을 등록할 수 있습니다."}</p>
             </div>
-            {active?.watched&&<span className="pill">관심종목</span>}
+            {active&&<div className="journal-current-actions">
+               <Link className="btn btn-outline" href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>+ 투자 판단 작성</Link>
+               <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>목표·손절 설정</Link>
+             </div>}
+             {active?.watched&&<span className="pill">관심종목</span>}
           </div>
           {active&&<div className="journal-current-grid">
             <div><span>최근 투자 논리</span><strong>{active.thesis?
@@ -177,13 +181,19 @@ export function JournalWorkspace({
             <div><span>목표가</span><strong>{active.plan?
               planPrice(active.plan.targetPrice,active.plan.priceCurrency):"미설정"}</strong>
               <small>계획 가격 · 주문 아님</small>
+               <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>목표가 {active.plan?"변경":"입력"} →</Link>
             </div>
             <div><span>손절가</span><strong>{active.plan?
               planPrice(active.plan.stopPrice,active.plan.priceCurrency):"미설정"}</strong>
               <small>나의 계획 · 주문 아님</small>
+               <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>손절가 {active.plan?"변경":"입력"} →</Link>
             </div>
           </div>}
-          {!active&&<p className="journal-instruction">일지는 실제 체결 없이도 작성할 수 있습니다. 계획 가격은 실시간 시세 또는 자동 주문으로 사용되지 않습니다.</p>}
+          {!active&&<div className="journal-actions">
+             <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
+             <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>
+             <Link className="btn btn-outline" href="/private/journal/new?mode=plan">+ 투자 계획</Link>
+           </div>}
         </section>
 
         {active&&<section className="journal-history">
@@ -204,7 +214,7 @@ export function JournalWorkspace({
 
           {view!=="trades" && view!=="broker" ? <div className="journal-timeline">
             {(view==="plans"?history.filter(e=>e.type==="plan"):history).length===0 ?
-              <div className="journal-empty">아직 작성한 기록이 없습니다. 새 기록을 작성해 보세요.</div>:
+              <div className="journal-empty">아직 작성한 기록이 없습니다. <Link href={view==="plans"?"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected):"/private/journal/new?ticker="+encodeURIComponent(selected)}>{view==="plans"?"첫 목표·손절 계획 작성 →":"새 투자 기록 작성 →"}</Link></div>:
               (view==="plans"?history.filter(e=>e.type==="plan"):history).map(e=>
                 <article key={e.type+e.id} className="journal-entry">
                   <div className="journal-entry-dot" aria-hidden="true"/>

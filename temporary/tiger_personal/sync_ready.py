@@ -159,7 +159,18 @@ def run(env=None):
                 raise ValueError("BROKER_ACCOUNT_MISMATCH")
         asset,rows=normalize(assets,positions)
         step="UPLOAD"
-        return submit(env["POSITIONARY_PERSONAL_GOOGLE_SUBJECT"],account,asset,rows,env)
+        result=submit(env["POSITIONARY_PERSONAL_GOOGLE_SUBJECT"],account,asset,rows,env)
+        # Market quote entitlements are independent of private trade/position
+        # access. A denial must NEVER roll back the successful account snapshot.
+        try:
+            from temporary.tiger_personal.market_quotes_worker import sync_quotes
+            outcome=sync_quotes(env,cfg,rows)
+            print("PERSONAL_MARKET_QUOTES_STAGED count="+str(outcome["count"])+
+                  " realtime="+str(outcome["realtime"])+
+                  " delayed="+str(outcome["delayed"]))
+        except Exception:
+            print("PERSONAL_MARKET_QUOTES_UNAVAILABLE")
+        return result
     except Exception:
         # Never print provider exception details; upstream SDK may embed secrets.
         raise PilotStepError(step) from None

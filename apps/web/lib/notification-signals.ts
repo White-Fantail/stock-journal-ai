@@ -27,7 +27,7 @@ const ageMs=(v:string|null,nowMs:number):number=>{
 
 export function derivePersonalAlerts(
  personal:TigerPersonalRead|null,health:TigerPersonalHealth|null,
- plans:readonly JournalPlan[],now=new Date(),
+ plans:readonly JournalPlan[]|null,now=new Date(),
 ):SyncSignal[]{
  const nowMs=now.getTime();
  const signals:SyncSignal[]=[];
@@ -60,7 +60,7 @@ export function derivePersonalAlerts(
  }
  if(personal===null)return signals.slice(0,30);
  const latestPlans=new Map<string,JournalPlan>();
- for(const plan of [...plans].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))){
+ for(const plan of [...(plans??[])].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))){
    if(!latestPlans.has(plan.ticker))latestPlans.set(plan.ticker,plan);
  }
  const seenSymbols=new Set<string>();
@@ -79,7 +79,7 @@ export function derivePersonalAlerts(
         compareAmounts(position.quantity,"0")<=0||
         seenSymbols.has(position.symbol))continue;
      seenSymbols.add(position.symbol);
-     if(!latestPlans.has(position.symbol)){
+     if(plans!==null && !latestPlans.has(position.symbol)){
        signals.push({id:"plan:"+position.symbol,kind:"PLAN_MISSING",severity:"info",
          title:position.symbol+" · 투자 계획 미작성",
          detail:"보유가 관측된 종목입니다. 투자 기간, 판단을 바꿀 조건과 위험 한도를 투자일지에 기록해 보세요. 가격 알림이나 매매 신호가 아닙니다.",

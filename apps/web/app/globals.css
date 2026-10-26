@@ -424,3 +424,13 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .site-footer{padding:22px 0}
   .app-shell .page-intro>div{min-width:0}
 }
+
+/* Long-horizon review: NAV comparisons and monthly navigation remain readable on phones. */
+@media(max-width:760px){
+  .app-shell .account-summary-item .user-list-row{flex-wrap:wrap;align-items:flex-start}
+  .app-shell .account-summary-item .user-list-row>div{min-width:0;max-width:100%}
+  .app-shell .account-summary-item .user-list-value{margin-left:auto;overflow-wrap:anywhere}
+  .app-shell .journal-page nav.user-panel-head{flex-wrap:wrap;align-items:flex-start}
+  .app-shell .journal-page nav.user-panel-head .home-actions{width:100%;flex-wrap:wrap}
+  .app-shell .journal-page nav.user-panel-head .home-actions .btn{min-height:44px;flex:1 1 125px}
+}

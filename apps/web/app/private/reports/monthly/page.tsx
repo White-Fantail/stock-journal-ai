@@ -76,11 +76,11 @@ export default async function MonthlyReviewReport({searchParams}:{
           <Link href="/private/alerts">점검 센터 →</Link>
         </div>
         <div className="account-summary-values portfolio-account-values">
-          <div><small>해당 월말까지 작성된 종목별 계획</small><strong>{report.plannedSymbols}개</strong></div>
+          <div><small>보고서 기준일까지 작성된 종목별 계획</small><strong>{report.plannedSymbols}개</strong></div>
           <div><small>전략 핵심 항목 작성 완료</small><strong>{report.completeStrategySymbols}개</strong></div>
-          <div><small>해당 월말 기준 점검 시점 도래</small><strong>{report.dueAsOfMonthEnd}개</strong></div>
+          <div><small>보고서 기준 시점 점검 기한 도래</small><strong>{report.dueAsOfCutoff}개</strong></div>
         </div>
-        <p className="user-footnote">전략 핵심 항목은 전략 유형, 기간, 논리 무효화 조건, 개인 최대 비중,
+        <p className="user-footnote">점검 기준: {label(report.checkedAsOf)} (NZ). 전략 핵심 항목은 전략 유형, 기간, 논리 무효화 조건, 개인 최대 비중,
           정기 점검 주기의 작성 여부만 확인합니다. 수익률이나 판단의 옳고 그름을 평가하지 않습니다.
           이벤트 기반 점검은 날짜를 임의로 부여하지 않습니다.</p>
       </section>

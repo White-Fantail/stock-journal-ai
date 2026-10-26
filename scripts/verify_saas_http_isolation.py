@@ -161,7 +161,8 @@ def main():
         assert code==200 and blist["entries"]==[]
         code,out=request("/internal/v1/journal/export",{"subject":A})
         assert code==200 and out["complete"] and len(out["journal"])==1 and len(out["trades"])==1
-        assert len(out["plans"])==2 and out["plans"][0]["isBrokerOrder"] is False
+        assert len(out["plans"])==3 and all(p["isBrokerOrder"] is False for p in out["plans"])
+        assert any(p["strategyType"]=="LONG_TERM" for p in out["plans"])
         code,out=request("/internal/v1/journal/export",{"subject":B})
         assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[]
         nonce=str(uuid4())

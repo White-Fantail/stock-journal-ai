@@ -2,11 +2,12 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { googleIdentity } from "./lib/saas-auth-policy";
 import { provisionGoogle } from "./lib/saas-api";
+import { SESSION_MAX_AGE_SECONDS } from "./lib/auth-session-policy";
 
 // App login is independent of Tiger authorization. No broker OAuth tokens are stored here.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
-  session: { strategy: "jwt", maxAge: 60 * 60 },
+  session: { strategy: "jwt", maxAge: SESSION_MAX_AGE_SECONDS },
   // Only trust forwarded hosts on Vercel or during local development.
   // Never rely on unvalidated forwarded hosts from arbitrary proxies.
   trustHost: process.env.VERCEL === "1" || process.env.NODE_ENV === "development",

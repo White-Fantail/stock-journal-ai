@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
-import {evidenceForAnalysis,parseAiResult,aiRequestBody} from "../lib/ai-analysis";
+import {evidenceForAnalysis,parseAiResult,aiRequestBody,sanitizedExcerpt} from "../lib/ai-analysis";
 import type {JournalEntry,JournalPlan,ManualTradeEvent} from "../lib/saas-trades-api";
 import type {TigerPersonalOrder} from "../lib/tiger-api";
 const read=(path:string)=>readFileSync(fileURLToPath(new URL(path,import.meta.url)),"utf8");
@@ -58,4 +58,16 @@ test("ZDR only, no silent fallback, no background generation or broker trading",
   assert.ok(route.includes('claimAiAnalysis('));
   assert.ok(!route.includes("place_order("));
   assert.ok(!route.includes("NEXT_PUBLIC_OPENROUTER"));
+});
+
+test("accidentally pasted email, secret, account-like identifier and links are minimized",()=>{
+  const fragment="Mail finance@example.com key sk-test_secret_token_12345678 account 123456789012345 https://host.example/finance?token=secret";
+  const redacted=sanitizedExcerpt(fragment,380);
+  assert.ok(redacted.includes("[이메일 숨김]"));
+  assert.ok(redacted.includes("[토큰 숨김]"));
+  assert.ok(redacted.includes("[숫자 식별자 숨김]"));
+  assert.ok(redacted.includes("[링크 숨김]"));
+  for(const secret of ["finance@example.com","sk-test_secret_token","123456789012345","token=secret"]){
+    assert.ok(!redacted.includes(secret));
+  }
 });

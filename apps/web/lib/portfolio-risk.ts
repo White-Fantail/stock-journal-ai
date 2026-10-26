@@ -5,7 +5,7 @@
  */
 import type {TigerPersonalAccount} from "./tiger-api";
 
-type Position=Readonly<{symbol:string;marketValue:string;percent:string}>;
+type Position=Readonly<{symbol:string;percent:string}>;
 export type ConcentrationResult=
   |Readonly<{status:"READY";currency:string;asOf:string;positions:Position[];
       largestPercent:string;topTwoPercent:string;basis:"INVESTED_STOCK_MARKET_VALUE"}>
@@ -55,8 +55,7 @@ export function assessConcentration(
   const total=items.reduce((acc,[,amount])=>acc+amount,0n);
   if(total===0n)return {status:"UNAVAILABLE",reason:"관측 평가액 합계를 확인할 수 없습니다."};
   return {status:"READY",currency,asOf:account.asOf!,basis:"INVESTED_STOCK_MARKET_VALUE",
-    positions:items.map(([symbol,amount])=>({symbol,marketValue:(amount/SCALE).toString(),
-      percent:percent(amount,total)})),
+    positions:items.map(([symbol,amount])=>({symbol,percent:percent(amount,total)})),
     largestPercent:percent(items[0][1],total),
     topTwoPercent:percent(items.slice(0,2).reduce((sum,[,amount])=>sum+amount,0n),total)};
 }

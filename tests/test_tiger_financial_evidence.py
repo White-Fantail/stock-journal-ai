@@ -51,7 +51,7 @@ class FakeFrame:
 class TigerFundEvidenceTests(unittest.TestCase):
     def test_success_is_still_unverified(self):
         source=FakeSource([FakeFrame([row(101)])])
-        batch=collect_fund_observations(source,WINDOW,"DEPOSIT_WITHDRAW",hmac_secret=KEY)
+        batch=collect_fund_observations(source,WINDOW,"DEPOSIT_WITHDRAW",account="SYNTH12345",hmac_secret=KEY)
         self.assertEqual(batch.state,"SHADOW_OBSERVED_ONLY")
         self.assertFalse(batch.history_certified)
         self.assertEqual(len(batch.records),1)
@@ -65,13 +65,13 @@ class TigerFundEvidenceTests(unittest.TestCase):
         self.assertNotEqual(e.source_ref,"101")
         self.assertEqual(source.calls,[{
             "seg_types":["SEC","FUT"],"fund_type":"DEPOSIT_WITHDRAW",
-            "start":0,"limit":50,
-            "start_date":"2026-10-01","end_date":"2026-10-31"}])
+            "account":"SYNTH12345","start":0,"limit":50,
+            "start_date":"2026-10-01","end_date":"2026-10-30"}])
 
     def test_all_three_documented_categories_remain_unverified(self):
         for category in ("DEPOSIT_WITHDRAW","FOREX","CORPORATE_ACTION"):
             batch=collect_fund_observations(FakeSource([[row(77)]]),WINDOW,
-                                            category,hmac_secret=KEY)
+                                            category,account="SYNTH12345",hmac_secret=KEY)
             self.assertEqual(batch.category,category)
             self.assertFalse(batch.history_certified)
             self.assertEqual(batch.records[0].filter_category,category)
@@ -81,7 +81,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
                for i in range(1000,1050)]
         last=[row(1050,page=2,item_count=51,page_count=2)]
         source=FakeSource([first,last])
-        batch=collect_fund_observations(source,WINDOW,"FOREX",hmac_secret=KEY)
+        batch=collect_fund_observations(source,WINDOW,"FOREX",account="SYNTH12345",hmac_secret=KEY)
         self.assertEqual(len(batch.records),51)
         self.assertEqual(batch.pages,2)
         self.assertEqual([x["start"] for x in source.calls],[0,50])
@@ -89,10 +89,10 @@ class TigerFundEvidenceTests(unittest.TestCase):
 
     def test_owner_scope_changes_hmac_source_reference(self):
         original=collect_fund_observations(FakeSource([[row(99)]]),WINDOW,
-                   "CORPORATE_ACTION",hmac_secret=KEY).records[0]
+                   "CORPORATE_ACTION",account="SYNTH12345",hmac_secret=KEY).records[0]
         other=collect_fund_observations(FakeSource([[row(99)]]),
                  replace(WINDOW,account_id=uuid4()),
-                 "CORPORATE_ACTION",hmac_secret=KEY).records[0]
+                 "CORPORATE_ACTION",account="SYNTH12345",hmac_secret=KEY).records[0]
         self.assertNotEqual(original.source_ref,other.source_ref)
         self.assertEqual(original.evidence_sha256,other.evidence_sha256)
 
@@ -117,6 +117,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
           [row(1,id="not-a-number")],
           [row(1,type="\nsecret")],
           [row(1,page="1")],
+          [row(1,page=True)],
           [row(1,updated_at="sensitive")],
           [],
         ]
@@ -124,7 +125,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
             with self.subTest(row=rows[0] if rows else None):
                 with self.assertRaises(FundEvidenceUnavailable):
                     collect_fund_observations(FakeSource([rows]),WINDOW,
-                        "DEPOSIT_WITHDRAW",hmac_secret=KEY)
+                        "DEPOSIT_WITHDRAW",account="SYNTH12345",hmac_secret=KEY)
 
     def test_window_and_access_cannot_be_supplied_as_freeform_or_forged(self):
         with self.assertRaises(FundEvidenceUnavailable):
@@ -133,15 +134,19 @@ class TigerFundEvidenceTests(unittest.TestCase):
             FundWindow(uuid4(),uuid4(),date(2026,10,1),date(2026,10,1))
         with self.assertRaises(FundEvidenceUnavailable):
             collect_fund_observations(FakeSource([[row(1)]]),WINDOW,
-                                      "TRADE",hmac_secret=KEY)
+                                      "TRADE",account="SYNTH12345",hmac_secret=KEY)
         with self.assertRaises(FundEvidenceUnavailable):
             collect_fund_observations(FakeSource([[row(1)]]),WINDOW,
-                                      "FOREX",hmac_secret=b"weak")
+                                      "FOREX",account="SYNTH12345",hmac_secret=b"weak")
+        with self.assertRaises(FundEvidenceUnavailable):
+            collect_fund_observations(FakeSource([[row(1)]]),WINDOW,
+                                      "FOREX",account="foreign/account",
+                                      hmac_secret=KEY)
 
     def test_failures_have_sanitized_error_codes_only(self):
         with self.assertRaises(FundEvidenceUnavailable) as ctx:
             collect_fund_observations(BrokenSource(),WINDOW,
-                "DEPOSIT_WITHDRAW",hmac_secret=KEY)
+                "DEPOSIT_WITHDRAW",account="SYNTH12345",hmac_secret=KEY)
         self.assertEqual(str(ctx.exception),"PROVIDER_READ_FAILED")
         self.assertNotIn("sensitive",str(ctx.exception))
 

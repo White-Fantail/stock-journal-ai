@@ -32,7 +32,30 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
         <h3>보유 종목</h3><span className="user-muted">{account.positions.length}개 · Tiger 관측</span>
       </div>
       {account.positions.length===0?<p className="user-empty">현재 수집된 보유 종목이 없습니다. 전체 거래 이력의 부재를 의미하지 않습니다.</p>:
-      <div className="portfolio-verified-scroll">
+      <div className="mobile-data-cards" aria-label="보유 종목 모바일 목록">
+        {account.positions.map(p=>{
+          const q=account.marketObservations.find(x=>x.symbol===p.symbol && x.currency===p.currency);
+          return <article className="mobile-data-card" key={p.symbol+":"+p.currency}>
+            <div className="mobile-data-card-head">
+              <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></strong>
+                <small>{p.currency} · Tiger 보유 관측</small></div>
+              <strong>{viewNumber(p.quantity)}주</strong>
+            </div>
+            <dl className="mobile-data-card-fields">
+              <div><dt>평균 매입단가</dt><dd>{viewNumber(p.averageCost)} {p.currency}</dd></div>
+              <div><dt>최근 관측 시세</dt><dd>{q?viewNumber(q.price)+" USD":"미확인"}</dd></div>
+              <div><dt>추정 평가액</dt><dd>{q?.estimatedValue?viewNumber(q.estimatedValue)+" USD":"계산 보류"}</dd></div>
+              <div><dt>추정 미실현 손익</dt><dd>{q?.estimatedUnrealized?viewNumber(q.estimatedUnrealized)+" USD":"계산 보류"}</dd></div>
+            </dl>
+            <details className="data-disclosure"><summary>수익률 및 Tiger 원본 평가 보기</summary>
+              <p>추정 수익률: {q?.estimatedReturnPct?viewNumber(q.estimatedReturnPct)+"%":"계산 보류"}</p>
+              <p>Tiger 원본 평가액: {viewNumber(p.marketValue)} {p.currency} · 원본 미실현손익: {viewNumber(p.unrealizedPnl)} {p.currency}</p>
+              <p>시세 출처: {q?(q.mode==="REALTIME_PERMISSIONED"?"실시간 권한":"15분 지연"):"미확인"} · {q?when(q.quoteAt):"관측 없음"} (NZ)</p>
+            </details>
+          </article>;
+        })}
+      </div>
+      <div className="portfolio-verified-scroll desktop-data-table">
         <table className="portfolio-verified-table">
           <thead><tr><th>종목</th><th>수량</th><th>Tiger 평균단가</th><th>최근 미국주식 시세</th><th>시세 기준 평가액 (참고)</th><th>추정 미실현손익 (참고)</th><th>추정 수익률 (참고)</th><th>Tiger 보유 스냅샷 평가액</th></tr></thead>
           <tbody>{account.positions.map(p=>{

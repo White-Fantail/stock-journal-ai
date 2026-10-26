@@ -22,7 +22,8 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "010_broker_backfill_staging.sql",
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql",
                           "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql",
-                          "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql"])
+                          "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql",
+                          "018_journal_broker_fill_links.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_saas_docker_packages_every_broker_module_import_root(self):
@@ -73,6 +74,16 @@ class HostedSchemaPolicyTests(unittest.TestCase):
         self.assertIn("saas_reconciliation_source_links",source)
         self.assertNotIn("DROP TABLE",source)
         self.assertNotIn("GRANT UPDATE",source)
+
+    def test_broker_note_link_contract_is_append_only_and_tenant_scoped(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="018_journal_broker_fill_links.sql")
+        self.assertEqual(source.count("CREATE TABLE saas_journal_broker_fill_links"),1)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("saas_verified_execution_stage(workspace_id,version_id,source_key_hmac,symbol)",source)
+        self.assertIn("REFERENCES saas_journal_records(workspace_id,id,author_user_id,ticker,entry_kind)",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertNotIn("DROP TABLE",source)
 
     def test_paged_checkpoint_migration_is_additive_and_tenant_scoped(self):
         source = next(sql for name, _, sql in manifest()

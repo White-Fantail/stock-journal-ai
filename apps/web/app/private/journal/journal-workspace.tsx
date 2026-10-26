@@ -23,6 +23,8 @@ type Props={
   plans:readonly JournalPlan[];
   trades:readonly ManualTradeEvent[];
   brokerRead:TigerLedgerRead|null;
+  brokerNoteAction:(data:FormData)=>Promise<void>;
+  brokerNoteKeys:Readonly<Record<string,string>>;
   noteAction:(data:FormData)=>Promise<void>;
   planAction:(data:FormData)=>Promise<void>;
   noteKey:string;planKey:string;
@@ -49,7 +51,8 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 }
 
 export function JournalWorkspace({
-  enabled,entries,plans,trades,brokerRead,noteAction,planAction,noteKey,planKey,
+  enabled,entries,plans,trades,brokerRead,brokerNoteAction,brokerNoteKeys,
+  noteAction,planAction,noteKey,planKey,
 }:Props){
   const symbols=useMemo(()=>{
     const names=new Set<string>();
@@ -70,6 +73,7 @@ export function JournalWorkspace({
   const [view,setView]=useState<View>("activity");
   const [composer,setComposer]=useState<"note"|"plan">("note");
   const [kind,setKind]=useState<JournalKind>("THESIS");
+  const [annotate,setAnnotate]=useState<string|null>(null);
 
   const summaries=useMemo(()=>{
     return symbols.map(ticker=>{
@@ -107,6 +111,7 @@ export function JournalWorkspace({
     setSelected(ticker);
     setDraftTicker(ticker);
     setView("activity");
+    setAnnotate(null);
   }
   function createNew(){
     setSelected("");
@@ -311,6 +316,15 @@ export function JournalWorkspace({
                       <p className="journal-entry-text">{e.value.rationale}</p>
                     </> : <>
                       {e.value.content && <p className="journal-entry-text">{e.value.content}</p>}
+                      {e.value.brokerRef && <p className="journal-form-hint">
+                        {brokerRead?.readEnabled && brokerRead.executions.some(f=>
+                          f.accountId===e.value.brokerRef?.accountId &&
+                          f.sourceRef===e.value.brokerRef?.sourceRef &&
+                          f.reviewVersion===e.value.brokerRef?.reviewVersion)
+                          ?"✓ 연결된 Tiger 체결 · 현재 독립 검증 유효"
+                          :"당시 Tiger 체결에 연결한 메모 · 현재 원본 검증을 재확인할 수 없음"}
+                        {" · "}메모 원문은 보존됩니다.
+                      </p>}
                       {e.value.tradeEventId&&<a href={`/private/trades/${e.value.tradeEventId}`}
                         className="journal-trade-link">직접 입력 거래 상세 보기 ↗</a>}
                     </>}
@@ -340,6 +354,28 @@ export function JournalWorkspace({
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
                 <small>수수료 {t.fee} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
+                {brokerNoteKeys[t.accountId+":"+t.sourceRef] &&
+                  <button type="button" className="btn btn-outline"
+                    aria-expanded={annotate===t.accountId+":"+t.sourceRef}
+                    onClick={()=>setAnnotate(old=>old===t.accountId+":"+t.sourceRef?null:t.accountId+":"+t.sourceRef)}>
+                    {annotate===t.accountId+":"+t.sourceRef?"메모 접기":"이 체결에 투자일지 남기기"}
+                  </button>}
+                {annotate===t.accountId+":"+t.sourceRef && brokerNoteKeys[t.accountId+":"+t.sourceRef] &&
+                  <form action={brokerNoteAction} className="journal-compose-form">
+                    <input type="hidden" name="idempotencyKey" value={brokerNoteKeys[t.accountId+":"+t.sourceRef]}/>
+                    <input type="hidden" name="accountId" value={t.accountId}/>
+                    <input type="hidden" name="sourceRef" value={t.sourceRef}/>
+                    <input type="hidden" name="ticker" value={t.symbol}/>
+                    <label>이 체결을 한 이유와 복기
+                      <textarea name="content" rows={3} maxLength={6000} required
+                        placeholder="진입·청산 판단, 감정, 배운 점을 직접 남겨보세요."/>
+                    </label>
+                    <label className="journal-confirm">
+                      <input type="checkbox" name="confirmation" value="yes" required/>
+                      내가 직접 작성한 메모이며, 증권사 주문을 생성하지 않음을 확인합니다.
+                    </label>
+                    <button type="submit" className="btn btn-primary journal-save">연결 메모 저장</button>
+                  </form>}
               </div>
             </article>)}
             {brokerRead.readEnabled && <p className="journal-limit">

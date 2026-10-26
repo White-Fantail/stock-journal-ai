@@ -27,6 +27,7 @@ from services.saas_api.ledger_read import private_ledger
 try:
     from temporary.tiger_personal.api import PilotError, import_pilot, view_pilot
     from temporary.tiger_personal.history import import_orders
+    from temporary.tiger_personal.fill_probe import import_probes
 except ModuleNotFoundError as exc:
     if exc.name not in ("temporary", "temporary.tiger_personal", "temporary.tiger_personal.api"):
         raise
@@ -39,6 +40,8 @@ except ModuleNotFoundError as exc:
     def view_pilot(*args):
         raise PilotError()
     def import_orders(*args):
+        raise PilotError()
+    def import_probes(*args):
         raise PilotError()
 
 from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, finish as tiger_finish,
@@ -56,7 +59,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/tiger/sync-status", "/internal/v1/tiger/review-status",
             "/internal/v1/tiger/ledger-read",
             "/internal/v1/tiger/personal-import", "/internal/v1/tiger/personal-view",
-            "/internal/v1/tiger/personal-orders-import"}
+            "/internal/v1/tiger/personal-orders-import",
+            "/internal/v1/tiger/personal-transactions-import"}
 _MAX_BYTES = 4096
 
 def authorized(method: str, path: str, raw_body: bytes, headers, secret: str, now: int | None = None) -> bool:
@@ -116,7 +120,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(413,{"error":"INVALID_BODY"})
             body=self.rfile.read(n)
             if path in ("/internal/v1/tiger/personal-import",
-                        "/internal/v1/tiger/personal-orders-import") and os.environ.get("POSITIONARY_PERSONAL_TIGER_ENABLED") != "1":
+                        "/internal/v1/tiger/personal-orders-import",
+                         "/internal/v1/tiger/personal-transactions-import") and os.environ.get("POSITIONARY_PERSONAL_TIGER_ENABLED") != "1":
                 return self.reply(404,{"error":"NOT_FOUND"})
             key = (os.environ.get("POSITIONARY_PERSONAL_BRIDGE_SECRET","")
                    if path in ("/internal/v1/tiger/personal-import",
@@ -150,6 +155,7 @@ class Handler(BaseHTTPRequestHandler):
                     "/internal/v1/tiger/personal-import": {"subject","account","assets","positions"},
                     "/internal/v1/tiger/personal-view": {"subject"},
                     "/internal/v1/tiger/personal-orders-import": {"subject","account","from","to","part","parts","complete","orders"},
+                     "/internal/v1/tiger/personal-transactions-import": {"subject","account","from","to","probes"},
                 }
                 if path == "/internal/v1/tiger/personal-view":
                     # Signed gateway chooses a bounded page; no tenant/account locator.
@@ -162,7 +168,9 @@ class Handler(BaseHTTPRequestHandler):
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     with psycopg.connect(broker_dsn,connect_timeout=5) as broker_conn:
-                        if path.endswith("/personal-orders-import"):
+                        if path.endswith("/personal-transactions-import"):
+                            out=import_probes(identity_conn,broker_conn,data)
+                        elif path.endswith("/personal-orders-import"):
                             out=import_orders(identity_conn,broker_conn,data)
                         elif path.endswith("/personal-import"):
                             out=import_pilot(identity_conn,broker_conn,data)

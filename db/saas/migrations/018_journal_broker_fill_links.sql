@@ -45,8 +45,17 @@ CREATE POLICY journal_broker_fill_insert ON saas_journal_broker_fill_links FOR I
 GRANT SELECT,INSERT ON saas_journal_broker_fill_links TO saas_trade_runtime;
 -- Grant only scoped immutable release facts needed to prove a genuine target.
 -- Trade role still cannot decrypt Tiger tokens, stage payloads or publish.
-GRANT SELECT ON saas_broker_ledger_publications,saas_broker_ledger_sources,
-  saas_reconciliation_versions,saas_verified_execution_stage
-  TO saas_trade_runtime;
+GRANT SELECT (workspace_id,id,account_id,review_version_id,review_version_num)
+  ON saas_broker_ledger_publications TO saas_trade_runtime;
+GRANT SELECT (workspace_id,publication_id,account_id,review_version_id,source_key_hmac)
+  ON saas_broker_ledger_sources TO saas_trade_runtime;
+GRANT SELECT (workspace_id,id,account_id,version_num,state)
+  ON saas_reconciliation_versions TO saas_trade_runtime;
+GRANT SELECT (workspace_id,version_id,source_key_hmac,symbol)
+  ON saas_verified_execution_stage TO saas_trade_runtime;
+GRANT SELECT (workspace_id,id,connection_id)
+  ON saas_broker_accounts TO saas_trade_runtime;
+GRANT SELECT (workspace_id,id,provider_code,status,authorization_expires_at,granted_scopes)
+  ON saas_broker_connections TO saas_trade_runtime;
 REVOKE UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER
   ON saas_journal_broker_fill_links FROM saas_trade_runtime;

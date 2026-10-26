@@ -141,6 +141,7 @@ jobs:
             "SAAS_MIGRATION_BACKUP_VERIFIED": "1", # CI simulation, not production backup proof
             "SAAS_TRADE_RUNTIME_PASSWORD": "a" * 64,
             "SAAS_BROKER_RUNTIME_PASSWORD": "b" * 64,
+            "SAAS_PUBLICATION_RUNTIME_PASSWORD": "d" * 64,
             "RAILWAY_PROJECT_ID": "881e854d-86a2-436f-86a5-b17e5f92e912",
             "RAILWAY_SERVICE_ID": "350c9a6f-4f1e-4aaf-a50d-9ea8c1c5d31e",
             "RAILWAY_ENVIRONMENT_ID": "1a79e220-c75e-40be-a608-2d1f21a3ebb8",
@@ -175,6 +176,24 @@ jobs:
               assert flags == (False, False, True, True)
               assert conn.execute("SELECT has_table_privilege(current_user,'saas_trade_events','INSERT')").fetchone()[0] is False
               assert conn.execute("SELECT count(*) FROM saas_tiger_grants").fetchone()[0] == 0
+          PY
+      - name: Publisher has dedicated limited RLS login; broker cannot insert release
+        run: |
+          python - <<'PY'
+          import psycopg
+          with psycopg.connect("postgresql://saas_publication_app:" + "d"*64 +
+                "@localhost:5432/journal_hosted_deploy_ci") as publisher:
+              rows = publisher.execute("""SELECT rolsuper,rolbypassrls,
+                  pg_has_role(current_user,'saas_publication_runtime','USAGE'),
+                  has_table_privilege(current_user,'saas_broker_ledger_publications','INSERT'),
+                  has_table_privilege(current_user,'saas_verified_execution_stage','INSERT')
+                  FROM pg_roles WHERE rolname=current_user""").fetchone()
+              assert rows == (False,False,True,True,False),rows
+              assert publisher.execute("SELECT count(*) FROM saas_broker_ledger_publications").fetchone()[0] == 0
+          with psycopg.connect("postgresql://saas_broker_app:" + "b"*64 +
+                "@localhost:5432/journal_hosted_deploy_ci") as collector:
+              assert collector.execute("""SELECT has_table_privilege(
+                  current_user,'saas_broker_ledger_publications','INSERT')""").fetchone()[0] is False
           PY
       - name: Verify 004-to-005 live upgrade and nonempty-data rollback on disposable PostgreSQL 18
         run: |
@@ -292,7 +311,7 @@ jobs:
           python - <<'PY'
           import psycopg
           with psycopg.connect("postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_restore") as c:
-              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 16
+              assert c.execute("SELECT count(*) FROM saas_schema_versions").fetchone()[0] == 17
               assert c.execute("SELECT to_regclass('public.saas_journal_records')").fetchone()[0]
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0]
           print("Synthetic PostgreSQL 18 backup/restore PASS (not production backup proof)")

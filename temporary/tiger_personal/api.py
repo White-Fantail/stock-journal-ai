@@ -6,6 +6,7 @@ import re
 from decimal import Decimal, InvalidOperation
 from services.saas_api.tiger_oauth import _scope, unseal
 from temporary.tiger_personal.snapshot_store import save_snapshot
+from temporary.tiger_personal.history import load_orders
 
 _SUB = re.compile(r"^[0-9]{3,255}$")
 _ACC = re.compile(r"^[A-Za-z0-9]{5,25}$")
@@ -91,5 +92,6 @@ def view_pilot(identity, broker, subject):
                     if not isinstance(snap,dict) or snap.get("source")!="PERSONAL_SNAPSHOT_ONLY":
                         raise PilotError("INVALID_SOURCE")
                     item[key]=snap["data"]
+            item.update(load_orders(broker,wid,aid))
             result.append(item)
     return {"coverage":"SNAPSHOT_ONLY","verified":False,"accounts":result}

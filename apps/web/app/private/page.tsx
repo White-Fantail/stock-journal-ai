@@ -60,6 +60,7 @@ export default async function WorkspaceHome(){
       </div>
       <div className="home-actions">
         <Link className="btn btn-outline" href="/private/alerts">투자 점검</Link>
+        <Link className="btn btn-outline" href="/private/reports/monthly">월간 복기</Link>
         <Link className="btn btn-outline" href="/private/risk">위험 계산기</Link>
         <Link className="btn btn-primary" href="/private/journal/new">+ 투자 일지 작성</Link>
       </div>

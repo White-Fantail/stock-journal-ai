@@ -24,8 +24,18 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql",
                           "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql",
                           "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql",
-                           "020_journal_tiger_observation_links.sql"])
+                           "020_journal_tiger_observation_links.sql",
+                           "021_ai_request_quotas.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_ai_quota_has_tenant_rls_and_no_prompt_storage(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="021_ai_request_quotas.sql")
+        self.assertIn("CREATE TABLE saas_ai_request_quotas",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT,INSERT,UPDATE",source)
+        self.assertNotIn("DROP TABLE",source)
+        self.assertNotIn("prompt",source.lower().replace("no prompt",""))
 
     def test_observation_journal_is_append_only_and_never_a_certified_fill(self):
         source=next(sql for name,_,sql in manifest()

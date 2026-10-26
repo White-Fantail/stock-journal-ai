@@ -18,7 +18,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view";
+export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view" | "personal-health-view";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -305,4 +305,32 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
          typeof a.partial==="boolean" && typeof a.truncated==="boolean")) return null;
     return result;
   } catch {return null;}
+}
+
+/** Signed owner-only cron health. This does NOT attest brokerage transactions. */
+export type TigerPersonalHealth=Readonly<{
+  source:"PERSONAL_SYNC_HEALTH";coverageVerified:false;
+  accounts:ReadonlyArray<{
+    alias:string;lastAssetsAt:string|null;
+    latest:null|{alias:string;latestRunAt:string;assets:"OK"|"FAILED";
+       orders:"OK"|"PARTIAL"|"FAILED";fills:"OK"|"PARTIAL"|"UNAVAILABLE"};
+  }>;
+}>;
+export async function tigerPersonalHealth():Promise<TigerPersonalHealth|null>{
+  try{
+    const result=await tigerCall("personal-health-view") as TigerPersonalHealth;
+    const iso=(s:unknown)=>typeof s==="string" && !Number.isNaN(Date.parse(s));
+    if(!result || result.source!=="PERSONAL_SYNC_HEALTH" || result.coverageVerified!==false ||
+       !Array.isArray(result.accounts) || result.accounts.length>5 ||
+       !result.accounts.every(a=>a && typeof a.alias==="string" && a.alias.length<=100 &&
+         (a.lastAssetsAt===null||iso(a.lastAssetsAt)) &&
+         (a.latest===null || (a.latest && a.latest.alias===a.alias &&
+           iso(a.latest.latestRunAt) && ["OK","FAILED"].includes(a.latest.assets) &&
+           ["OK","PARTIAL","FAILED"].includes(a.latest.orders) &&
+           ["OK","PARTIAL","UNAVAILABLE"].includes(a.latest.fills)))))
+      throw new Error("INVALID_TIGER_HEALTH");
+    return result;
+  }catch{
+    return null;
+  }
 }

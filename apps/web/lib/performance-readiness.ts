@@ -28,7 +28,12 @@ export function assessPerformanceReadiness(
     ledger.coverage==="VERIFIED_ACCOUNTS_ONLY";
   const verified=accessible&&ledger!==null?ledger.accounts.filter(a=>a.state==="VERIFIED"):[];
   const truncated=accessible&&ledger?.truncated===true;
-  const published=!truncated&&verified.length>0;
+  const verifiedIds=new Set(verified.map(a=>a.accountId));
+  const verifiedRecordCount=accessible&&ledger!==null&&!truncated
+    ?ledger.executions.filter(e=>verifiedIds.has(e.accountId)).length+
+       ledger.positions.filter(p=>verifiedIds.has(p.accountId)).length
+    :0;
+  const published=verifiedRecordCount>0;
   const asOf=verified.reduce<string|null>((last,account)=>{
     const at=account.asOf;
     if(!at||!Number.isFinite(Date.parse(at)))return last;
@@ -43,9 +48,9 @@ export function assessPerformanceReadiness(
         "읽기 가능한 독립 검증 원장이 공개되지 않았습니다."},
     {kind:"BROKER_EXECUTIONS",state:published?"VERIFIED":"NOT_VERIFIED",
       label:"검증된 체결·FIFO 원장",detail:published?
-        "독립 검증된 계좌 원장이 일부 공개되었습니다. 각 계좌의 검증 범위를 넘어 전체 실적을 계산하지 않습니다.":
+        "독립 검증된 계좌에서 읽기 가능한 체결 또는 포지션 원장 항목이 있습니다. 이것만으로 전체 실적을 계산하지 않습니다.":
         truncated?"조회 상한으로 일부 체결 또는 포지션이 생략돼 원장을 통째로 사용할 수 없습니다.":
-        "검증된 계좌 원장을 사용할 수 없습니다."},
+        "독립 검증된 체결 또는 포지션 원장 항목이 확인되지 않았습니다."},
     {kind:"BROKER_COVERAGE",state:"NOT_VERIFIED",label:"전 계좌·전체 기간 원본 이력",
       detail:"게시된 일부 계좌의 원장은 전체 보유 계좌·거래 기간의 커버리지를 증명하지 않습니다."},
     {kind:"CASH_FLOWS",state:"NOT_VERIFIED",label:"입출금·자금 이동",

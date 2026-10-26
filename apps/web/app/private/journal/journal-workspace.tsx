@@ -11,8 +11,6 @@ const KIND_LABEL:Record<JournalKind,string>={
   WATCHLIST_REMOVE:"관심종목 해제",
 };
 type View="activity"|"plans"|"trades";
-type EntryEvent={type:"note";timestamp:string;id:string;value:JournalEntry} |
-                {type:"plan";timestamp:string;id:string;value:JournalPlan};
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
   plan:JournalPlan|null;review:JournalEntry|null;
@@ -143,7 +141,7 @@ export function JournalWorkspace({
             shownSymbols.map(s=><button key={s.ticker} type="button"
               aria-pressed={selected===s.ticker}
               onClick={()=>choose(s.ticker)}
-              className={`journal-symbol ${selected===s.ticker?"journal-symbol-active":""}`}>
+              className={`btn journal-symbol ${selected===s.ticker?"journal-symbol-active":""}`}>
               <span className="journal-symbol-avatar">{s.ticker.slice(0,2)}</span>
               <span className="journal-symbol-main">
                 <strong>{s.ticker}</strong>
@@ -185,9 +183,9 @@ export function JournalWorkspace({
           <div className="journal-section-heading">
             <div><span className="journal-kicker">WRITE AN UPDATE</span><h2>새로운 판단 남기기</h2></div>
             <div className="journal-mode" role="group" aria-label="기록 유형">
-              <button type="button" className={composer==="note"?"journal-mode-active":""}
+              <button type="button" className={`btn ${composer==="note"?"journal-mode-active":""}`}
                 onClick={()=>setComposer("note")}>투자일지</button>
-              <button type="button" className={composer==="plan"?"journal-mode-active":""}
+              <button type="button" className={`btn ${composer==="plan"?"journal-mode-active":""}`}
                 onClick={()=>setComposer("plan")}>목표·손절 계획</button>
             </div>
           </div>
@@ -271,11 +269,11 @@ export function JournalWorkspace({
           </div>
           <div className="journal-tabs" role="group" aria-label="기록 필터">
             <button type="button" aria-pressed={view==="activity"} onClick={()=>setView("activity")}
-              className={view==="activity"?"journal-tab-active":""}>전체 변경 이력</button>
+              className={`btn ${view==="activity"?"journal-tab-active":""}`}>전체 변경 이력</button>
             <button type="button" aria-pressed={view==="plans"} onClick={()=>setView("plans")}
-              className={view==="plans"?"journal-tab-active":""}>투자 계획</button>
+              className={`btn ${view==="plans"?"journal-tab-active":""}`}>투자 계획</button>
             <button type="button" aria-pressed={view==="trades"} onClick={()=>setView("trades")}
-              className={view==="trades"?"journal-tab-active":""}>연결 가능한 거래</button>
+              className={`btn ${view==="trades"?"journal-tab-active":""}`}>연결 가능한 거래</button>
           </div>
 
           {view!=="trades" ? <div className="journal-timeline">

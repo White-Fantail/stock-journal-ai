@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { currentWorkspace } from "../../../lib/require-workspace";
-import { tigerStatus, tigerSyncStatus, tigerReviewStatus, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus } from "../../../lib/tiger-api";
+import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
 
 export const metadata:Metadata={title:"포트폴리오 · Positionary"};
 export const dynamic="force-dynamic";
@@ -32,6 +32,50 @@ function timeLabel(raw:string|null):string {
   const t=new Date(raw);
   if(!Number.isFinite(t.valueOf())) return "정보 없음";
   return new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(t);
+}
+
+/** A released historical native-currency FIFO view, NEVER a live quotation.
+ *  Every row comes from the server-side signed, rechecked release. Unknown
+ *  valuations and unrealized return remain visibly UNKNOWN.
+ */
+function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
+  account:TigerAccount;
+  proof:Extract<TigerLedgerRead["accounts"][number],{state:"VERIFIED"}> | TigerLedgerRead["accounts"][number];
+  positions:readonly VerifiedBrokerPosition[];
+  truncated:boolean;
+}) {
+  return <section className="state-panel portfolio-account" aria-label={account.alias+" 검증 원장"}>
+    <div className="sync-head">
+      <div><span className="breadcrumb">Tiger Brokers · 독립 검증 원장</span><h2>{account.alias}</h2></div>
+      <span className="pill pill-neutral">검증 버전 v{proof.version}</span>
+    </div>
+    <p>체결이력과 증권사 증거를 대조해 공개한 <strong>과거 기준 시점의 원장</strong>입니다.
+      시세를 갱신한 현재 보유자산 평가액이나 계좌 총수익률이 아닙니다.</p>
+    <p className="sync-subtle">원장 기준 시각: {timeLabel(proof.asOf??null)} · FIFO · 종목별 원본 통화</p>
+    <div className="portfolio-unknown-grid">
+      <div><small>현재 평가액</small><strong>미확인</strong></div>
+      <div><small>미실현손익</small><strong>미확인</strong></div>
+      <div><small>계좌 총수익률</small><strong>미확인</strong></div>
+    </div>
+    {positions.length>0 ? <div className="portfolio-verified-scroll">
+      <table className="portfolio-verified-table">
+        <thead><tr><th scope="col">종목</th><th scope="col">검증된 수량</th>
+          <th scope="col">남은 취득원가</th><th scope="col">누적 실현손익</th></tr></thead>
+        <tbody>{positions.map(p=><tr key={p.symbol+":"+p.currency}>
+          <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></th>
+          <td>{p.quantity}주</td>
+          <td>{p.costBasis} {p.currency}</td>
+          <td>{p.realizedPnl} {p.currency}</td>
+        </tr>)}</tbody>
+      </table>
+    </div> : <p className="sync-subtle">현재 표시 가능한 검증 포지션이 없습니다. 계좌 자산이 0이라는 의미는 아닙니다.</p>}
+    {truncated && <p role="status" className="sync-subtle">
+      조회 상한으로 일부 종목이나 체결이 생략되었을 수 있습니다. 이 표를 전체 계좌 합계로 사용하지 마세요.
+    </p>}
+    <p className="sync-subtle">취득원가는 남아 있는 FIFO 매수 원가입니다. 실현손익은 동일 종목·통화 내 검증된 매도 결과에만 해당합니다.
+      다른 통화끼리 합산하지 않으며, 현재 시세·배당·세금·환산 손익은 이 표에 포함하지 않습니다.</p>
+    <Link href="/private/journal" className="btn btn-outline">검증 체결과 나의 투자일지 보기 →</Link>
+  </section>;
 }
 
 function AccountReadiness({account,connection,job,review}:{
@@ -80,10 +124,11 @@ function AccountReadiness({account,connection,job,review}:{
 
 export default async function PortfolioPage() {
   if(!await currentWorkspace()) redirect("/login");
-  const [links,history,reviews]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus()]);
+  const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
   const historyState:TigerSyncStatus|null=history.status==="fulfilled"?history.value:null;
   const reviewState:TigerReviewStatus|null=reviews.status==="fulfilled"?reviews.value:null;
+  const ledgerState:TigerLedgerRead|null=brokerLedger.status==="fulfilled"?brokerLedger.value:null;
   const accounts=accountState?.accounts ?? [];
   const connectionById=new Map(accountState?.connections.map(c=>[c.id,c.status])??[]);
   const latestJob=new Map<string,TigerSyncJob>();
@@ -97,8 +142,8 @@ export default async function PortfolioPage() {
       <p>계좌 연결 상태와 데이터 검증 준비 현황을 확인하세요. 확인되지 않은 거래 내역으로 잔고나 손익을 만들어 표시하지 않습니다.</p>
     </div>
     <div className="info-strip" role="status"><span aria-hidden="true">ⓘ</span><div>
-      <strong>현재 포트폴리오 수익률을 산출할 수 없습니다.</strong>
-      <p>검증된 과거 거래, 수수료 및 동일 기준 시각의 증권사 보유현황이 없으면 결과는 미확인으로 유지합니다. 이 화면에 예시 거래나 테스트 잔고를 표시하지 않습니다.</p>
+      <strong>현재 평가액·미실현손익·계좌 총수익률은 확인되지 않았습니다.</strong>
+      <p>독립 검증된 원장이 존재하는 계좌에서만 과거 기준의 수량·취득원가·실현손익을 보여줍니다. 현재 시세를 확인하지 않은 평가손익이나 예시 잔고는 표시하지 않습니다.</p>
     </div></div>
     {accountState===null || historyState===null || reviewState===null ? <section className="state-panel" role="alert">
       <span className="pill pill-warning">조회 불가</span>
@@ -112,10 +157,18 @@ export default async function PortfolioPage() {
       <Link href="/private/tiger" className="btn btn-outline">Tiger 연동 상태 보기</Link>
     </section> : <>
       <div className="dashboard-heading"><h2>계좌별 검증 상태</h2><span className="pill pill-neutral">{accounts.length}개 계좌</span></div>
-      <div className="sync-jobs">{accounts.map(account=><AccountReadiness
-        key={account.id} account={account}
-        connection={connectionById.get(account.connectionId)??"UNKNOWN"}
-        job={latestJob.get(account.id)??null} review={latestReview.get(account.id)??null}/>)}</div>
+      <div className="sync-jobs">{accounts.map(account=>{
+        const proof=ledgerState?.readEnabled
+          ? ledgerState.accounts.find(a=>a.accountId===account.id && a.state==="VERIFIED") : undefined;
+        const active=connectionById.get(account.connectionId)==="CONNECTED";
+        return proof && active ? <VerifiedAccountSnapshot
+          key={account.id} account={account} proof={proof}
+          positions={ledgerState?.positions.filter(p=>p.accountId===account.id)??[]}
+          truncated={ledgerState?.truncated??false}/>
+          : <AccountReadiness key={account.id} account={account}
+            connection={connectionById.get(account.connectionId)??"UNKNOWN"}
+            job={latestJob.get(account.id)??null} review={latestReview.get(account.id)??null}/>;
+      })}</div>
     </>}
     <section className="state-panel">
       <h2>투자 판단과 검증 체결을 함께 보기</h2>

@@ -193,3 +193,12 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .portfolio-verified-table thead th{font-size:.8rem;color:var(--muted);font-weight:650;background:#f7faf8}
 .portfolio-verified-table tbody th{font-weight:750}
 .portfolio-verified-table tbody tr:last-child th,.portfolio-verified-table tbody tr:last-child td{border-bottom:none}
+
+/* Data-first journal layout and dedicated writing route. */
+.journal-page-heading{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.journal-page-heading h1{margin:8px 0 6px}
+.journal-page-heading p{margin:0}
+.journal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.journal-held-context{margin-top:16px!important;color:#326b54!important;font-size:.84rem!important}
+.journal-create-page{max-width:760px;margin:24px 0;padding:26px}
+@media(max-width:620px){.journal-create-page{padding:18px}}

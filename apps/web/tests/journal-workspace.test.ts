@@ -13,7 +13,7 @@ test("journal private page rechecks authentication and uses server actions witho
   assert.ok(page.includes("auth()"));
   assert.ok(!page.includes("manualTradeEnabled"));
   assert.ok(!page.includes(["SAAS","S2","ENABLED"].join("_")));
-  assert.ok(page.includes("submitJournalPlan"));
+  assert.ok(source("../app/private/journal/new/page.tsx").includes("submitJournalPlan"));
   assert.ok(page.includes("Promise.allSettled"));
   assert.ok(!page.includes("localStorage"));
   assert.ok(!page.includes("Math.random"));
@@ -26,7 +26,7 @@ test("journal UX groups only the authenticated user's recorded symbols",()=>{
   assert.ok(app.includes("trades"));
   assert.ok(app.includes("setSelected"));
   assert.ok(app.includes("selected"));
-  assert.ok(app.includes("tradeEventId"));
+  assert.ok(source("../app/private/journal/new/page.tsx").includes("tradeEventId"));
   assert.ok(app.includes("isBrokerOrder")===false);
   assert.ok(app.includes("사용자 직접 작성"));
   assert.ok(app.includes("목표가"));

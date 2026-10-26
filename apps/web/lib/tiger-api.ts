@@ -18,7 +18,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
+export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -122,5 +122,68 @@ export async function tigerReviewStatus():Promise<TigerReviewStatus> {
          ["BLOCKER","REVIEW"].includes(i.severity) &&
          ["ACCOUNT","WINDOW","EXECUTION","SNAPSHOT"].includes(i.scope))))
     throw new Error("INVALID_TIGER_REVIEW_STATUS");
+  return data;
+}
+
+/** Released broker facts, always separate from user-authored journal events.
+ *  The service returns an empty, UNVERIFIED state until Tiger + independent
+ *  publication + read-only rollout are formally approved. Never mock balances.
+ */
+export type VerifiedBrokerExecution = Readonly<{
+  sourceRef:string;accountId:string;symbol:string;side:"BUY"|"SELL";
+  currency:string;quantity:string;price:string;fee:string;
+  executedAt:string;reviewVersion:number;provenance:"BROKER_VERIFIED";
+}>;
+export type VerifiedBrokerPosition = Readonly<{
+  accountId:string;symbol:string;currency:string;quantity:string;
+  costBasis:string;realizedPnl:string;asOf:string;
+  reviewVersion:number;provenance:"BROKER_VERIFIED";
+}>;
+export type TigerLedgerRead = Readonly<{
+  provider:"TIGER";readEnabled:boolean;
+  coverage:"UNVERIFIED"|"VERIFIED_ACCOUNTS_ONLY";
+  accounts:ReadonlyArray<{
+    accountId:string;alias:string;state:"NOT_AUTHORIZED"|"NOT_VERIFIED"|"VERIFIED";
+    version?:number;asOf?:string;
+  }>;
+  executions:ReadonlyArray<VerifiedBrokerExecution>;
+  positions:ReadonlyArray<VerifiedBrokerPosition>;
+  truncated:boolean;
+}>;
+
+const ledgerDecimal=/^(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/;
+const ledgerSymbol=/^[A-Z0-9.:-]{1,32}$/;
+const ledgerUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const validLedgerTime=(v:unknown)=>typeof v==="string" && v.length<=64 && Number.isFinite(Date.parse(v));
+
+export async function tigerLedgerRead():Promise<TigerLedgerRead> {
+  const data=await tigerCall("ledger-read") as TigerLedgerRead;
+  if(!data || data.provider!=="TIGER" || typeof data.readEnabled!=="boolean" ||
+     typeof data.truncated!=="boolean" ||
+     !Array.isArray(data.accounts) || data.accounts.length>25 ||
+     !Array.isArray(data.executions) || data.executions.length>100 ||
+     !Array.isArray(data.positions) || data.positions.length>100 ||
+     data.coverage!==(data.readEnabled?"VERIFIED_ACCOUNTS_ONLY":"UNVERIFIED") ||
+     !data.accounts.every(a=>a && ledgerUuid.test(a.accountId) &&
+       typeof a.alias==="string" && a.alias.length<=100 &&
+       ["NOT_AUTHORIZED","NOT_VERIFIED","VERIFIED"].includes(a.state) &&
+       (a.state!=="VERIFIED" || (Number.isInteger(a.version) && (a.version??0)>0 && validLedgerTime(a.asOf)))) ||
+     !data.executions.every(e=>e && /^[0-9a-f]{64}$/.test(e.sourceRef) &&
+       ledgerUuid.test(e.accountId) && ledgerSymbol.test(e.symbol) &&
+       ["BUY","SELL"].includes(e.side) && /^[A-Z]{3}$/.test(e.currency) &&
+       [e.quantity,e.price,e.fee].every(v=>typeof v==="string" && ledgerDecimal.test(v)) &&
+       validLedgerTime(e.executedAt) && Number.isInteger(e.reviewVersion) &&
+       e.reviewVersion>0 && e.provenance==="BROKER_VERIFIED" &&
+       data.accounts.some(a=>a.accountId===e.accountId && a.state==="VERIFIED" && a.version===e.reviewVersion)) ||
+     !data.positions.every(p=>p && ledgerUuid.test(p.accountId) &&
+       ledgerSymbol.test(p.symbol) && /^[A-Z]{3}$/.test(p.currency) &&
+       [p.quantity,p.costBasis].every(v=>typeof v==="string" && ledgerDecimal.test(v)) &&
+       typeof p.realizedPnl==="string" && /^-?(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/.test(p.realizedPnl) &&
+       validLedgerTime(p.asOf) && Number.isInteger(p.reviewVersion) &&
+       p.reviewVersion>0 && p.provenance==="BROKER_VERIFIED" &&
+       data.accounts.some(a=>a.accountId===p.accountId && a.state==="VERIFIED" && a.version===p.reviewVersion)) ||
+     (!data.readEnabled && (data.accounts.length!==0 || data.executions.length!==0 ||
+                            data.positions.length!==0 || data.truncated)))
+    throw new Error("INVALID_TIGER_LEDGER_READ");
   return data;
 }

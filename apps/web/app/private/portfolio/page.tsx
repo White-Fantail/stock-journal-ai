@@ -184,7 +184,7 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
           {policy===null?<p className="user-footnote">Tiger 조회 오류가 있어 계좌 순자산 기준 비교를 보류합니다.</p>:
             policy.state==="UNAVAILABLE"?<p className="user-footnote">{policy.reason}</p>:<>
               <p className="user-footnote">Tiger 동일 계좌 순자산({policy.accountCurrency}) 대비 참고 비중입니다.
-                계획의 최대 보유 비중은 전체 투자 포트폴리오 기준일 수 있어, 아래 비교만으로 한도 위반이나 매매 필요성을 판정하지 않습니다.</p>
+                계획의 최대 보유 비중은 전체 투자 포트폴리오 기준일 수 있어, 아래 비교만으로 한도 위반이나 매매 필요성을 판정하지 않습니다. 비중은 소수 둘째 자리로 표시하되 내부 비교는 반올림 전 정확한 수치로 수행합니다.</p>
               <div className="user-list">
                 {policy.positions.map(p=><div className="user-list-row" key={p.ticker}>
                   <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.ticker)}>{p.ticker}</Link></strong>

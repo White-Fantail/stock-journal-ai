@@ -92,15 +92,34 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
   return <section className="state-panel">
     <h2>Tiger 주문 및 부분체결 관측 이력</h2>
     {!!data.readWarnings?.length && <p role="status">Tiger 원본 응답의 일부 항목 형식이 맞지 않아 해당 항목만 제외했습니다. 표시된 자료는 부분 조회 결과이며 전체 주문 이력으로 사용하지 마세요.</p>}
-    <p>증권사 API에서 수집한 실제 <strong>주문 단위</strong> 자료야. 주문 한 건은 여러 번 나누어 체결될 수 있으며, 수수료·시간·현금 거래의 완전성은 검증 전이야.
-    거래 원장으로 확정하거나 자동 손익 계산에 사용하지 않아.</p>
+    <details className="data-disclosure"><summary>주문 자료 범위 및 검증 안내</summary>
+      <p>증권사 API에서 수집한 주문 단위 관측값입니다. 한 주문이 여러 차례 체결될 수 있으며 수수료·시간·현금 거래의 완전성은 검증 전입니다. 확정 거래 원장이나 손익 계산에 사용하지 않습니다.</p>
+    </details>
     {data.accounts.some(a=>a.partial || a.truncated) && <p role="status">조회 누락 가능성이 있는 구간이 존재해. 표시된 자료를 전체 거래 이력으로 사용하지 마.</p>}
     <p>수집 구간: {data.accounts.reduce((n,a)=>n+a.windowCount,0)}개 · 전체 관측 주문 {data.accounts.reduce((n,a)=>n+a.totalOrders,0)}건 · 현재 페이지 {page+1} · 표시: {rows.length}개
     {data.accounts.some(a=>a.truncated)?" · 표시 한도 적용":""}</p>
-    {rows.some(o=>o.filled===null) && <p role="status">이전 수집 자료에는 Tiger의 소수점 수량 정보가 빠져 있어. 잘못된 수량을 표시하지 않고 재수집 후에 보여줄게.</p>}
+    {rows.some(o=>o.filled===null) && <p role="status">일부 과거 주문의 소수점 수량이 미확인이라 임의로 표시하지 않습니다.</p>}
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
-      <div style={{overflowX:"auto"}}>
-        <table style={{width:"100%"}}>
+      <div className="mobile-data-cards" aria-label="Tiger 주문 모바일 목록">
+        {rows.slice(0,compact?12:120).map((o,i)=>
+          <article className="mobile-data-card" key={o.sourceRef+":"+i}>
+            <div className="mobile-data-card-head">
+              <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></strong>
+                <div className="mobile-data-card-meta">{o.side==="BUY"?"매수":"매도"} · {o.status}</div></div>
+              <small>{when(o.at)}</small>
+            </div>
+            <dl className="mobile-data-card-fields">
+              <div><dt>평균 체결가</dt><dd>{viewNumber(o.price)} {o.currency}</dd></div>
+              <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":viewNumber(o.filled)+"주"}</dd></div>
+              <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {o.feeCurrency??"통화 미확인"}</dd></div>
+              <div><dt>계좌</dt><dd>{o.alias}</dd></div>
+            </dl>
+            <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
+              "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></div>
+          </article>)}
+      </div>
+      <div className="responsive-table desktop-data-table">
+        <table>
           <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>투자 기록</th></tr></thead>
           <tbody>{rows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
             <td>{when(o.at)}</td>
@@ -129,7 +148,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         금액 또는 증거 불일치 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
         조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
       <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. 수수료 금액·통화 모두 확인된 경우만 별도로 구분해.</p>
-      {data.accounts.some(a=>a.feeObservations.length>0) && <div style={{overflowX:"auto"}}>
+      {data.accounts.some(a=>a.feeObservations.length>0) && <div className="responsive-table">
         <table style={{width:"100%"}}>
           <thead><tr><th>주문 종목</th><th>수수료 합계</th><th>검증 수준</th><th>수수료 구성</th></tr></thead>
           <tbody>{data.accounts.flatMap(a=>a.feeObservations).map(f=><tr key={f.sourceRef}>
@@ -142,7 +161,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
       </div>}
       {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
       {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
-        <div style={{overflowX:"auto"}}><table style={{width:"100%"}}>
+        <div className="responsive-table"><table>
           <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th><th>투자 기록</th></tr></thead>
           <tbody>{data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><tr key={f.sourceRef}>
             <td>{f.timeRaw??"미확인"}</td>
@@ -154,9 +173,9 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
           </tr>)}</tbody>
         </table></div>}
     </div>}
-    {!compact && <div style={{display:"flex",gap:18,marginTop:14}}>
+    {!compact && <nav className="record-pagination" aria-label="주문 페이지 이동">
       {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}
       {data.accounts.some(a=>a.hasMore) && page<20 && <Link href={"/private/trades?page="+(page+1)}>다음 주문 기록 →</Link>}
-    </div>}
+    </nav>}
   </section>;
 }

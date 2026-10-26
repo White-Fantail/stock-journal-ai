@@ -32,6 +32,20 @@ test("only consent-selected bounded evidence leaves application, no IDs or monet
   assert.ok(payload.includes("손절가 기록: 없음"));
 });
 
+test("opt-in AI sees policy completeness but not numeric allocation amounts",()=>{
+  const strategic=[{...plans[0],strategyType:"LONG_TERM",
+    investmentHorizon:"OVER_THREE_YEARS",
+    invalidationCondition:"Business thesis fails",
+    maxAllocationPct:"17.25",reviewCadence:"QUARTERLY"}] as JournalPlan[];
+  const e=evidenceForAnalysis("STOCK_REVIEW","TSLA",entries,strategic,events,orders);
+  const plan=e.evidence.find(x=>x.kind==="PLAN");
+  assert.ok(plan?.detail.includes("LONG_TERM"));
+  assert.ok(plan?.detail.includes("Business thesis fails"));
+  assert.ok(plan?.detail.includes("QUARTERLY"));
+  assert.ok(plan?.detail.includes("위험 비중 한도: 설정"));
+  assert.ok(!JSON.stringify(e).includes("17.25"));
+  assert.ok(!JSON.stringify(e).includes('"maxAllocationPct"'));
+});
 test("source material is untrusted and hallucinated evidence IDs fail closed",()=>{
   const envelope=evidenceForAnalysis("HABITS",null,entries,plans,events,orders);
   const response={

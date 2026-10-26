@@ -18,6 +18,7 @@ from services.saas_api.journal import list_notes, create_note, export_journal
 from services.saas_api.journal_broker_links import create_broker_note
 from services.saas_api.journal_observation_links import create_observation_note
 from services.saas_api.journal_plans import list_plans,create_plan
+from services.saas_api.ai_quota import claim_ai
 from services.saas_api.request_security import valid_nonce, consume_signed_request, RequestRejected
 from services.saas_api.account import delete_account
 from services.saas_api.trade_detail import trade_detail
@@ -56,7 +57,7 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
             "/internal/v1/journal/export", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
-            "/internal/v1/journal/plan/create", "/internal/v1/account/delete", "/internal/v1/trades/detail",
+            "/internal/v1/journal/plan/create", "/internal/v1/ai/claim", "/internal/v1/account/delete", "/internal/v1/trades/detail",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
             "/internal/v1/tiger/read", "/internal/v1/tiger/disconnect",
@@ -216,19 +217,22 @@ class Handler(BaseHTTPRequestHandler):
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     out=delete_account(identity_conn,data.get("subject"),data.get("confirmation"))
                 return self.reply(200,out)
-            if path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/"):
+            if path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/") or path == "/internal/v1/ai/claim":
                 # Financial operations ALWAYS require a separate
                 # non-BYPASSRLS, SELECT/INSERT-only Postgres login role.
                 scoped_dsn = os.environ.get("SAAS_TRADE_DATABASE_URL")
                 if not scoped_dsn or scoped_dsn == dsn:
                     return self.reply(503,{"error":"FINANCIAL_DB_ROLE_NOT_CONFIGURED"})
+                if path == "/internal/v1/ai/claim" and set(data)!={"subject","mode","consented"}:
+                    return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 if path == "/internal/v1/journal/broker-note/create" and set(data)!={"subject","brokerNote"}:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 if path == "/internal/v1/journal/observation-note/create" and set(data)!={"subject","observationNote"}:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 # Deny tenant/account selection in client payload, even though
                 # every request also derives membership fresh from Google subject.
-                if set(data) - ({"subject","tradeId"} if path == "/internal/v1/trades/detail" else
+                if set(data) - ({"subject","mode","consented"} if path == "/internal/v1/ai/claim" else
+                                {"subject","tradeId"} if path == "/internal/v1/trades/detail" else
                                 {"subject","trade"} if path == "/internal/v1/trades/create" else
                                 {"subject","entry"} if path == "/internal/v1/journal/create" else
                                 {"subject","plan"} if path == "/internal/v1/journal/plan/create" else
@@ -239,7 +243,10 @@ class Handler(BaseHTTPRequestHandler):
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     with psycopg.connect(scoped_dsn,connect_timeout=5) as trade_conn:
-                        if path == "/internal/v1/trades/list":
+                        if path == "/internal/v1/ai/claim":
+                            out=claim_ai(identity_conn,trade_conn,data.get("subject"),
+                                {"mode":data.get("mode"),"consented":data.get("consented")})
+                        elif path == "/internal/v1/trades/list":
                             out=list_trades(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/trades/create":
                             out=create_trade(identity_conn,trade_conn,data.get("subject"),data.get("trade"))

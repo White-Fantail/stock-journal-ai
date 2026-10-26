@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { formatDecimal } from "../../../lib/format-decimal";
 import Link from "next/link";
-import type { TigerLedgerRead, TigerPersonalPosition } from "../../../lib/tiger-api";
+import type { TigerLedgerRead, TigerPersonalPosition, TigerPersonalOrder, TigerPersonalFill } from "../../../lib/tiger-api";
 import type {
   JournalEntry, JournalKind, JournalPlan, ManualTradeEvent,
 } from "../../../lib/saas-trades-api";
@@ -13,7 +13,7 @@ const KIND_LABEL:Record<JournalKind,string>={
   TRADE_NOTE:"체결 메모",WATCHLIST_ADD:"관심종목 등록",
   WATCHLIST_REMOVE:"관심종목 해제",
 };
-type View="activity"|"trades"|"broker";
+type View="activity"|"trades"|"observed"|"broker";
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
   plan:JournalPlan|null;review:JournalEntry|null;
@@ -26,6 +26,8 @@ type Props={
   trades:readonly ManualTradeEvent[];
   brokerRead:TigerLedgerRead|null;
   personalPositions:readonly TigerPersonalPosition[];
+  personalOrders:readonly TigerPersonalOrder[];
+  personalFills:readonly TigerPersonalFill[];
   initialTicker?:string;
 };
 
@@ -50,7 +52,7 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 }
 
 export function JournalWorkspace({
-  enabled,entries,plans,trades,brokerRead,personalPositions,initialTicker,
+  enabled,entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,initialTicker,
 }:Props){
   const symbols=useMemo(()=>{
     const names=new Set<string>();
@@ -64,10 +66,12 @@ export function JournalWorkspace({
       for(const item of brokerRead.positions) names.add(item.symbol);
     }
     for(const p of personalPositions) names.add(p.symbol);
+    for(const p of personalOrders) names.add(p.symbol);
+    for(const p of personalFills) names.add(p.symbol);
     return [...names].sort((a,b)=>
       Number(personalPositions.some(p=>p.symbol===b))-
       Number(personalPositions.some(p=>p.symbol===a))||a.localeCompare(b));
-  },[entries,plans,trades,brokerRead,personalPositions]);
+  },[entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills]);
   const [selected,setSelected]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
   const [search,setSearch]=useState("");
   const [view,setView]=useState<View>("activity");
@@ -90,6 +94,8 @@ export function JournalWorkspace({
   const activeTrades=trades.filter(t=>t.ticker===selected&&t.kind==="EXECUTION");
   const voided=new Set(trades.filter(t=>t.kind==="VOID").map(t=>t.voidsEventId));
   const connectedTrades=activeTrades.filter(t=>!voided.has(t.id));
+  const observedOrders=personalOrders.filter(o=>o.symbol===selected);
+  const observedFills=personalFills.filter(f=>f.symbol===selected);
   const brokerTrades=brokerRead?.readEnabled
     ? brokerRead.executions.filter(t=>t.symbol===selected) : [];
   const brokerAccountNames=new Map(brokerRead?.accounts.map(a=>[a.accountId,a.alias])??[]);
@@ -206,6 +212,8 @@ export function JournalWorkspace({
               className={`btn ${view==="activity"?"journal-tab-active":""}`}>투자 판단 · 계획</button>
             <button type="button" aria-pressed={view==="trades"} onClick={()=>setView("trades")}
               className={`btn ${view==="trades"?"journal-tab-active":""}`}>직접 입력 거래</button>
+            <button type="button" aria-pressed={view==="observed"} onClick={()=>setView("observed")}
+              className={`btn ${view==="observed"?"journal-tab-active":""}`}>Tiger 관측 거래</button>
             <button type="button" aria-pressed={view==="broker"} onClick={()=>setView("broker")}
               className={`btn ${view==="broker"?"journal-tab-active":""}`}>Tiger 검증 체결</button>
           </div>
@@ -229,6 +237,10 @@ export function JournalWorkspace({
                       <p className="journal-entry-text">{e.value.rationale}</p>
                     </> : <>
                       {e.value.content && <p className="journal-entry-text">{e.value.content}</p>}
+                      {e.value.observationRef && <p className="journal-form-hint">
+                        Tiger {e.value.observationRef.kind==="ORDER"?"주문":"개별 체결"} 관측 기록에 연결한 나의 판단 · 증권사 검증 전
+                        {" · "}원본 주문 상태가 바뀌더라도 메모는 보존됩니다.
+                      </p>}
                       {e.value.brokerRef && <p className="journal-form-hint">
                         {brokerRead?.readEnabled && brokerRead.executions.some(f=>
                           f.accountId===e.value.brokerRef?.accountId &&
@@ -254,6 +266,31 @@ export function JournalWorkspace({
                 <a href={`/private/trades/${t.id}`}>상세 보기 ↗</a>
               </div>)}
             <p className="journal-limit">최근 최대 50건의 직접 입력 거래 중 일부입니다. 전체 과거 매매 내역 또는 증권사 검증 데이터가 아닙니다.</p>
+          </div> : view==="observed" ? <div className="journal-trades" aria-label="미검증 Tiger 관측 거래">
+            {observedOrders.length+observedFills.length===0?
+              <p className="journal-empty">조회된 Tiger 관측 주문·체결이 없습니다. 이전 거래가 없었다는 의미가 아닙니다.</p> :
+              <>
+                {observedFills.map(f=><article className="journal-trade-row" key={"fill:"+f.sourceRef}>
+                  <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
+                    <small>Tiger 개별 체결 관측 · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
+                    {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
+                        e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                  </div>
+                  <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
+                    "&page=0&ticker="+encodeURIComponent(f.symbol)}>매매 복기 작성 →</Link>
+                </article>)}
+                {observedOrders.map(o=><article className="journal-trade-row" key={"order:"+o.sourceRef}>
+                  <div><strong>{o.side==="BUY"?"매수":"매도"} · {formatDecimal(o.filled,"?")}주 · {formatDecimal(o.price,"?")} {o.currency}</strong>
+                    <small>Tiger 주문 관측 · {o.status} · 개별 체결과는 별도</small>
+                    {entries.filter(e=>e.observationRef?.sourceRef===o.sourceRef &&
+                        e.observationRef?.kind==="ORDER").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                  </div>
+                  <Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
+                    "&page=0&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link>
+                </article>)}
+              </>}
+            <p className="journal-limit">여기의 주문은 체결을 증명하지 않으며, 개별 체결도 전체 계좌 이력이 검증된 데이터가 아닙니다.
+              내가 작성한 메모는 증권사 원본과 별도로 저장됩니다. <Link href="/private/trades">전체 주문 기록 →</Link></p>
           </div> : <div className="journal-trades" aria-label="검증된 Tiger 체결">
             {!brokerRead ? <p className="journal-empty" role="status">
               Tiger 검증 원장 조회에 연결하지 못했습니다. 내 기록은 그대로 보존됩니다.

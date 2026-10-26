@@ -53,7 +53,7 @@ test("home and portfolio use real scoped records instead of onboarding cards",()
 test("a selected stock displays actionable target and stop controls",()=>{
   const ui=read("../app/private/journal/journal-workspace.tsx");
   const create=read("../app/private/journal/new/page.tsx");
-  assert.ok(ui.includes("목표·손절 설정"));
+  assert.ok(ui.includes("투자 전략·계획 관리"));
   assert.ok(ui.includes("목표가 {active.plan?"));
   assert.ok(ui.includes("손절가 {active.plan?"));
   assert.ok(ui.includes("/private/journal/new?mode=plan&ticker="));
@@ -61,6 +61,13 @@ test("a selected stock displays actionable target and stop controls",()=>{
   assert.ok(create.includes('name="targetPrice"'));
   assert.ok(create.includes('name="stopPrice"'));
   assert.ok(create.includes('name="rationale"'));
+  assert.ok(create.includes('name="strategyType"'));
+  assert.ok(create.includes('name="invalidationCondition"'));
+  assert.ok(create.includes('name="maxAllocationPct"'));
+  assert.ok(create.includes('name="reviewCadence"'));
+  assert.ok(create.includes('name="investmentHorizon"'));
+  assert.ok(ui.includes("e.value.invalidationCondition"));
+  assert.ok(!ui.includes('<form'));
   assert.ok(!ui.includes("<form"));
 });
 
@@ -74,7 +81,7 @@ test("journal shows investment notes and target-stop plan revisions in one chron
   assert.ok(ui.includes('type:"note" as const'));
   assert.ok(ui.includes('type:"plan" as const'));
   assert.ok(ui.includes("b.timestamp.localeCompare(a.timestamp)"));
-  assert.ok(ui.includes("e.type===\"plan\"?\"목표·손절 계획 변경\""));
+  assert.ok(ui.includes("e.type===\"plan\"?\"투자 전략·계획 변경\""));
   assert.ok(ui.includes("e.value.rationale"));
   assert.ok(ui.includes('href={"/private/journal/new?mode=plan&ticker="'));
   assert.ok(!ui.includes("<form"));

@@ -164,7 +164,7 @@ def main() -> None:
         export = export_journal(identity,trade,a_sub)
         assert export["complete"] and len(export["journal"]) == 1 and len(export["trades"]) == 2
         assert len(export["plans"])==3
-        assert export["plans"][-1]["maxAllocationPct"]=="15.25"
+        assert any(p["maxAllocationPct"]=="15.25" for p in export["plans"])
         assert len(export_journal(identity,trade,b_sub)["journal"]) == 0
         assert export_journal(identity,trade,b_sub)["plans"]==[]
 

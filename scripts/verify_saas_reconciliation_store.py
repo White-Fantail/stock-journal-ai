@@ -81,7 +81,7 @@ with psycopg.connect(dsn) as identity:
         good=evidence(a[2],a[3])
         blocked=record_reconciliation(identity,broker,a[0],good)
         assert blocked["version"]==2 and blocked["state"]=="BLOCKED"
-        assert blocked["issues"]==["INDEPENDENT_ATTESTATION_REQUIRED"]
+        assert blocked["issues"]==["INDEPENDENT_ATTESTATION_REQUIRED","SOURCE_EVIDENCE_MISSING"],blocked
 
         # The proof must refer to exactly one persisted, tenant-scoped
         # encrypted original-fill record; a guessed/absent row cannot stage.

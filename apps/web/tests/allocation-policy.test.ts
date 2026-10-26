@@ -12,6 +12,7 @@ const account=(positions: {symbol:string;quantity:string;currency:string;marketV
 }) as TigerPersonalAccount;
 const pos=(symbol:string,marketValue:string)=>({
  symbol,quantity:"1",currency:"USD",marketValue,
+ averageCost:null,unrealizedPnl:null,
 });
 const plan=(ticker:string,maxAllocationPct:string|null,createdAt="2026-10-26T00:00:00Z")=>({
  ticker,maxAllocationPct,createdAt,

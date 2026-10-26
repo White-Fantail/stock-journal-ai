@@ -9,6 +9,7 @@ import {
   type JournalKind,
 } from "../../../lib/saas-trades-api";
 import { JournalWorkspace } from "./journal-workspace";
+import { tigerLedgerRead, type TigerLedgerRead } from "../../../lib/tiger-api";
 
 export const dynamic="force-dynamic";
 export const metadata={title:"투자 일지 · Positionary"};
@@ -77,6 +78,7 @@ export default async function JournalPage({
   let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
   let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
   let unavailable=false;
+  let brokerRead:TigerLedgerRead|null=null;
   {
     const [notesResult,planResult,tradeResult]=await Promise.allSettled([
       fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
@@ -88,6 +90,12 @@ export default async function JournalPage({
       plans=planResult.value;
       trades=tradeResult.value.events;
     }else unavailable=true;
+  }
+  // Broker readability is independent: an unavailable Tiger service must never
+  // hide the user-authored journal, nor supply example trades.
+  if(!unavailable){
+    try{ brokerRead=await tigerLedgerRead(); }
+    catch{ brokerRead=null; }
   }
   return <main className="journal-page">
     <div className="page-intro journal-intro">
@@ -108,12 +116,12 @@ export default async function JournalPage({
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
     <JournalWorkspace enabled={!unavailable}
-      entries={entries} plans={plans} trades={trades}
+      entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       noteAction={addJournal} planAction={addPlan}
       noteKey={randomUUID()} planKey={randomUUID()}/>
     <div className="journal-disclaimer">
       <strong>나의 기록과 실제 거래는 다릅니다.</strong> 목표가·손절가는 증권사 주문이 아닌 개인 투자 계획입니다.
-      연결된 거래는 사용자가 직접 입력한 최근 거래만 포함하며, Tiger 공식 승인 전에는 브로커 거래 이력이 자동으로 연결되지 않습니다.
+      직접 입력한 거래와 증권사에서 검증된 체결은 별도로 구분됩니다. 증권사 원장은 독립 검증 및 공식 승인 이후에만 종목별로 표시되며 개인 메모를 자동으로 변경하지 않습니다.
     </div>
   </main>;
 }

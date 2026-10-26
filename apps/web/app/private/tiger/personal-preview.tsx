@@ -33,17 +33,31 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
       {account.positions.length===0?<p className="user-empty">현재 수집된 보유 종목이 없습니다. 전체 거래 이력의 부재를 의미하지 않습니다.</p>:
       <div className="portfolio-verified-scroll">
         <table className="portfolio-verified-table">
-          <thead><tr><th>종목</th><th>수량</th><th>평균 단가</th><th>시장 가치</th><th>미실현손익</th></tr></thead>
-          <tbody>{account.positions.map(p=><tr key={p.symbol+":"+p.currency}>
-            <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link><small className="user-muted portfolio-symbol-currency">{p.currency}</small></th>
-            <td>{viewNumber(p.quantity)}</td>
-            <td>{viewNumber(p.averageCost)} {p.currency}</td>
-            <td>{viewNumber(p.marketValue)} {p.currency}</td>
-            <td className={p.unrealizedPnl?.startsWith("-")?"value-negative":"value-standard"}>{viewNumber(p.unrealizedPnl)} {p.currency}</td>
-          </tr>)}</tbody>
+          <thead><tr><th>종목</th><th>수량</th><th>Tiger 평균단가</th><th>최근 미국주식 시세</th><th>시세 기준 평가액 (참고)</th><th>추정 미실현손익 (참고)</th><th>추정 수익률 (참고)</th><th>Tiger 보유 스냅샷 평가액</th></tr></thead>
+          <tbody>{account.positions.map(p=>{
+            const q=account.marketObservations.find(x=>x.symbol===p.symbol && x.currency===p.currency);
+            return <tr key={p.symbol+":"+p.currency}>
+              <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link><small className="user-muted portfolio-symbol-currency">{p.currency}</small></th>
+              <td>{viewNumber(p.quantity)}</td>
+              <td>{viewNumber(p.averageCost)} {p.currency}</td>
+              <td>{q ? <><strong>{viewNumber(q.price)} USD</strong>
+                <small className="user-muted">{q.mode==="REALTIME_PERMISSIONED"?"실시간 권한 시세":"미국주식 15분 지연 시세"}
+                {q.stale?" · 과거 마지막 체결가":""} · {when(q.quoteAt)} (NZ)</small></> : "시세 미확인"}</td>
+              <td>{q?.estimatedValue===null || !q?"계산 보류":viewNumber(q.estimatedValue)+" USD"}</td>
+              <td className={q?.estimatedUnrealized?.startsWith("-")?"value-negative":"value-standard"}>
+                {q?.estimatedUnrealized===null || !q?"계산 보류":viewNumber(q.estimatedUnrealized)+" USD"}</td>
+              <td>{q?.estimatedReturnPct===null || !q?"계산 보류":viewNumber(q.estimatedReturnPct)+"%"}</td>
+              <td>{viewNumber(p.marketValue)} {p.currency}
+                <small className="user-muted">원본 미실현손익 {viewNumber(p.unrealizedPnl)} {p.currency}</small></td>
+            </tr>;
+          })}</tbody>
         </table>
       </div>}
-      <p className="user-footnote">평가액·미실현손익은 Tiger 조회 시점의 원본값입니다. 서로 다른 통화를 임의로 합산하지 않습니다.</p>
+      <p className="user-footnote">시세 기준 계산은 최근 Tiger 보유수량 × 시세와 Tiger 관측 평균단가를 사용한 <strong>참고 추정</strong>입니다.
+        수수료·환율·배당·과거 매매원장의 정확성이 검증되지 않았으므로 확정 손익이나 전체 투자수익률이 아닙니다.
+        시세가 없거나 보유 스냅샷이 오래되면 계산을 보류합니다. 서로 다른 통화는 합산하지 않습니다.
+        Tiger 보유 스냅샷 평가액과 추정 시세 평가액은 조회 시각이 다를 수 있습니다.</p>
+      {account.marketObservations.length===0 && <p className="user-footnote">아직 연결된 시장 시세가 없습니다. 다음 Railway 수집 후 미국주식 시세 권한·지연 시세 지원 여부를 확인합니다.</p>}
     </section>)}
   </div>;
 }

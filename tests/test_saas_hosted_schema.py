@@ -21,7 +21,7 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "008_tiger_oauth.sql", "009_tiger_runtime_login.sql",
                           "010_broker_backfill_staging.sql",
                           "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql",
-                          "014_reconciliation_audit.sql"])
+                          "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_reconciliation_schema_enforces_immutable_tenant_staging(self):

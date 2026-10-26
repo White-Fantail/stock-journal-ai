@@ -27,7 +27,7 @@ export default async function WorkspaceHome() {
       <article className="dashboard-card">
         <div className="icon-square" aria-hidden="true">◎</div>
         <h3>증권사 연결</h3>
-        <span className={state?.enabled && connected ? "pill" : "pill pill-warning"}>{connectionLabel}</span>
+        <span className={personal?.accounts.length || (state?.enabled && connected) ? "pill" : "pill pill-warning"}>{connectionLabel}</span>
         <p style={{marginTop:14}}>{personal?.accounts.length ? "내 계정은 개인 Tiger API로 조회 중입니다. 다른 사용자는 공식 앱 승인 후 연결됩니다." : "Tiger 공식 앱 승인을 준비하고 있습니다."}</p>
         <Link href="/private/brokers">연결 상태 확인 →</Link>
       </article>

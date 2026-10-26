@@ -213,6 +213,8 @@ export type TigerPersonalAccount = Readonly<{
   fillObservations:TigerPersonalFill[];
   fillProbeCount:number;fillProbeUnavailable:number;fillProbeDifference:number;
   fillProbePartial:number;fillProbeTruncated:boolean;
+  feeProbeMatched:number;feeProbeCurrencyUnknown:number;
+  feeProbeDifference:number;feeProbeUnavailable:number;
   windowCount:number;partial:boolean;truncated:boolean;hasMore:boolean;totalOrders:number
 }>;
 export type TigerPersonalRead = Readonly<{
@@ -259,7 +261,8 @@ export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> 
            typeof f.price==="string" && personalDecimal.test(f.price) &&
            (f.timeRaw===null || (typeof f.timeRaw==="string" &&
              /^(?:[0-9]{13}|[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})$/.test(f.timeRaw)))) &&
-         [a.fillProbeCount,a.fillProbeUnavailable,a.fillProbeDifference,a.fillProbePartial].every(
+         [a.fillProbeCount,a.fillProbeUnavailable,a.fillProbeDifference,a.fillProbePartial,
+          a.feeProbeMatched,a.feeProbeCurrencyUnknown,a.feeProbeDifference,a.feeProbeUnavailable].every(
            v=>Number.isInteger(v) && v>=0) && typeof a.fillProbeTruncated==="boolean" &&
          Number.isInteger(a.windowCount) && a.windowCount>=0 &&
          Number.isInteger(a.totalOrders) && a.totalOrders>=0 &&

@@ -161,6 +161,24 @@ with psycopg.connect(dsn) as identity:
         else:
             raise AssertionError("Cross-workspace publication was allowed")
 
+        # Publisher can INSERT only new append-only release rows, not rewrite
+        # financial evidence or its prior published state.
+        for command in (
+            "UPDATE saas_broker_ledger_publications SET source_count=0",
+            "DELETE FROM saas_broker_ledger_publications",
+        ):
+            with broker.transaction():
+                broker.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(a[2]),))
+                try:
+                    broker.execute(command)
+                except psycopg.errors.InsufficientPrivilege:
+                    pass
+                else:
+                    raise AssertionError("Publisher could mutate a historical release")
+        with broker.transaction():
+            scoped_b=_publication_scope(identity,broker,b[0])
+            assert broker.execute("SELECT count(*) FROM saas_broker_ledger_publications WHERE workspace_id=%s",(scoped_b,)).fetchone()[0]==0
+
         broker.execute("SET ROLE saas_broker_app")
         assert broker.execute("""SELECT has_table_privilege(
             current_user,'saas_broker_ledger_publications','INSERT')""").fetchone()[0] is False

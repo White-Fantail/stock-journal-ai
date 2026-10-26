@@ -111,14 +111,14 @@ def private_ledger(identity, broker, subject):
                 executions.append({
                     "sourceRef":str(key),"accountId":str(account_id),
                     "symbol":symbol,"side":side,"currency":currency,
-                    "quantity":str(qty),"price":str(price),"fee":str(fee),
+                    "quantity":format(qty,'f'),"price":format(price,'f'),"fee":format(fee,'f'),
                     "executedAt":occurred.isoformat(),"reviewVersion":version,
                     "provenance":"BROKER_VERIFIED"})
             for symbol,currency,qty,cost,realized in projected:
                 positions.append({
                     "accountId":str(account_id),"symbol":symbol,
-                    "currency":currency,"quantity":str(qty),
-                    "costBasis":str(cost),"realizedPnl":str(realized),
+                    "currency":currency,"quantity":format(qty,'f'),
+                    "costBasis":format(cost,'f'),"realizedPnl":format(realized,'f'),
                     "asOf":as_of.isoformat(),"reviewVersion":version,
                     "provenance":"BROKER_VERIFIED"})
         executions.sort(key=lambda r:(r["executedAt"],r["sourceRef"]),reverse=True)

@@ -68,3 +68,13 @@ The isolated daily worker also makes a **bounded 30-day diagnostic** call to the
 New owner-only HMAC endpoint `/internal/v1/tiger/personal-transactions-import` stores the bounded original normalized response as encrypted `PERSONAL_TRANSACTION_OBSERVATION` in the existing tenant-RLS snapshots table, always with `PARTIAL` completeness. No new DB or migration. The private trades screen separates these **observed** individual transactions from `PERSONAL_ORDER_OBSERVATION` and independently certified P4 broker executions. Order `commission` is **not** allocated to its component fills. Missing `commission_currency` and ambiguous source `transacted_at` timezone are shown as unknown rather than substituted.
 
 After main deployment, verify actual SDK support and the safely aggregated diagnostic counters before widening coverage. Do not claim live Prime access or exact individual fee coverage based on the synthetic tests.
+
+### Phase 2: Itemized actual order charges and cursor-first history (dev)
+
+The isolated RSA runner now queries `TradeClient.get_order(account=..., id=..., show_charges=True)` **read-only** for the same bounded sample as `get_transactions`. It compares each returned `Charge.total` to the sum of its `ChargeDetail.after_discount_amount` values and compares the total to the separately observed order commission. A missing `commission_currency` does NOT inherit `contract.currency`, and a `Charge` is an order fee, never the commission for an individual fill. Unavailable, conflicting, or currency-unknown evidence is explicitly distinguished, and cannot enter P4 verified accounting.
+
+The signed ingress accepts the optional `feeReview` envelope so existing snapshots continue to load. The private trades page displays aggregated counts and a limited itemized order-fee table using opaque order references; original external account and order identifiers are not rendered.
+
+The historical `get_orders` collector requests `page_token=""` from the initial page and rejects duplicate order IDs with conflicting observations. Legacy 100-item pages without continuation still receive `complete=False`. This tightens *collection coverage* evidence but does not prove corporate actions, funding/FX, history older than the configured start, nor full executed transaction coverage.
+
+Operational verification requires observing the next scheduled production runner execution; **GitHub Actions and a successful Railway deployment do not prove real Tiger `get_transactions` or `show_charges` access**. Do not deploy or enable a broker-verified ledger from these observations.

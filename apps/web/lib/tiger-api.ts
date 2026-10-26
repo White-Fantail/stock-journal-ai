@@ -205,7 +205,7 @@ export type TigerPersonalAccount = Readonly<{
   assets:{netLiquidation:string|null;cashBalance:string|null}|null;
   positions:TigerPersonalPosition[];
   orders:TigerPersonalOrder[];
-  windowCount:number;partial:boolean;truncated:boolean
+  windowCount:number;partial:boolean;truncated:boolean;hasMore:boolean;totalOrders:number
 }>;
 export type TigerPersonalRead = Readonly<{
   coverage:"SNAPSHOT_ONLY";verified:false;accounts:TigerPersonalAccount[]
@@ -215,9 +215,10 @@ const personalSymbol=/^[A-Z0-9.:-]{1,32}$/;
 function nullableNumber(v:unknown): v is string|null {
   return v===null || (typeof v==="string" && personalDecimal.test(v));
 }
-export async function tigerPersonalRead():Promise<TigerPersonalRead|null> {
+export async function tigerPersonalRead(page=0):Promise<TigerPersonalRead|null> {
+  if(!Number.isInteger(page) || page<0 || page>20) return null;
   try {
-    const result=await tigerCall("personal-view") as TigerPersonalRead;
+    const result=await tigerCall("personal-view",{page:String(page)}) as TigerPersonalRead;
     if(!result || result.coverage!=="SNAPSHOT_ONLY" || result.verified!==false ||
        !Array.isArray(result.accounts) || result.accounts.length>5 ||
        !result.accounts.every(a=>a && typeof a.alias==="string" &&
@@ -239,6 +240,8 @@ export async function tigerPersonalRead():Promise<TigerPersonalRead|null> {
            nullableNumber(o.price) && nullableNumber(o.fee) &&
            (o.at===null || (typeof o.at==="string" && /^[0-9]{13}$/.test(o.at)))) &&
          Number.isInteger(a.windowCount) && a.windowCount>=0 &&
+         Number.isInteger(a.totalOrders) && a.totalOrders>=0 &&
+         typeof a.hasMore==="boolean" &&
          typeof a.partial==="boolean" && typeof a.truncated==="boolean")) return null;
     return result;
   } catch {return null;}

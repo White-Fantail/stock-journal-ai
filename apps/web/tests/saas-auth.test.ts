@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { googleIdentity, saasAuthConfigured } from "../lib/saas-auth-policy";
+import { SESSION_MAX_AGE_SECONDS, SESSION_REFRESH_INTERVAL_SECONDS } from "../lib/auth-session-policy";
 
 const configured = {
   AUTH_GOOGLE_ID: "synthetic-google-client-id",
@@ -32,4 +33,11 @@ test("Google login requires ALL private configurations and safe origins", () => 
   }
   assert.equal(saasAuthConfigured({...configured,AUTH_URL:"http://localhost:3000"}),false);
   assert.equal(saasAuthConfigured({...configured,AUTH_URL:"http://localhost:3000"},true),true);
+});
+
+
+test("Google JWT session persists for 30 days and refreshes before expiry", () => {
+  assert.equal(SESSION_MAX_AGE_SECONDS, 30 * 24 * 60 * 60);
+  assert.equal(SESSION_REFRESH_INTERVAL_SECONDS, 60 * 60);
+  assert.ok(SESSION_REFRESH_INTERVAL_SECONDS < SESSION_MAX_AGE_SECONDS);
 });

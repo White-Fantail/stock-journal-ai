@@ -177,7 +177,10 @@ jobs:
                              env=env, check=True)
           with psycopg.connect(env["SAAS_DATABASE_URL"]) as c:
               versions = [r[0] for r in c.execute("SELECT name FROM saas_schema_versions ORDER BY name")]
-              assert versions == ["001_identity.sql", "002_broker_links.sql", "003_trade_events.sql", "004_csv_imports.sql", "005_remove_csv_imports.sql", "006_journal_security.sql", "007_trade_runtime_login.sql", "008_tiger_oauth.sql", "009_tiger_runtime_login.sql", "010_broker_backfill_staging.sql", "011_backfill_worker_fencing.sql", "012_backfill_page_resume.sql", "013_broker_dispatch_queue.sql", "014_reconciliation_audit.sql", "015_reconciliation_lineage.sql", "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql", "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql", "020_journal_tiger_observation_links.sql", "021_ai_request_quotas.sql", "022_personal_sync_health.sql", "023_investment_strategy_plan.sql"]
+              from services.saas_api.schema_admin import APPROVED_AUTO_MIGRATIONS, manifest
+              reviewed_versions = [name for name, _, _ in manifest()]
+              assert versions == reviewed_versions
+              assert set(versions) == APPROVED_AUTO_MIGRATIONS
               assert c.execute("SELECT to_regclass('public.saas_csv_import_batches')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_csv_import_rows')").fetchone()[0] is None
               assert c.execute("SELECT to_regclass('public.saas_trade_events')").fetchone()[0] is not None

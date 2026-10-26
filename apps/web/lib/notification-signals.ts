@@ -6,7 +6,7 @@ import type {TigerPersonalRead,TigerPersonalHealth} from "./tiger-api";
 import type {JournalPlan} from "./saas-trades-api";
 
 export type SyncSignal={id:string;
-  kind:"SYNC_FAILED"|"SYNC_DELAYED"|"SYNC_UNREPORTED"|"HISTORY_PARTIAL"|"PLAN_MISSING";
+  kind:"SYNC_FAILED"|"SYNC_DELAYED"|"SYNC_UNREPORTED"|"HISTORY_PARTIAL"|"PLAN_MISSING"|"PLAN_INCOMPLETE";
   severity:"warning"|"info";title:string;detail:string;observedAt:string|null};
 const MONEY=/^(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
 
@@ -79,11 +79,20 @@ export function derivePersonalAlerts(
         compareAmounts(position.quantity,"0")<=0||
         seenSymbols.has(position.symbol))continue;
      seenSymbols.add(position.symbol);
-     if(plans!==null && !latestPlans.has(position.symbol)){
+     if(plans===null)continue; // Do not infer missing records from an API failure.
+     const plan=latestPlans.get(position.symbol);
+     if(!plan){
        signals.push({id:"plan:"+position.symbol,kind:"PLAN_MISSING",severity:"info",
          title:position.symbol+" · 투자 계획 미작성",
          detail:"보유가 관측된 종목입니다. 투자 기간, 판단을 바꿀 조건과 위험 한도를 투자일지에 기록해 보세요. 가격 알림이나 매매 신호가 아닙니다.",
          observedAt:account.asOf});
+     }else if(!plan.strategyType || !plan.investmentHorizon ||
+               !plan.invalidationCondition || !plan.reviewCadence ||
+               !plan.maxAllocationPct){
+       signals.push({id:"plan-incomplete:"+position.symbol,kind:"PLAN_INCOMPLETE",
+         severity:"info",title:position.symbol+" · 투자 전략 보완 권장",
+         detail:"보유 종목의 투자 전략 유형·기간·논리 무효화 조건·최대 비중·점검 주기를 살펴보세요. 미설정 항목은 의도적으로 비워 둘 수 있으며 매매 신호가 아닙니다.",
+         observedAt:plan.createdAt});
      }
    }
  }

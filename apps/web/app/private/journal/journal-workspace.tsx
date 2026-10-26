@@ -36,7 +36,7 @@ function displayTime(value:string):string{
 }
 function planPrice(value:string|null,currency:string|null){
   if(value===null) return "미설정";
-  const compact=value.replace(/(\\.\\d*?[1-9])0+$/,"$1").replace(/\\.0+$/,"");
+  const compact=value.replace(/(\.\d*?[1-9])0+$/,"$1").replace(/\.0+$/,"");
   return `${compact} ${currency??""}`;
 }
 function contentPreview(value:string,max=115){

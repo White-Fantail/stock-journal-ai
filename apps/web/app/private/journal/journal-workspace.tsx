@@ -267,7 +267,7 @@ export function JournalWorkspace({
                     <p className="journal-entry-text">{e.content}</p>
                   </div>)}
                 <Link className="btn btn-outline"
-                  href={"/private/journal/new?mode=broker&ticker="+encodeURIComponent(t.symbol)+"&accountId="+encodeURIComponent(t.accountId)+"&sourceRef="+encodeURIComponent(t.sourceRef)}>
+                  href={"/private/journal/new?mode=broker&ticker="+encodeURIComponent(t.symbol)}>
                   체결 복기 작성 →
                 </Link>
               </div>

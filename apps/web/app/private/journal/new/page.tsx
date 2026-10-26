@@ -53,7 +53,8 @@ async function addBrokerFillNote(form:FormData){
     await submitBrokerFillNote(subject,{
       idempotencyKey:field(form,"idempotencyKey"),
       ticker,content:field(form,"content"),
-      accountId:field(form,"accountId"),sourceRef:field(form,"sourceRef"),
+      accountId:field(form,"fillSelection").split(":")[0]??"",
+      sourceRef:field(form,"fillSelection").split(":")[1]??"",
     });
   }catch{
     redirect("/private/journal/new?error=unavailable");
@@ -86,23 +87,22 @@ async function addPlan(form:FormData) {
 
 
 export default async function JournalNewPage({searchParams}:{
-  searchParams:Promise<{ticker?:string;mode?:string;accountId?:string;sourceRef?:string;error?:string}>
+  searchParams:Promise<{ticker?:string;mode?:string;error?:string}>
 }){
   const [session,workspace,params]=await Promise.all([auth(),currentWorkspace(),searchParams]);
   if(!workspace||!session?.user?.id) redirect("/login");
   const ticker=(params.ticker??"").toUpperCase();
   const safeTicker=TICKER.test(ticker)?ticker:"";
   const mode=params.mode==="plan"?"plan":params.mode==="broker"?"broker":"note";
-  let brokerFill:Awaited<ReturnType<typeof tigerLedgerRead>>["executions"][number]|undefined;
+  let brokerFills:Awaited<ReturnType<typeof tigerLedgerRead>>["executions"]=[];
   if(mode==="broker"){
-    if(!safeTicker||!params.accountId||!params.sourceRef) notFound();
+    if(!safeTicker) notFound();
     try{
       const ledger=await tigerLedgerRead();
       if(!ledger.readEnabled) notFound();
-      brokerFill=ledger.executions.find(e=>e.symbol===safeTicker &&
-        e.accountId===params.accountId && e.sourceRef===params.sourceRef);
+      brokerFills=ledger.executions.filter(e=>e.symbol===safeTicker);
     }catch{notFound();}
-    if(!brokerFill) notFound();
+    if(brokerFills.length===0) notFound();
   }
   let manual:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
   if(mode==="note"&&safeTicker){
@@ -120,13 +120,17 @@ export default async function JournalNewPage({searchParams}:{
     </div>
     {params.error&&<p role="alert">입력 내용을 확인해 주세요. 저장 여부가 불확실하면 기존 기록부터 확인하세요.</p>}
     <section className="journal-compose journal-create-page">
-    {mode==="broker"&&brokerFill ?
+    {mode==="broker"&&brokerFills.length>0 ?
       <form action={addBrokerFillNote} className="journal-compose-form">
         <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
-        <input type="hidden" name="ticker" value={brokerFill.symbol}/>
-        <input type="hidden" name="accountId" value={brokerFill.accountId}/>
-        <input type="hidden" name="sourceRef" value={brokerFill.sourceRef}/>
-        <p className="journal-form-hint">독립 검증 체결 · {brokerFill.symbol} · {formatDecimal(brokerFill.quantity)}주 · {formatDecimal(brokerFill.price)} {brokerFill.currency}</p>
+        <input type="hidden" name="ticker" value={safeTicker}/>
+        <label>복기를 연결할 검증 체결
+          <select name="fillSelection" required>{brokerFills.map(e=>
+            <option key={e.accountId+":"+e.sourceRef} value={e.accountId+":"+e.sourceRef}>
+              {e.side==="BUY"?"매수":"매도"} · {formatDecimal(e.quantity)}주 · {formatDecimal(e.price)} {e.currency} · {e.executedAt}
+            </option>)}</select>
+        </label>
+        <p className="journal-form-hint">독립 검증된 체결만 선택할 수 있습니다. 직접 입력 거래와 구분됩니다.</p>
         <label>이 체결의 매매 근거와 복기<textarea name="content" rows={7} maxLength={6000} required placeholder="진입·청산 근거, 잘한 점, 다음에 보완할 점"/></label>
         <label className="journal-confirm"><input type="checkbox" name="confirmation" value="yes" required/> 직접 작성한 판단이며 주문이 아닙니다.</label>
         <button type="submit" className="btn btn-primary journal-save">복기 저장</button>

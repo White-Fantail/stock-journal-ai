@@ -151,7 +151,13 @@ class Handler(BaseHTTPRequestHandler):
                     "/internal/v1/tiger/personal-view": {"subject"},
                     "/internal/v1/tiger/personal-orders-import": {"subject","account","from","to","part","parts","complete","orders"},
                 }
-                if set(data) != permitted[path]:
+                if path == "/internal/v1/tiger/personal-view":
+                    # Signed gateway chooses a bounded page; no tenant/account locator.
+                    page=data.get("page","0")
+                    if (set(data)!={"subject","page"} or not isinstance(page,str)
+                            or not page.isdecimal() or len(page)>2 or int(page)>20):
+                        return self.reply(400,{"error":"INVALID_PAGE"})
+                elif set(data) != permitted[path]:
                     return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
                 with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
@@ -161,7 +167,7 @@ class Handler(BaseHTTPRequestHandler):
                         elif path.endswith("/personal-import"):
                             out=import_pilot(identity_conn,broker_conn,data)
                         elif path.endswith("/personal-view"):
-                            out=view_pilot(identity_conn,broker_conn,data["subject"])
+                            out=view_pilot(identity_conn,broker_conn,data["subject"],int(data["page"]))
                         elif path.endswith("/ledger-read"):
                             out=private_ledger(identity_conn,broker_conn,data["subject"])
                         elif path.endswith("/review-status"):

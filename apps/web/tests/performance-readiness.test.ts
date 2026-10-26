@@ -6,7 +6,11 @@ const full=():TigerLedgerRead=>({
  provider:"TIGER",readEnabled:true,coverage:"VERIFIED_ACCOUNTS_ONLY",
  accounts:[{accountId:"synthetic",alias:"Synthetic verified",state:"VERIFIED",
    asOf:"2026-10-25T00:00:00Z",version:2}],
- executions:[],positions:[],truncated:false,
+ executions:[],positions:[{
+   accountId:"synthetic",symbol:"TEST",currency:"USD",quantity:"1",
+   costBasis:"100",realizedPnl:"0",asOf:"2026-10-25T00:00:00Z",
+   reviewVersion:2,provenance:"BROKER_VERIFIED",
+ }],truncated:false,
 });
 test("no broker data means no profitability assertion",()=>{
  const s=assessPerformanceReadiness(null,null);
@@ -24,6 +28,13 @@ test("one verified broker ledger does not certify full coverage or cashflow-adju
   "FX_CONVERSION","HISTORICAL_VALUATIONS","PERFORMANCE_RELEASE"]){
   assert.equal(s.gates.find(x=>x.kind===key)?.state,"NOT_VERIFIED");
  }
+});
+test("verified account with no published execution or position rows stays incomplete",()=>{
+ const empty={...full(),positions:[],executions:[]};
+ const state=assessPerformanceReadiness(empty,null);
+ assert.equal(state.verifiedAccounts,1);
+ assert.equal(state.gates.find(x=>x.kind==="BROKER_EXECUTIONS")?.state,"NOT_VERIFIED");
+ assert.equal(state.overall,"NOT_AVAILABLE");
 });
 test("limited broker ledger fails closed and personal assets are not backfilled as proof",()=>{
  const incomplete={...full(),truncated:true};

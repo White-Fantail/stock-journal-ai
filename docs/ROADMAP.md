@@ -131,3 +131,13 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Preserve old notes, source separation, idempotency conflict behavior, strict input bounds and origin. Never infer a user's trade reason from the broker order.
 - [ ] Validate real owner Tiger observations and complete origin coverage in production; no claimed accounting-grade fill provenance until reconciliation. The new 020 migration and journal linkage are **dev only** pending explicit fast-forward merge and controlled deployment.
 
+
+### Roadmap priority 5 · User-invoked AI journal analysis (2026-10-27, dev implementation)
+- [x] Dedicated private AI reflection page: stock-specific thesis/plan/observed orders versus history-wide habit review; each run requires fresh checked consent. No automatic jobs, personal data uploads from browser, or AI-generated trading actions.
+- [x] OpenRouter chat completions integration runs only on the trusted Next.js server with `POSITIONARY_AI_ENABLED=1`, server-only `OPENROUTER_API_KEY`, and explicitly chosen `OPENROUTER_MODEL`. Provider routing enforces `zdr=true`, `data_collection=deny` and structured JSON support; no lower-privacy fallback.
+- [x] Minimal evidence: maximum 18 user-authored note excerpts, 10 plan rationale excerpts with target/stop *presence* only, 12 manually asserted trade rationales without monetary values, and 12 Tiger *order* direction/status/date observations without accounts, IDs, quantities or prices. Bound total data size, no private brokerage key and no personal identity to model.
+- [x] Validate model insights using original evidence references, refuse invented source IDs, display provenance and limitations; never claim source attestations, cost basis, realized profit, performance or actionable trade advice. Responses are ephemeral and are not stored in PostgreSQL or browser storage.
+- [x] Forward-only 021 workspace-specific AI quota table with FORCE RLS; freshly resolved Google subject plus scoped trade role atomically claims a maximum of 4 per UTC day and 60 per UTC month; requests consume quota even on provider failure. No prompts/outputs in quota DB. Billing spend caps must also be configured on the OpenRouter API key.
+- [ ] Production activation requires installing and privacy-reviewing `OPENROUTER_MODEL`, `OPENROUTER_API_KEY`, key spending limit and explicitly turning `POSITIONARY_AI_ENABLED=1` in Vercel server environment. Do not treat CI as provider activation or proof that the model supports ZDR.
+- [ ] Historical cost-basis, broker reconciliation and independent source proof remain prerequisites for using confirmed outcome metrics in AI, and must not be inferred from personal Tiger order observations.
+

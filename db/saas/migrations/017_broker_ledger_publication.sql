@@ -46,10 +46,31 @@ CREATE TABLE saas_broker_ledger_sources (
   FOREIGN KEY(workspace_id,review_version_id,source_key_hmac)
     REFERENCES saas_verified_execution_stage(workspace_id,version_id,source_key_hmac)
 );
--- Privileged authenticated broker service still needs a separately validated
--- release signature. No grant to Google/journal application or public routes.
+-- Release inserts are NOT permitted for the Tiger collection/staging role.
+-- Publisher is a distinct passwordless-by-default non-BYPASSRLS login; an
+-- operator must independently provision its password only after approvals.
+DO $publish_roles$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='saas_publication_runtime') THEN
+   CREATE ROLE saas_publication_runtime NOLOGIN;
+ END IF;
+ IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='saas_publication_app') THEN
+   CREATE ROLE saas_publication_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
+       NOREPLICATION NOBYPASSRLS PASSWORD NULL;
+ END IF;
+END $publish_roles$;
+GRANT saas_publication_runtime TO saas_publication_app;
+GRANT SELECT ON saas_broker_ledger_publications,saas_broker_ledger_sources
+ TO saas_broker_runtime;
 GRANT SELECT,INSERT ON saas_broker_ledger_publications,saas_broker_ledger_sources
-  TO saas_broker_runtime;
+ TO saas_publication_runtime;
+-- Only narrow reads needed to verify origin, membership-scoped entitlements and
+-- the normalized staging review. No INSERT/UPDATE on Tiger source/staging.
+GRANT SELECT ON saas_broker_accounts,saas_broker_connections,
+  saas_tiger_grants,saas_tiger_account_secrets,
+  saas_reconciliation_versions,saas_verified_execution_stage,
+  saas_projection_position_stage,saas_reconciliation_source_links,
+  saas_broker_source_stage TO saas_publication_runtime;
 ALTER TABLE saas_broker_ledger_publications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saas_broker_ledger_publications FORCE ROW LEVEL SECURITY;
 CREATE POLICY broker_ledger_publication_tenant ON saas_broker_ledger_publications
@@ -62,4 +83,4 @@ CREATE POLICY broker_ledger_source_tenant ON saas_broker_ledger_sources
   WITH CHECK (workspace_id=NULLIF(current_setting('saas.workspace_id',true),'')::uuid);
 REVOKE UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER
   ON saas_broker_ledger_publications,saas_broker_ledger_sources
-  FROM saas_broker_runtime;
+  FROM saas_publication_runtime,saas_broker_runtime;

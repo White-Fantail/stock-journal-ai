@@ -53,3 +53,6 @@ cd apps/web && npm ci && npm run typecheck
 
 ## Public-history privacy limitation
 The historical personal trade files and investment narratives have been removed from the **current** branch tree. Git commit history, old branch references, forks, pull-request diffs and caches can retain copies; a normal deletion commit cannot erase them. See [privacy remediation](docs/OPERATIONS.md#public-git-history-remediation) for the separate history-purge process. Do not treat source-tree deletion as an irreversible deletion of all previously published GitHub copies.
+
+
+**Investment journal links:** the dev-only, forward migration 018 and a signed internal note route let users attach their own immutable `TRADE_NOTE` rationale to a specific independently verified Tiger execution (not simply a matching ticker). A later corrected/blocked provider review removes its *current verified* label but preserves the human note and linked historical reference. This route is inactive for uncertified Tiger data and never places orders.

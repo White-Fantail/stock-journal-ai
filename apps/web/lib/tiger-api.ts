@@ -35,7 +35,7 @@ export async function tigerCall(action: TigerAction, extra: Record<string,string
     throw new Error("NOT_CONFIGURED");
   const subject = await subjectForRequest();
   const path = "/internal/v1/tiger/" + action;
-  const body = JSON.stringify({ subject, ...extra });
+  const body = JSON.stringify({ ...extra, subject }); // fresh Google subject cannot be overridden
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = randomUUID();
   const signature = createHmac("sha256", env.SAAS_INTERNAL_SECRET!)

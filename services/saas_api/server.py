@@ -85,9 +85,11 @@ class Handler(BaseHTTPRequestHandler):
             n=int(self.headers.get("Content-Length","-1"))
             # Korean rationale can be up to 3,000 characters (multibyte UTF-8).
             # Retain tighter request bounds on identity and read-only routes.
-            max_body = 16384 if path in ("/internal/v1/trades/create", "/internal/v1/journal/create",
-                                         "/internal/v1/journal/plan/create",
-                                         "/internal/v1/journal/broker-note/create") else _MAX_BYTES
+            max_body = (32768 if path == "/internal/v1/journal/broker-note/create"
+                        else 16384 if path in ("/internal/v1/trades/create",
+                                                "/internal/v1/journal/create",
+                                                "/internal/v1/journal/plan/create")
+                        else _MAX_BYTES)
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
             body=self.rfile.read(n)

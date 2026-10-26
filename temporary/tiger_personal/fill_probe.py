@@ -14,7 +14,7 @@ from services.saas_api.tiger_oauth import _scope, _key, seal, unseal
 from temporary.tiger_personal.api import PilotError, owner_only, number
 from temporary.tiger_personal.fill_probe_worker import (
     _ID, _TIME, _SYMBOL, _STATES, _CURRENCIES,
-    _transaction, _probe_order, sync_probe,
+    _transaction, _probe_order, _fee_review, sync_probe,
 )
 
 def _payload(value):
@@ -35,8 +35,10 @@ def _payload(value):
         raise PilotError("INVALID_PROBE")
     ids=set()
     for p in probes:
-        if not isinstance(p,dict) or set(p)!={"orderId","symbol","currency","side",
-                                                "orderCommission","commissionCurrency","status","fills"}:
+        required={"orderId","symbol","currency","side",
+                  "orderCommission","commissionCurrency","status","fills"}
+        if (not isinstance(p,dict) or not required.issubset(p)
+                or set(p)-required-{"feeReview"}):
             raise PilotError("INVALID_PROBE")
         if (not isinstance(p["orderId"],str) or not _ID.fullmatch(p["orderId"])
                 or p["orderId"] in ids or not isinstance(p["symbol"],str)

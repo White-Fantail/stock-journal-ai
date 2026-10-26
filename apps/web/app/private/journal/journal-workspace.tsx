@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { TigerLedgerRead } from "../../../lib/tiger-api";
 import type {
   JournalEntry, JournalKind, JournalPlan, ManualTradeEvent,
 } from "../../../lib/saas-trades-api";
@@ -10,7 +11,7 @@ const KIND_LABEL:Record<JournalKind,string>={
   TRADE_NOTE:"체결 메모",WATCHLIST_ADD:"관심종목 등록",
   WATCHLIST_REMOVE:"관심종목 해제",
 };
-type View="activity"|"plans"|"trades";
+type View="activity"|"plans"|"trades"|"broker";
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
   plan:JournalPlan|null;review:JournalEntry|null;
@@ -21,6 +22,7 @@ type Props={
   entries:readonly JournalEntry[];
   plans:readonly JournalPlan[];
   trades:readonly ManualTradeEvent[];
+  brokerRead:TigerLedgerRead|null;
   noteAction:(data:FormData)=>Promise<void>;
   planAction:(data:FormData)=>Promise<void>;
   noteKey:string;planKey:string;
@@ -47,15 +49,21 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 }
 
 export function JournalWorkspace({
-  enabled,entries,plans,trades,noteAction,planAction,noteKey,planKey,
+  enabled,entries,plans,trades,brokerRead,noteAction,planAction,noteKey,planKey,
 }:Props){
   const symbols=useMemo(()=>{
     const names=new Set<string>();
     for(const item of entries) names.add(item.ticker);
     for(const item of plans) names.add(item.ticker);
     for(const item of trades) if(item.ticker&&item.kind==="EXECUTION") names.add(item.ticker);
+    // Only signed, revalidated broker facts; never infer a ticker from a
+    // pending or PARTIAL Tiger source snapshot.
+    if(brokerRead?.readEnabled){
+      for(const item of brokerRead.executions) names.add(item.symbol);
+      for(const item of brokerRead.positions) names.add(item.symbol);
+    }
     return [...names].sort();
-  },[entries,plans,trades]);
+  },[entries,plans,trades,brokerRead]);
   const [selected,setSelected]=useState(symbols[0]??"");
   const [draftTicker,setDraftTicker]=useState(symbols[0]??"");
   const [search,setSearch]=useState("");
@@ -81,6 +89,9 @@ export function JournalWorkspace({
   const activeTrades=trades.filter(t=>t.ticker===selected&&t.kind==="EXECUTION");
   const voided=new Set(trades.filter(t=>t.kind==="VOID").map(t=>t.voidsEventId));
   const connectedTrades=activeTrades.filter(t=>!voided.has(t.id));
+  const brokerTrades=brokerRead?.readEnabled
+    ? brokerRead.executions.filter(t=>t.symbol===selected) : [];
+  const brokerAccountNames=new Map(brokerRead?.accounts.map(a=>[a.accountId,a.alias])??[]);
   const history=useMemo(()=>[
     ...entries.filter(e=>e.ticker===selected).map(e=>({
       type:"note" as const,id:e.id,timestamp:e.createdAt,value:e,
@@ -108,7 +119,7 @@ export function JournalWorkspace({
     <div className="journal-metrics" aria-label="최근 조회한 투자 기록 현황">
       <div><span className="journal-metric-mark">▦</span>
         <small>기록된 종목</small><strong>{enabled?symbols.length:"—"}</strong>
-        <span>일지와 최근 직접 입력 거래 기준</span></div>
+        <span>내 기록과 승인된 증권사 체결 기준 · 전체 이력 아님</span></div>
       <div><span className="journal-metric-mark">✎</span>
         <small>불러온 변경 기록</small><strong>{enabled?totalEntries:"—"}</strong>
         <span>일지 최대 200건 · 계획 최대 200건</span></div>
@@ -147,7 +158,8 @@ export function JournalWorkspace({
               <span className="journal-symbol-avatar">{s.ticker.slice(0,2)}</span>
               <span className="journal-symbol-main">
                 <strong>{s.ticker}</strong>
-                <small>{s.watched?"관심종목 · ":""}{s.count}건 기록</small>
+                <small>{s.watched?"관심종목 · ":""}{s.count}건 내 기록
+                  {brokerRead?.readEnabled ? ` · 확인된 체결 ${brokerRead.executions.filter(e=>e.symbol===s.ticker).length}건` : ""}</small>
               </span><span aria-hidden="true" className="journal-symbol-arrow">›</span>
             </button>)
           }
@@ -275,10 +287,12 @@ export function JournalWorkspace({
             <button type="button" aria-pressed={view==="plans"} onClick={()=>setView("plans")}
               className={`btn ${view==="plans"?"journal-tab-active":""}`}>투자 계획</button>
             <button type="button" aria-pressed={view==="trades"} onClick={()=>setView("trades")}
-              className={`btn ${view==="trades"?"journal-tab-active":""}`}>연결 가능한 거래</button>
+              className={`btn ${view==="trades"?"journal-tab-active":""}`}>직접 입력 거래</button>
+            <button type="button" aria-pressed={view==="broker"} onClick={()=>setView("broker")}
+              className={`btn ${view==="broker"?"journal-tab-active":""}`}>Tiger 검증 체결</button>
           </div>
 
-          {view!=="trades" ? <div className="journal-timeline">
+          {view!=="trades" && view!=="broker" ? <div className="journal-timeline">
             {(view==="plans"?history.filter(e=>e.type==="plan"):history).length===0 ?
               <div className="journal-empty">아직 이 유형의 기록이 없습니다. 위에서 첫 판단을 남겨보세요.</div>:
               (view==="plans"?history.filter(e=>e.type==="plan"):history).map(e=>
@@ -303,7 +317,7 @@ export function JournalWorkspace({
                     <small>사용자 직접 작성 · 변경 이력 보존</small>
                   </div>
                 </article>)}
-          </div> : <div className="journal-trades">
+          </div> : view==="trades" ? <div className="journal-trades">
             {connectedTrades.length===0 ?
               <p className="journal-empty">현재 목록에서 이 종목의 유효한 직접 입력 거래가 확인되지 않았습니다.</p>:
               connectedTrades.map(t=><div className="journal-trade-row" key={t.id}>
@@ -313,6 +327,26 @@ export function JournalWorkspace({
                 <a href={`/private/trades/${t.id}`}>상세 보기 ↗</a>
               </div>)}
             <p className="journal-limit">최근 최대 50건의 직접 입력 거래 중 일부입니다. 전체 과거 매매 내역 또는 증권사 검증 데이터가 아닙니다.</p>
+          </div> : <div className="journal-trades" aria-label="검증된 Tiger 체결">
+            {!brokerRead ? <p className="journal-empty" role="status">
+              Tiger 검증 원장 조회에 연결하지 못했습니다. 내 기록은 그대로 보존됩니다.
+            </p> : !brokerRead.readEnabled ? <p className="journal-empty" role="status">
+              Tiger 공식 승인과 독립 원장 검증 전에는 증권사 거래를 표시하지 않습니다.
+            </p> : brokerTrades.length===0 ? <p className="journal-empty">
+              현재 조회한 검증 원장에서 이 종목의 체결이 확인되지 않았습니다. 이것이 거래가 없었다는 뜻은 아닙니다.
+            </p> : brokerTrades.map(t=><article className="journal-trade-row" key={t.accountId+":"+t.sourceRef}>
+              <div>
+                <strong>{t.side==="BUY"?"매수":"매도"} {t.quantity}주 · {t.price} {t.currency}</strong>
+                <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
+                  증권사 원본 검증 v{t.reviewVersion}</small>
+                <small>수수료 {t.fee} {t.currency} · BROKER_VERIFIED · 이 체결은 직접 입력 거래와 별도입니다.</small>
+              </div>
+            </article>)}
+            {brokerRead.readEnabled && <p className="journal-limit">
+              독립 검증 후 공개된 최근 체결만 표시합니다.
+              {brokerRead.truncated?" 100건 상한에 도달해 일부 거래가 목록에 없을 수 있습니다.":""}
+              종목별 내 메모와 함께 볼 수 있지만 메모가 개별 체결에 자동 귀속되지는 않습니다.
+            </p>}
           </div>}
         </section>}
       </div>

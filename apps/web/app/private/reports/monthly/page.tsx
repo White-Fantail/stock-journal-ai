@@ -3,6 +3,8 @@ import {redirect} from "next/navigation";
 import {auth} from "../../../../auth";
 import {currentWorkspace} from "../../../../lib/require-workspace";
 import {fetchJournal,fetchJournalPlans,fetchManualTrades} from "../../../../lib/saas-trades-api";
+import {tigerLedgerRead} from "../../../../lib/tiger-api";
+import {assessPerformanceReadiness} from "../../../../lib/performance-readiness";
 import {buildMonthlyProcessReport,currentNzMonth,stepMonth} from "../../../../lib/monthly-process";
 
 export const metadata={title:"월간 투자 복기 · Positionary"};
@@ -22,12 +24,13 @@ export default async function MonthlyReviewReport({searchParams}:{
   const requested=typeof params.month==="string"?params.month:current;
   const month=/^20[2-9][0-9]-(?:0[1-9]|1[0-2])$/.test(requested)&&requested<=current
     ?requested:current;
-  const [notes,plans,trades]=await Promise.allSettled([
+  const [notes,plans,trades,broker]=await Promise.allSettled([
     fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
-    fetchManualTrades(session.user.id),
+    fetchManualTrades(session.user.id),tigerLedgerRead(),
   ]);
   const complete=notes.status==="fulfilled"&&plans.status==="fulfilled"&&trades.status==="fulfilled";
   const report=complete?buildMonthlyProcessReport(month,notes.value,plans.value,trades.value.events,now):null;
+  const readiness=assessPerformanceReadiness(broker.status==="fulfilled"?broker.value:null,null);
   const prev=stepMonth(month,-1);
   const next=stepMonth(month,1);
   return <main className="journal-page">
@@ -83,6 +86,28 @@ export default async function MonthlyReviewReport({searchParams}:{
         <p className="user-footnote">점검 기준: {label(report.checkedAsOf)} (NZ). 전략 핵심 항목은 전략 유형, 기간, 논리 무효화 조건, 개인 최대 비중,
           정기 점검 주기의 작성 여부만 확인합니다. 수익률이나 판단의 옳고 그름을 평가하지 않습니다.
           이벤트 기반 점검은 날짜를 임의로 부여하지 않습니다.</p>
+      </section>
+      <section className="user-panel">
+        <div className="user-panel-head">
+          <h2>검증된 투자 성과 계산 준비 상태</h2>
+          <Link href="/private/portfolio">원장 상태 확인 →</Link>
+        </div>
+        <p>현재는 <strong>{readiness.label}</strong> 상태입니다. 일부 Tiger 주문이나 계좌 평가액만으로
+          확정 수익률을 계산하지 않습니다. 이 상태는 실제 투자 성과가 나쁘거나 좋다는 뜻이 아닙니다.</p>
+        <p className="user-footnote">공개된 검증 원장 계좌 수: {readiness.verifiedAccounts}개.
+          데이터 확인 기준: {readiness.asOf?label(readiness.asOf):"검증 원장 기준 시각 없음"}.</p>
+        <div className="user-list" aria-label="투자 성과 데이터 검증 조건">
+          {readiness.gates.map(gate=><div key={gate.kind} className="user-list-row">
+            <div>
+              <strong>{gate.label}</strong>
+              <small>{gate.detail}</small>
+            </div>
+            <small>{gate.state==="VERIFIED"?"부분 확인":
+              gate.state==="UNAVAILABLE"?"조회 불가":"추가 검증 필요"}</small>
+          </div>)}
+        </div>
+        <p className="journal-limit">이 표는 매매 알림이나 투자 조언이 아닌 데이터 품질 점검입니다.
+          현금 흐름·기간별 평가액·환율 등의 근거가 검증되기 전까지 수익률을 만들지 않습니다.</p>
       </section>
       <section className="user-panel">
         <div className="user-panel-head">

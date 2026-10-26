@@ -89,6 +89,10 @@ class PrivateLedgerGateTests(unittest.TestCase):
             self.assertEqual(found[0],4)
             self.assertEqual(found[2],fills)
         with patch("services.saas_api.ledger_read._candidate",
+                   return_value=(b.version,4,T,fills,positions,b.revision)),\
+             patch("services.saas_api.ledger_read._approved",return_value=False):
+            self.assertIsNone(_matching_published_review(b,str(uuid4()),b.account))
+        with patch("services.saas_api.ledger_read._candidate",
                    side_effect=PublicationRefused("SOURCE_VERSION_CHANGED")):
             self.assertIsNone(_matching_published_review(b,str(uuid4()),b.account))
 

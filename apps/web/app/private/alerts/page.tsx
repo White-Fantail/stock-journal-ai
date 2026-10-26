@@ -6,7 +6,7 @@ import {fetchJournalPlans} from "../../../lib/saas-trades-api";
 import {tigerPersonalRead,tigerPersonalHealth} from "../../../lib/tiger-api";
 import {derivePersonalAlerts} from "../../../lib/notification-signals";
 
-export const metadata={title:"알림 센터 · Positionary"};
+export const metadata={title:"투자 점검 센터 · Positionary"};
 export const dynamic="force-dynamic";
 
 function timeLabel(value:string|null){
@@ -29,8 +29,8 @@ export default async function NotificationsPage(){
   return <main className="journal-page">
     <div className="page-intro journal-page-heading">
       <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
-        <h1>알림 센터</h1>
-        <p>내 Tiger 데이터의 마지막 수집 상태와, 투자 계획에 도달한 시세 관측을 확인합니다.</p>
+        <h1>투자 점검 센터</h1>
+        <p>Tiger 수집 상태와 아직 계획을 작성하지 않은 보유 종목을 확인합니다. 가격 감시나 매매 알림은 제공하지 않습니다.</p>
       </div>
       <Link className="btn btn-outline" href="/private/portfolio">포트폴리오 확인</Link>
     </div>
@@ -59,11 +59,11 @@ export default async function NotificationsPage(){
             </div>
           </article>)}
         </div>}
-      {plans.status!=="fulfilled"&&<p role="alert">투자 계획을 가져오지 못해 목표가·손절가 판단을 생략했습니다.</p>}
+      {plans.status!=="fulfilled"&&<p role="alert">투자 계획을 가져오지 못해 미작성 계획 점검을 생략했습니다.</p>}
       <p className="journal-limit">이 알림은 페이지 조회 시 생성되는 앱 내부 안내이며, 휴대폰 푸시나 이메일로 자동 전송되지 않습니다.
         계획 가격 알림은 동일 USD 통화·최근 보유 정보·45분 이내 시세 관측일 때만 표시합니다.
         하루 한 번 수집으로는 장중 가격 변화를 지속 감시할 수 없습니다. 가격 조건은 실제 주문이 아닙니다.</p>
-      <Link href="/private/journal" className="btn btn-outline">목표가·손절가 계획 확인 →</Link>
+      <Link href="/private/journal" className="btn btn-outline">투자 계획 관리 →</Link>
     </section>
   </main>;
 }

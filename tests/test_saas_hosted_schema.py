@@ -25,8 +25,18 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "016_journal_plan_revisions.sql", "017_broker_ledger_publication.sql",
                           "018_journal_broker_fill_links.sql", "019_tiger_market_quotes.sql",
                            "020_journal_tiger_observation_links.sql",
-                           "021_ai_request_quotas.sql"])
+                           "021_ai_request_quotas.sql",
+                           "022_personal_sync_health.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_tiger_sync_health_is_append_only_and_owner_scoped(self):
+        source=next(sql for name,_,sql in manifest()
+                    if name=="022_personal_sync_health.sql")
+        self.assertIn("CREATE TABLE saas_tiger_personal_sync_health",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT,INSERT",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertIn("run_id",source)
 
     def test_ai_quota_has_tenant_rls_and_no_prompt_storage(self):
         source=next(sql for name,_,sql in manifest()

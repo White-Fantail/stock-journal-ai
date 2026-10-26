@@ -118,6 +118,11 @@ export default async function PortfolioPage() {
         job={latestJob.get(account.id)??null} review={latestReview.get(account.id)??null}/>)}</div>
     </>}
     <section className="state-panel">
+      <h2>투자 판단과 검증 체결을 함께 보기</h2>
+      <p>투자 일지에서는 직접 입력한 거래와 독립 검증된 Tiger 체결을 종목별로 구분해서 볼 수 있습니다. 아직 승인되지 않은 증권사 데이터는 표시하지 않습니다.</p>
+      <Link href="/private/journal" className="btn btn-outline">종목별 투자 일지 열기 →</Link>
+    </section>
+    <section className="state-panel">
       <h2>포트폴리오 검증 절차</h2>
       <div className="connection-steps">
         <div className="connection-step">1 · 체결이력 수집<small>누락·중복·수수료 상태 확인</small></div>

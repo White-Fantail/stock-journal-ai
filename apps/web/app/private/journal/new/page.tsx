@@ -154,7 +154,7 @@ export default async function JournalNewPage({searchParams}:{
   const manual=results[0].status==="fulfilled"?results[0].value.events:[];
   const entries=results[1].status==="fulfilled"?results[1].value:[];
   const planHistoryAvailable=results[2].status==="fulfilled";
-  const plans=planHistoryAvailable?results[2].value:[];
+  const plans=results[2].status==="fulfilled"?results[2].value:[];
   const existingPlan=mode==="plan"&&safeTicker
     ?[...plans].filter(p=>p.ticker===safeTicker)
       .sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0]??null

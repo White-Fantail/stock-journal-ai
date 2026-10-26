@@ -89,6 +89,11 @@ def private_ledger(identity, broker, subject):
         executions=[]
         positions=[]
         for account_id, alias in accounts:
+            # Serialize with P4 reconciliation/publication writers so a
+            # just-superseded review cannot be read as the current version
+            # while another request appends a BLOCKED audit.
+            broker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                           (str(wid)+":"+str(account_id),))
             if not _account_authorized(broker,wid,account_id):
                 statuses.append({"accountId":str(account_id),"alias":alias,
                                  "state":"NOT_AUTHORIZED"})

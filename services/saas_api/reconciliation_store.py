@@ -144,7 +144,10 @@ def _find_lineage(broker, wid, account:AccountEvidence, secret):
     if any(len(values)!=1 for values in by_key.values()) or len(rows)>5000:
         issues.add("SOURCE_EVIDENCE_CONFLICT")
     unique=tuple(values[0] for values in by_key.values() if len(values)==1)
-    return unique,issues
+    # A conflicting second source version must change the decision fingerprint
+    # even though conflicting rows are intentionally never linked as trusted.
+    observed=tuple((rid,str(key),str(sha)) for rid,key,sha in rows)
+    return unique,issues,observed
 
 
 def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,attestation=None):
@@ -175,8 +178,8 @@ def record_reconciliation(identity,broker,subject,account:AccountEvidence,*,atte
             raise AuditRefused("ACCOUNT_NOT_AUTHORIZED")
         # All signatures are bound to the *actual* tenant-scoped stage rows,
         # not to user-supplied raw source IDs or unauthenticated HTTP claims.
-        links,lineage_issues=_find_lineage(broker,wid,account,secret)
-        bound_digest=_bound_digest(digest,links,secret)
+        links,lineage_issues,observed=_find_lineage(broker,wid,account,secret)
+        bound_digest=_bound_digest(digest,observed,secret)
         issues=set(verdict.issue_codes)|lineage_issues
         verified=(verdict.status=="RECONCILED" and not lineage_issues
                   and _attested(bound_digest,attestation))

@@ -1,0 +1,40 @@
+import assert from "node:assert/strict";
+import {test} from "node:test";
+import {readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+const read=(path:string)=>readFileSync(fileURLToPath(new URL(path,import.meta.url)),"utf8");
+
+test("private account-reference view never claims multi-account policy compliance",()=>{
+  const ui=read("../app/private/portfolio/page.tsx");
+  const risk=read("../lib/allocation-policy.ts");
+  assert.ok(ui.includes("assessAccountPolicyReference("));
+  assert.ok(ui.includes("전체 포트폴리오 정책 준수 여부는 미확인"));
+  assert.ok(ui.includes("계좌 기준 참고 비중"));
+  assert.ok(ui.includes("data.readWarnings?.length"));
+  assert.ok(risk.includes("ACCOUNT_COMPARISON_NOT_PORTFOLIO_COMPLIANCE"));
+  for(const marker of ["quoteAt","marketObservations","fetch(","PRICE_TARGET","PRICE_STOP","placeOrder"])
+    assert.ok(!risk.includes(marker),marker);
+});
+
+test("monthly report only uses per-session journal and never treats observed orders as executions",()=>{
+  const ui=read("../app/private/reports/monthly/page.tsx");
+  const model=read("../lib/monthly-process.ts");
+  assert.ok(ui.includes("currentWorkspace()"));
+  assert.ok(ui.includes("auth()"));
+  assert.ok(ui.includes("fetchJournal(session.user.id)"));
+  assert.ok(ui.includes("fetchJournalPlans(session.user.id)"));
+  assert.ok(ui.includes("fetchManualTrades(session.user.id)"));
+  assert.ok(ui.includes("Pacific/Auckland")||model.includes("Pacific/Auckland"));
+  assert.ok(ui.includes("월간 투자 복기"));
+  assert.ok(model.includes("USER_AUTHORED_PROCESS_ONLY"));
+  for(const forbidden of ["tigerPersonalRead","marketObservations","PLACE_ORDER","sendNotification","fetch("])
+    assert.ok(!ui.includes(forbidden)&&!model.includes(forbidden),forbidden);
+});
+
+test("new investor reports are reachable from mobile and check center",()=>{
+  const layout=read("../app/private/layout.tsx");
+  const alerts=read("../app/private/alerts/page.tsx");
+  const home=read("../app/private/page.tsx");
+  for(const file of [layout,alerts,home])assert.ok(file.includes('href="/private/reports/monthly"'));
+  assert.ok(layout.includes('className="app-mobile-more-panel"'));
+});

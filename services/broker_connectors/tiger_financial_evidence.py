@@ -9,12 +9,13 @@ categories are request filters, NOT independent account verification.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
 import math
 import re
+from numbers import Integral
 from typing import Protocol, Any
 from uuid import UUID
 
@@ -27,6 +28,7 @@ MAX_PAGES=20
 MAX_DAYS=89
 _CURRENCY=re.compile(r"^[A-Z]{3}$")
 _ID=re.compile(r"^[0-9]{1,24}$")
+_ACCOUNT=re.compile(r"^[A-Za-z0-9]{5,25}$")
 _DATE=re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _NUM=re.compile(r"^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$")
 
@@ -41,7 +43,7 @@ class FundEvidenceUnavailable(RuntimeError):
 
 class ReadOnlyFunds(Protocol):
     def get_fund_details(self, *, seg_types: list[str], fund_type: str,
-                         start: int, limit: int, start_date: str,
+                         account: str, start: int, limit: int, start_date: str,
                          end_date: str) -> Any: ...
 
 
@@ -124,15 +126,15 @@ def _number(raw: Any) -> str:
 
 def _timestamp(raw: Any) -> str | None:
     if raw is None:return None
-    if isinstance(raw,bool) or not isinstance(raw,int) or raw<946684800000 or raw>4102444800000:
+    if isinstance(raw,bool) or not isinstance(raw,Integral) or raw<946684800000 or raw>4102444800000:
         raise FundEvidenceUnavailable("SOURCE_TIMESTAMP_INVALID")
     return datetime.fromtimestamp(raw/1000,timezone.utc).isoformat()
 
 
 def _observation(row: dict,category: str,window: FundWindow,key: bytes) -> FundObservation:
     ident=row.get("id")
-    if type(ident) is int:
-        ident=str(ident)
+    if isinstance(ident,Integral) and not isinstance(ident,bool):
+        ident=str(int(ident))
     if not isinstance(ident,str) or not _ID.fullmatch(ident):
         raise FundEvidenceUnavailable("SOURCE_ID_INVALID")
     segment=row.get("seg_type")
@@ -167,7 +169,8 @@ def _observation(row: dict,category: str,window: FundWindow,key: bytes) -> FundO
 
 
 def collect_fund_observations(source: ReadOnlyFunds,window: FundWindow,
-                              category: str, *, hmac_secret: bytes) -> FundObservationBatch:
+                              category: str, *, account: str,
+                              hmac_secret: bytes) -> FundObservationBatch:
     """Return a batch only when all advertised rows and pages validate.
 
     Empty/unbounded/inconsistent pages fail closed; even a complete snapshot
@@ -175,6 +178,8 @@ def collect_fund_observations(source: ReadOnlyFunds,window: FundWindow,
     """
     if not isinstance(window,FundWindow) or category not in CATEGORIES:
         raise FundEvidenceUnavailable("CATEGORY_OR_WINDOW_INVALID")
+    if not isinstance(account,str) or not _ACCOUNT.fullmatch(account):
+        raise FundEvidenceUnavailable("ACCOUNT_INVALID")
     if not isinstance(hmac_secret,bytes) or len(hmac_secret)<32:
         raise FundEvidenceUnavailable("SOURCE_KEY_INVALID")
     seen:dict[str,FundObservation]={}
@@ -185,9 +190,10 @@ def collect_fund_observations(source: ReadOnlyFunds,window: FundWindow,
         # Trusted worker owns the client; enforce only non-mutating method.
         try:
             response=source.get_fund_details(
-                seg_types=list(SEGMENTS),fund_type=category,
+                seg_types=list(SEGMENTS),fund_type=category,account=account,
                 start=page_index*PAGE_SIZE,limit=PAGE_SIZE,
-                start_date=window.start.isoformat(),end_date=window.end.isoformat())
+                start_date=window.start.isoformat(),
+                end_date=(window.end-timedelta(days=1)).isoformat())
         except Exception:
             raise FundEvidenceUnavailable("PROVIDER_READ_FAILED") from None
         rows=_rows(response)
@@ -195,12 +201,11 @@ def collect_fund_observations(source: ReadOnlyFunds,window: FundWindow,
             # An empty DataFrame has no documented pagination metadata.
             # Do not assert a zero-activity history is certified.
             raise FundEvidenceUnavailable("EMPTY_PAGE_UNVERIFIED")
-        first=rows[0]
         for row in rows:
             meta=[row.get(k) for k in ("page","limit","item_count","page_count")]
-            if any(type(x) is not int for x in meta):
+            if any(isinstance(x,bool) or not isinstance(x,Integral) for x in meta):
                 raise FundEvidenceUnavailable("PAGE_METADATA_INVALID")
-            page,size,total,pages=meta
+            page,size,total,pages=(int(x) for x in meta)
             if (page!=page_index+1 or size!=PAGE_SIZE or total<1
                     or pages<1 or pages>MAX_PAGES or
                     pages!=(total+PAGE_SIZE-1)//PAGE_SIZE):

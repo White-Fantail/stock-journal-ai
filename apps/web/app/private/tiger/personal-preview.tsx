@@ -32,7 +32,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
         <h3>보유 종목</h3><span className="user-muted">{account.positions.length}개 · Tiger 관측</span>
       </div>
       {account.positions.length===0?<p className="user-empty">현재 수집된 보유 종목이 없습니다. 전체 거래 이력의 부재를 의미하지 않습니다.</p>:
-      <div className="mobile-data-cards" aria-label="보유 종목 모바일 목록">
+      <><div className="mobile-data-cards" aria-label="보유 종목 모바일 목록">
         {account.positions.map(p=>{
           const q=account.marketObservations.find(x=>x.symbol===p.symbol && x.currency===p.currency);
           return <article className="mobile-data-card" key={p.symbol+":"+p.currency}>
@@ -76,7 +76,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
             </tr>;
           })}</tbody>
         </table>
-      </div>}
+      </div></>}
       <p className="user-footnote">시세 기준 계산은 최근 Tiger 보유수량 × 시세와 Tiger 관측 평균단가를 사용한 <strong>참고 추정</strong>입니다.
         수수료·환율·배당·과거 매매원장의 정확성이 검증되지 않았으므로 확정 손익이나 전체 투자수익률이 아닙니다.
         시세가 없거나 보유 스냅샷이 오래되면 계산을 보류합니다. 서로 다른 통화는 합산하지 않습니다.
@@ -100,7 +100,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
     {data.accounts.some(a=>a.truncated)?" · 표시 한도 적용":""}</p>
     {rows.some(o=>o.filled===null) && <p role="status">일부 과거 주문의 소수점 수량이 미확인이라 임의로 표시하지 않습니다.</p>}
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
-      <div className="mobile-data-cards" aria-label="Tiger 주문 모바일 목록">
+      <><div className="mobile-data-cards" aria-label="Tiger 주문 모바일 목록">
         {rows.slice(0,compact?12:120).map((o,i)=>
           <article className="mobile-data-card" key={o.sourceRef+":"+i}>
             <div className="mobile-data-card-head">
@@ -132,7 +132,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
           </tr>)}</tbody>
         </table>
-      </div>}
+      </div></>}
     {compact && rows.length>12 && <Link href="/private/trades">전체 관측 주문 보기 →</Link>}
     {!compact && <div className="journal-trades" style={{marginTop:26}}>
       <h3>개별 체결 API 확인 · 검증 전</h3>

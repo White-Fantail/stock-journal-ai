@@ -36,7 +36,7 @@ _HORIZONS = frozenset((
 _CADENCES = frozenset((
     "WEEKLY","MONTHLY","QUARTERLY","SEMIANNUAL","ANNUAL","EVENT_DRIVEN",
 ))
-_ALLOCATION = re.compile(r"^(?:0|[1-9][0-9]?|100)(?:\\.[0-9]{1,2})?$")
+_ALLOCATION = re.compile(r"^(?:0|[1-9][0-9]?|100)(?:\.[0-9]{1,2})?$")
 
 
 def _enum(raw, choices, label):

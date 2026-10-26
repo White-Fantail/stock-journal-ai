@@ -62,6 +62,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "020_journal_tiger_observation_links.sql", # private unverified broker observations to authored memo
     "021_ai_request_quotas.sql", # tenant quota, does not store prompts/responses
     "022_personal_sync_health.sql", # owner private cron success/failure observations
+    "023_investment_strategy_plan.sql", # additive nullable strategy metadata on immutable journal revisions
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

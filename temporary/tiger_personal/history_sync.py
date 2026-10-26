@@ -207,7 +207,7 @@ def main():
         print("PERSONAL_ORDER_HISTORY_UNAVAILABLE step="+phase)
         raise SystemExit(1)
     try:
-        from temporary.tiger_personal.fill_probe import sync_probe
+        from temporary.tiger_personal.fill_probe_worker import sync_probe
         result=sync_probe()
         print("PERSONAL_TRANSACTION_PROBE_STAGED orders="+str(result["ordersProbed"])+
               " matched="+str(result["matchedSamples"])+

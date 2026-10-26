@@ -29,7 +29,15 @@ def configuration(env):
     if private_key.startswith("-----BEGIN"):
         if "PRIVATE KEY-----" not in private_key or "-----END" not in private_key:
             raise ValueError("PILOT_INVALID_KEY")
-    elif not re.fullmatch(r"[A-Za-z0-9+/=]{256,8192}", private_key):
+        private_key = "".join(line.strip() for line in private_key.splitlines()
+                              if not line.startswith("-----"))
+    if not re.fullmatch(r"[A-Za-z0-9+/=]{256,8192}", private_key):
+        raise ValueError("PILOT_INVALID_KEY")
+    try:
+        parsed = base64.b64decode(private_key, validate=True)
+    except Exception as exc:
+        raise ValueError("PILOT_INVALID_KEY") from exc
+    if len(parsed) < 256 or parsed[:1] != bytes([0x30]):
         raise ValueError("PILOT_INVALID_KEY")
     return tiger_id, account, private_key
 

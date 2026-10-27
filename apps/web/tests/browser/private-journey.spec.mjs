@@ -55,6 +55,20 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.locator('input[name="ticker"]')).toHaveValue("QATEST");
   await page.locator('textarea[name="rationale"]').fill("Synthetic B7 initial investment rationale");
+  // Synthetic manual source: unknown Tiger holdings are not silently zero.
+  await page.locator('select[name="strategyType"]').selectOption("LONG_TERM");
+  await page.locator('input[name="maxAllocationPct"]').fill("20");
+  await page.getByLabel(/투자 기준 자산 총액/).fill("10000");
+  await page.getByLabel(/매수에 사용할 수 있는 현금/).fill("5000");
+  await page.getByLabel(/기존 QATEST 평가액/).fill("0");
+  await page.getByLabel(/기존 QATEST 보유 수량/).fill("0");
+  await page.getByLabel(/가정할 매수가/).fill("400");
+  await page.getByLabel(/추가로 매수한다고 가정할 수량/).fill("2");
+  await expect(page.locator(".plan-scenario-result")).toContainText("8.00%");
+  await expect(page.locator('input[name="riskDecisionNote"]')).toHaveValue("");
+  await page.locator(".plan-risk-decision input[type=checkbox]").check();
+  await expect(page.locator('input[name="riskDecisionNote"]')).toHaveValue(/QATEST.*8.00%/);
+
   await page.locator('textarea[name="invalidationCondition"]').fill("Synthetic thesis invalidated when assumptions change");
   await page.locator('select[name="reviewCadence"]').selectOption("MONTHLY");
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
@@ -93,6 +107,8 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   const exported=await exp.json();
   expect(exported.complete).toBe(true);
   expect(exported.plans.filter(p=>p.ticker==="QATEST").length).toBe(2);
+  expect(exported.plans.filter(p=>p.ticker==="QATEST").some(p=>
+    typeof p.riskDecisionNote==="string"&&p.riskDecisionNote.includes("8.00%"))).toBe(true);
   expect(exported.planSelfReviews.some(p=>p.ticker==="QATEST")).toBe(true);
   const action=exported.actionFollowups.find(x=>x.state==="DONE");
   expect(action).toBeTruthy();

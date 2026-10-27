@@ -116,7 +116,11 @@ test("B4 plan editing retains all existing strategy fields as a new full immutab
  assert.ok(page.includes("initialTarget={existingPlan?.targetPrice??"));
  assert.ok(page.includes("initialStop={existingPlan?.stopPrice??"));
  assert.ok(pricing.includes("onChange={e=>setStop(e.target.value)}"));
- assert.ok(page.includes("defaultValue={existingPlan?.strategyType??"));
+ assert.ok(page.includes("initialStrategy={existingPlan?.strategyType??"));
+ assert.ok(pricing.includes('name="strategyType"'));
+ assert.ok(page.includes('riskDecisionNote:field(form,"riskDecisionNote")||null'));
+ assert.ok(pricing.includes('name="riskDecisionNote"'));
+ assert.ok(pricing.includes("checked={includeReview}"));
  assert.ok(page.includes("defaultValue={existingPlan?.reviewCadence??"));
  assert.ok(page.includes("action={addPlan}"));
  assert.ok(page.includes("submitJournalPlan(subject"));

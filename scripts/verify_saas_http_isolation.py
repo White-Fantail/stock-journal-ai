@@ -169,6 +169,24 @@ def main():
         code,_=request("/internal/v1/journal/checkin/context",
                        {"subject":A,"ticker":"TSLA","workspaceId":"forged"})
         assert code==400,code
+        # Owner manual risk tagging is independent from broker positions.
+        factors={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
+                 "factors":["AI_INFRA","HIGH_GROWTH"],
+                 "rationale":"A synthetic user-only risk classification"}
+        code,created_factor=request("/internal/v1/risk-factors/create",
+                                    {"subject":A,"riskFactors":factors})
+        assert code==200 and created_factor["source"]=="USER_CLASSIFIED_ONLY",(code,created_factor)
+        code,replayed_factor=request("/internal/v1/risk-factors/create",
+                                     {"subject":A,"riskFactors":factors})
+        assert code==200 and replayed_factor["replayed"] is True
+        code,factor_list=request("/internal/v1/risk-factors/list",{"subject":A})
+        assert code==200 and len(factor_list["riskFactors"])==1
+        assert factor_list["riskFactors"][0]["factors"]==["AI_INFRA","HIGH_GROWTH"]
+        code,other_factor_list=request("/internal/v1/risk-factors/list",{"subject":B})
+        assert code==200 and other_factor_list["riskFactors"]==[]
+        code,_=request("/internal/v1/risk-factors/create",
+           {"subject":A,"riskFactors":factors,"workspaceId":"forged"})
+        assert code==400,code
         # Monthly reporting is a signed owner-only DB aggregate, not a capped
         # "latest trade" view or a brokerage performance computation.
         code,month=request("/internal/v1/journal/monthly-process",
@@ -187,6 +205,22 @@ def main():
         assert code==400,code
         code,_=request("/internal/v1/journal/monthly-process",
                        {"subject":A,"month":"2027-01"})
+        assert code==400,code
+        from datetime import datetime,timezone
+        # The current NZ ISO week is determined by the service clock.
+        today=datetime.now(timezone.utc).astimezone(__import__("zoneinfo").ZoneInfo("Pacific/Auckland")).date()
+        monday=today-__import__("datetime").timedelta(days=today.weekday())
+        year,weeknum,_=monday.isocalendar()
+        week_key=f"{year}-W{weeknum:02d}"
+        code,week_data=request("/internal/v1/journal/weekly-process",
+                               {"subject":A,"week":week_key})
+        assert code==200 and week_data["complete"] is True,(code,week_data)
+        assert week_data["coverage"]=="WEEK_WINDOW_DB_AGGREGATED"
+        code,b_week=request("/internal/v1/journal/weekly-process",
+                            {"subject":B,"week":week_key})
+        assert code==200 and b_week["noteCount"]==0,(code,b_week)
+        code,_=request("/internal/v1/journal/weekly-process",
+                       {"subject":A,"week":week_key,"workspaceId":"forged"})
         assert code==400,code
         # A signed request is NOT a broker publication certificate. This
         # synthetic HTTP harness has no approved broker login or grant.
@@ -211,8 +245,10 @@ def main():
         assert out["planSelfReviews"][0]["planRevisionId"]==strategic["id"]
         assert out["planSelfReviews"][0]["selfAssessment"]=="PARTIAL"
         assert out["planSelfReviews"][0]["nextAction"]=="Review the original strategy memo"
+        assert len(out["riskFactors"])==1
+        assert out["riskFactors"][0]["id"]==created_factor["id"]
         code,out=request("/internal/v1/journal/export",{"subject":B})
-        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[]
+        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -264,6 +300,7 @@ def main():
             for table in (
                 "saas_journal_plan_revisions",
                 "saas_journal_plan_checkins",
+                "saas_risk_factor_revisions",
                 "saas_journal_records",
                 "saas_ai_request_quotas",
                 "saas_tiger_personal_sync_health",

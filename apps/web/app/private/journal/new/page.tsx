@@ -256,6 +256,31 @@ export default async function JournalNewPage({searchParams}:{
         <input type="hidden" name="ticker" value={safeTicker}/>
         <p className="journal-form-hint"><strong>선택한 종목: {safeTicker}</strong> · 이 종목의 새 불변 계획 이력을 작성합니다.
           다른 종목을 관리하려면 <Link href="/private/journal/new?mode=plan">종목 선택</Link>으로 이동하세요.</p>
+        <div className="journal-plan-first">
+          <span className="breadcrumb">기본 투자 계획 · 먼저 작성할 항목</span>
+          <label>계획을 새로 정하거나 변경한 이유
+            <textarea name="rationale" rows={5} maxLength={3000} required
+              placeholder="내가 이 종목에 관심을 갖는 이유와 이번 계획을 작성·수정하는 이유를 적어 주세요."/>
+          </label>
+          <label>언제 이 투자 논리를 다시 생각해야 하나요?
+            <textarea name="invalidationCondition" rows={3} maxLength={1500}
+              defaultValue={existingPlan?.invalidationCondition??""}
+              placeholder="예: 사업 가정이 훼손되거나, 내가 확인한 기술적 진입 근거가 깨지는 경우"/>
+          </label>
+          <label>정기적으로 계획을 돌아볼 주기
+            <select name="reviewCadence" defaultValue={existingPlan?.reviewCadence??""}>
+              <option value="">미정 · 나중에 설정</option>
+              <option value="WEEKLY">매주</option>
+              <option value="MONTHLY">매월</option>
+              <option value="QUARTERLY">분기마다</option>
+              <option value="SEMIANNUAL">6개월마다</option>
+              <option value="ANNUAL">매년</option>
+              <option value="EVENT_DRIVEN">기업 공시·사건 발생 시</option>
+            </select>
+          </label>
+        </div>
+        <details className="data-disclosure">
+          <summary>투자 유형·기간·최대 비중 (선택 사항)</summary>
         <div className="journal-form-two">
           <label>투자 전략 유형
             <select name="strategyType" defaultValue={existingPlan?.strategyType??""}>
@@ -277,11 +302,6 @@ export default async function JournalNewPage({searchParams}:{
             </select>
           </label>
         </div>
-        <label>투자 논리가 무효화되는 조건
-          <textarea name="invalidationCondition" rows={3} maxLength={1500}
-            defaultValue={existingPlan?.invalidationCondition??""}
-            placeholder="예: 시장 지지 논리가 깨지거나 사업 가정이 훼손되는 경우. 단순 주가 변동 알림은 하지 않습니다."/>
-        </label>
         <div className="journal-form-two">
           <label>단일 종목 최대 보유 비중 (%) · 선택 사항
             <input name="maxAllocationPct" inputMode="decimal" type="text"
@@ -289,18 +309,9 @@ export default async function JournalNewPage({searchParams}:{
               pattern="(?:[0-9]{1,3}(?:[.][0-9]{1,2})?)"
               placeholder="예: 15"/>
           </label>
-          <label>정기 점검 주기
-            <select name="reviewCadence" defaultValue={existingPlan?.reviewCadence??""}>
-              <option value="">미정</option>
-              <option value="WEEKLY">매주</option>
-              <option value="MONTHLY">매월</option>
-              <option value="QUARTERLY">분기마다</option>
-              <option value="SEMIANNUAL">6개월마다</option>
-              <option value="ANNUAL">매년</option>
-              <option value="EVENT_DRIVEN">기업 공시·사건 발생 시</option>
-            </select>
-          </label>
+          <p className="journal-form-hint">비중은 내가 정한 전체 투자 기준일 수 있습니다. 일부 계좌의 관측 비중만으로 자동 준수 판정하지 않습니다.</p>
         </div>
+        </details>
         <details className="data-disclosure">
           <summary>목표가·손절가 계획 (선택 사항 · 실제 주문 아님)</summary>
           <div className="journal-form-three">
@@ -315,11 +326,9 @@ export default async function JournalNewPage({searchParams}:{
           </div>
           <p className="journal-form-hint">가격 두 개를 모두 비우면 가격 계획을 해제합니다. 투자 전략·검토 주기는 그대로 독립적으로 기록됩니다.</p>
         </details>
-        <label>계획을 새로 정하거나 변경한 이유
-          <textarea name="rationale" rows={5} maxLength={3000} required
-            placeholder="기존 계획과 달라진 부분, 이번 판단의 근거를 기록하세요."/>
-        </label>
-        <p className="journal-form-hint">새 계획을 저장하면 기존 기록을 수정하지 않고 변경 이력을 추가합니다. 목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다.</p>
+        <p className="journal-form-hint">세부 항목을 펼치지 않아도 기존 저장값은 입력 요소에 유지됩니다.
+          값을 직접 지우면 새 계획 변경 이력에 미설정으로 저장됩니다. 저장한 계획은 과거 기록을 수정하지 않고 새 이력으로 추가합니다.
+          목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다.</p>
         <button type="submit" className="btn btn-primary journal-save">새 투자 계획 저장</button>
       </form>
     :<form action={addJournal} className="journal-compose-form">

@@ -45,7 +45,7 @@ export default async function JournalPage({
     <div className="page-intro journal-intro journal-page-heading">
       <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
         <h1>투자 일지</h1>
-        <p>종목별 투자 근거, 목표·손절 계획, 복기를 관리합니다.</p></div>
+        <p>각 종목의 현재 계획과 판단 근거를 먼저 확인하고, 필요할 때 복기하거나 변경 이력을 살펴보세요.</p></div>
       <Link className="btn btn-primary" href="/private/journal/new">+ 일지 작성</Link>
     </div>
     {unavailable && <div className="state-panel" role="alert">

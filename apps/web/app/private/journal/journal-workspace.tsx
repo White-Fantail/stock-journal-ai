@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDecimal } from "../../../lib/format-decimal";
 import Link from "next/link";
+import {decisionGuide} from "../../../lib/journal-decision-guide";
 import type { TigerLedgerRead, TigerPersonalPosition, TigerPersonalOrder, TigerPersonalFill } from "../../../lib/tiger-api";
 import type {
   JournalEntry, JournalKind, JournalPlan, ManualTradeEvent,
@@ -86,6 +87,7 @@ export function JournalWorkspace({
       Number(personalPositions.some(p=>p.symbol===a))||a.localeCompare(b));
   },[entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills]);
   const [selected,setSelected]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
+  useEffect(()=>{if(initialTicker&&symbols.includes(initialTicker))setSelected(initialTicker);},[initialTicker,symbols]);
   const [search,setSearch]=useState("");
   const [view,setView]=useState<View>("activity");
 
@@ -103,6 +105,7 @@ export function JournalWorkspace({
     });
   },[symbols,entries,plans]);
   const active:Summary|undefined=summaries.find(s=>s.ticker===selected);
+  const guide=active?decisionGuide(active.ticker,plans,entries):null;
   const shownSymbols=summaries.filter(s=>s.ticker.toUpperCase().includes(search.trim().toUpperCase()));
   const activeTrades=trades.filter(t=>t.ticker===selected&&t.kind==="EXECUTION");
   const voided=new Set(trades.filter(t=>t.kind==="VOID").map(t=>t.voidsEventId));
@@ -130,6 +133,8 @@ export function JournalWorkspace({
   }
 
   return <div className="journal-root">
+    <details className="journal-metrics-details">
+      <summary>내 투자 기록 현황 보기</summary>
     <div className="journal-metrics" aria-label="최근 조회한 투자 기록 현황">
       <div><span className="journal-metric-mark">▦</span>
         <small>내 관심·보유 종목</small><strong>{enabled?symbols.length:"—"}</strong>
@@ -141,6 +146,7 @@ export function JournalWorkspace({
         <small>투자 논리 미기록</small><strong>{enabled?missingThesis:"—"}</strong>
         <span>투자 계획이 있는 종목  {listedPlans}개</span></div>
     </div>
+    </details>
 
     {!enabled ? <section className="journal-disabled">
       <div className="journal-disabled-icon">✎</div>
@@ -184,16 +190,54 @@ export function JournalWorkspace({
           <div className="journal-current-top">
             <div><span className="journal-kicker">{active?"INVESTMENT NOTES":"MY JOURNAL"}</span>
               <h2>{active?.ticker??"기록할 종목을 선택하세요"}</h2>
-              <p>{active?"투자 근거와 가장 최근 계획":"일지 작성 버튼으로 새로운 종목을 등록할 수 있습니다."}</p>
+              <p>{active?"현재 투자 논리·계획·복기 현황을 먼저 확인하세요.":"첫 종목 계획은 거래 없이도 작성할 수 있습니다."}</p>
             </div>
             {active&&<div className="journal-current-actions">
                <Link className="btn btn-outline" href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>+ 투자 판단 작성</Link>
-               <Link className="btn btn-outline" href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>투자 원칙 복기</Link>
+               {active.plan&&<Link className="btn btn-outline" href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>투자 원칙 복기</Link>}
                <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>투자 전략·계획 관리</Link>
              </div>}
              {active?.watched&&<span className="pill">관심종목</span>}
           </div>
-          {active&&<div className="journal-current-grid">
+          {active&&guide&&<div className="journal-guided-workflow" aria-label="종목별 투자 관리 흐름">
+            <article className="journal-guided-step">
+              <small>1 · 현재 계획</small>
+              <strong>{guide.plan==="EXISTS"?"투자계획 기록됨":"투자계획 작성 필요"}</strong>
+              <p>{active.plan?.invalidationCondition
+                ?"재검토 조건: "+contentPreview(active.plan.invalidationCondition,150):
+                "어떤 조건에서 투자 논리를 재검토할지 기록해 두세요."}</p>
+              <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>
+                {guide.plan==="EXISTS"?"계획 확인·변경":"내 계획 세우기"} →</Link>
+            </article>
+            <article className="journal-guided-step">
+              <small>2 · 판단 기록</small>
+              <strong>{guide.thesis==="EXISTS"?"투자 논리 기록됨":"투자 논리 기록 필요"}</strong>
+              <p>{active.thesis?.content?contentPreview(active.thesis.content,150):
+                "왜 이 종목을 선택했는지, 어떤 가정을 믿고 있는지 기록하세요."}</p>
+              <Link href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>
+                판단 기록 작성 →</Link>
+            </article>
+            <article className="journal-guided-step">
+              <small>3 · 정기 복기</small>
+              <strong>{guide.coverageIncomplete?"일지 일부 조회 · 일정 미확인":
+                !active.plan?"먼저 투자계획을 세우세요":
+                guide.due?"내가 정한 점검 시점 도래":
+                guide.nextReview?"다음 점검 "+displayTime(guide.nextReview):
+                guide.cadenceKnown?"점검 예정일 확인 필요":"정기 점검 주기 미설정"}</strong>
+              <p>{guide.reviewDate?"최근 사용자 복기 "+displayTime(guide.reviewDate)+" · 자동 준수 판정 아님":
+                "투자 이후에도 판단이 유효한지 스스로 점검해 보세요."}</p>
+              {active.plan?<Link href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>원칙 자기평가 →</Link>:
+                <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>점검 주기 설정 →</Link>}
+            </article>
+          </div>}
+          {active&&<div className="journal-primary-reason">
+            <h3>내가 기록한 투자 논리</h3>
+            <p>{active.thesis?.content??"별도 투자 논리 기록이 없습니다. 매매 없이도 투자 논리부터 기록할 수 있습니다."}</p>
+            {active.thesis&&<small>직접 작성 · {displayTime(active.thesis.createdAt)}</small>}
+          </div>}
+          {active&&<details className="journal-investment-details">
+            <summary>세부 투자 전략과 목표가·손절가 보기 (선택 사항)</summary>
+          <div className="journal-current-grid">
             <div><span>최근 투자 논리</span><strong>{active.thesis?
               contentPreview(active.thesis.content,105):"기록 없음"}</strong>
               {active.thesis&&<small>{displayTime(active.thesis.createdAt)} 기준</small>}
@@ -226,6 +270,7 @@ export function JournalWorkspace({
           {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
             <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
           </p>}
+          {active&&</details>}
           {!active&&<div className="journal-actions">
              <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
              <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>
@@ -235,9 +280,10 @@ export function JournalWorkspace({
 
         {active&&<section className="journal-history">
           <div className="journal-section-heading">
-            <div><span className="journal-kicker">DECISIONS OVER TIME</span><h2>{selected}의 기록</h2></div>
+            <div><span className="journal-kicker">기록 · 변경 이력</span><h2>{selected}의 판단 이력과 거래 출처</h2></div>
             <span className="journal-history-count">최근 {history.length}개 기록</span>
           </div>
+          <p className="user-footnote">기록은 작성·변경 순서대로 남습니다. 내가 입력한 거래, Tiger 관측 주문, 독립 검증 체결은 서로 다른 출처입니다.</p>
           <div className="journal-tabs" role="group" aria-label="기록 필터">
             <button type="button" aria-pressed={view==="activity"} onClick={()=>setView("activity")}
               className={`btn ${view==="activity"?"journal-tab-active":""}`}>투자 판단 · 계획</button>

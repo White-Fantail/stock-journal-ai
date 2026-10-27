@@ -539,3 +539,25 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .portfolio-unclassified-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
 .portfolio-unclassified-list a{min-height:44px;padding:10px;background:#f2f8f5;border-radius:9px}
 @media(max-width:640px){.portfolio-action-grid{grid-template-columns:1fr}.portfolio-scope-banner{padding:12px}}
+
+/* B4 journal UX: an authored decision flow precedes optional prices and raw fills. */
+.journal-metrics-details{margin:4px 0 18px}
+.journal-metrics-details>summary{cursor:pointer;color:var(--muted);font-size:.83rem;font-weight:750;min-height:44px;display:flex;align-items:center}
+.journal-metrics-details .journal-metrics{margin:8px 0 16px}
+.journal-guided-workflow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.journal-guided-step{border:1px solid var(--line);background:#fff;border-radius:13px;min-width:0;padding:14px;display:flex;flex-direction:column;gap:7px}
+.journal-guided-step small{font-size:.72rem;font-weight:750;color:var(--muted)}
+.journal-guided-step strong{font-size:.91rem;line-height:1.45;overflow-wrap:anywhere}
+.journal-guided-step p{font-size:.8rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);margin:0;flex:1}
+.journal-guided-step a{font-size:.82rem;font-weight:750;min-height:44px;display:inline-flex;align-items:center}
+.journal-primary-reason{background:#f6faf8;border-radius:13px;padding:16px;margin-top:12px;border:1px solid #ddece5}
+.journal-primary-reason h3{font-size:.86rem;margin:0 0 6px}
+.journal-primary-reason p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:.89rem;color:var(--ink);line-height:1.65;margin:0}
+.journal-primary-reason small{color:var(--muted)}
+.journal-investment-details{border-top:1px solid var(--line);margin-top:16px;padding-top:10px}
+.journal-investment-details>summary{cursor:pointer;color:#285e51;font-size:.84rem;font-weight:750;min-height:44px;display:flex;align-items:center}
+.journal-investment-details .journal-current-grid{margin-top:12px}
+.journal-plan-first{display:grid;gap:12px;margin-bottom:12px}
+.journal-plan-first>label{display:grid;gap:6px}
+@media(max-width:1100px){.journal-guided-workflow{grid-template-columns:1fr}}
+@media(max-width:760px){.journal-guided-step{padding:12px}.journal-primary-reason{padding:12px}}

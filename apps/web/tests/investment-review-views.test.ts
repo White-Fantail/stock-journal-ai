@@ -58,6 +58,21 @@ test("monthly report only uses per-session journal and never treats observed ord
     assert.ok(!ui.includes(forbidden)&&!model.includes(forbidden),forbidden);
 });
 
+test("weekly report uses complete tenant SQL rather than capped journal feeds",()=>{
+  const view=read("../app/private/reports/weekly/page.tsx");
+  const api=read("../lib/saas-trades-api.ts");
+  const layout=read("../app/private/layout.tsx");
+  assert.ok(view.includes("currentWorkspace()"));
+  assert.ok(view.includes("auth()"));
+  assert.ok(view.includes("fetchWeeklyProcessReport(session.user.id,selected)"));
+  assert.ok(!view.includes("fetchJournal("));
+  assert.ok(view.includes("lastNextAction"));
+  assert.ok(view.includes("report.partial"));
+  assert.ok(api.includes("/internal/v1/journal/weekly-process"));
+  assert.ok(api.includes("WEEK_WINDOW_DB_AGGREGATED"));
+  assert.ok(layout.includes('href="/private/reports/weekly"'));
+});
+
 test("private structured plan review is distinct from unverified trade observations",()=>{
  const editor=read("../app/private/journal/review/new/page.tsx");
  const api=read("../lib/saas-trades-api.ts");

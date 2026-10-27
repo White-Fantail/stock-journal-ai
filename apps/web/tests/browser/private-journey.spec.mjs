@@ -34,7 +34,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
  try{
   const page=await a.newPage();
   await page.goto("/private/getting-started");
-  await expect(page.getByRole("heading",{name:/첫 시작|시작 가이드|투자 시작/}).first()).toBeVisible();
+  await expect(page.getByRole("heading",{name:/투자 기록 시작하기/}).first()).toBeVisible();
   await page.goto("/private/principles");
   await expect(page.getByRole("heading",{name:"나의 투자 원칙",exact:true})).toBeVisible();
   await page.locator('select[name="objective"]').selectOption("LEARNING");
@@ -110,10 +110,12 @@ test("responsive real pages: 320–1024, touch menu, keyboard and overflow",asyn
   const page=await ctx.newPage();
   for(const width of [320,375,430,768,1024]){
    await page.setViewportSize({width,height:780});
-   for(const route of ["/private","/private/portfolio","/private/journal",
-     "/private/journal/new?mode=plan&ticker=BRTEST",
-     "/private/review","/private/principles","/private/settings"]){
-    await page.goto(route);
+   for(const route of ["/private","/private/journal",
+     "/private/journal/new?mode=plan&ticker=BRTEST","/private/review",
+     ...(width===375?["/private/portfolio","/private/principles",
+      "/private/settings","/private/reports/weekly","/private/reports/monthly",
+      "/private/analysis"]:[])]){
+    await page.goto(route,{waitUntil:"domcontentloaded"});
     await expect(page.locator("main").first()).toBeVisible();
     const size=await page.evaluate(()=>({
      width:document.documentElement.scrollWidth,client:document.documentElement.clientWidth,

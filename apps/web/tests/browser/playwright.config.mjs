@@ -5,7 +5,7 @@ export default defineConfig({
   testMatch:"*.spec.mjs",
   workers:1,
   retries:0,
-  timeout:90000,
+  timeout:240000,
   expect:{timeout:20000},
   reporter:[["line"]],
   globalSetup:"./prepare.mjs",

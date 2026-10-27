@@ -27,3 +27,8 @@ test("capped journal feed must not produce a definitive review due date",()=>{
  const d=decisionGuide("TEST",[plan("TEST","MONTHLY")],notes,new Date("2026-10-27T00:00:00Z"));
  assert.equal(d.coverageIncomplete,true);assert.equal(d.nextReview,null);
 });
+
+test("plan rationale counts as an investment thesis without duplicate notes",()=>{
+ const d=decisionGuide("TEST",[plan("TEST","MONTHLY")],[],new Date("2026-10-27T00:00:00Z"));
+ assert.equal(d.plan,"EXISTS");assert.equal(d.thesis,"EXISTS");
+});

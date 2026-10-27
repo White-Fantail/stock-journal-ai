@@ -33,6 +33,11 @@ export function sanitizedExcerpt(value:string,max:number):string{
     .replace(/\b(?:sk-|Bearer\s+)[A-Za-z0-9._-]{8,}\b/gi,"[토큰 숨김]")
     .replace(/\b[A-Za-z0-9+/_-]{40,}={0,2}\b/g,"[긴 식별자 숨김]")
     .replace(/\b(?:\d[\s-]?){12,}\d\b/g,"[숫자 식별자 숨김]")
+    // Minimize numerical financial references in user-authored free text.
+    .replace(/(?:계좌(?:\s*번호)?|account(?:\s*(?:number|no\.?|id))?|bank\s*account)\s*(?:[:#=\-]|\s)\s*[A-Za-z0-9][A-Za-z0-9 -]{3,28}/gi,"[계좌 식별정보 숨김]")
+    .replace(/(?:\b(?:USD|NZD|AUD|KRW|EUR)\s*|US\$|NZ\$|A\$|\$|₩|￦)\s*[-+]?\d[\d,]*(?:\.\d+)?/gi,"[금액 숨김]")
+    .replace(/\d[\d,]*(?:\.\d+)?\s*(?:달러|만원|원|주|shares?|dollars?|퍼센트|%)/gi,"[금액·수량 숨김]")
+    .replace(/\b\d{2,}(?:[.,]\d+)*\b/g,"[숫자 숨김]")
     .replace(/\u0000/g,"")
     .trim().slice(0,max);
 }

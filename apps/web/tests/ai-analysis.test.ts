@@ -85,3 +85,14 @@ test("accidentally pasted email, secret, account-like identifier and links are m
     assert.ok(!redacted.includes(secret));
   }
 });
+
+test("AI evidence strips financial numbers and short labeled account identifiers in prose",()=>{
+ const unsafe=[{...entries[0],content:"250달러에 10주 매수, USD 200.50, account no: 12345678, 계좌번호 123-456-789"}];
+ const payload=JSON.stringify(evidenceForAnalysis("STOCK_REVIEW","TSLA",unsafe,plans,events,orders));
+ for(const forbidden of ["250달러","10주","USD 200.50","12345678","123-456-789"]){
+  assert.ok(!payload.includes(forbidden),forbidden);
+ }
+ assert.ok(payload.includes("[금액"));
+ assert.ok(payload.includes("[계좌 식별정보 숨김]"));
+ assert.ok(read("../app/private/analysis/analysis-panel.tsx").includes("모든 민감한 표현이 자동 제거된다고 보장할 수 없으므로"));
+});

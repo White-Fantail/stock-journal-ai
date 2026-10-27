@@ -108,6 +108,7 @@ jobs:
           npm ci --ignore-scripts --no-audit
           npm run typecheck
           npm run test:security
+          node --check tests/browser/private-journey.spec.mjs
       - name: Build Next.js using synthetic CI-only OAuth configuration
         working-directory: apps/web
         env:

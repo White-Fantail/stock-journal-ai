@@ -14,7 +14,7 @@ export function decisionGuide(ticker:string,plans:readonly JournalPlan[],
  const current=[...plans].filter(p=>p.ticker===ticker)
    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))[0]??null;
  const own=entries.filter(e=>e.ticker===ticker);
- const thesis=own.some(e=>e.kind==="THESIS"&&e.content.trim().length>0);
+ const thesis=Boolean(current?.rationale.trim())||own.some(e=>e.kind==="THESIS"&&e.content.trim().length>0);
  const review=own.filter(e=>e.kind==="REVIEW").sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0]??null;
  // The authored feed is bounded. Never present a date as definitive if the
  // collection might be truncated. Events do not automatically prove rule compliance.

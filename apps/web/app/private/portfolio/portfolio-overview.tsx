@@ -43,7 +43,7 @@ export function PortfolioOverview({personal,plans,factors}:{
        <Link href="/private/portfolio/risk-groups/edit">분류 관리 →</Link></div>
      {exposure.state==="UNAVAILABLE"?<p className="user-footnote">{exposure.reason}</p>:<>
        <p className="user-footnote">같은 종목이 여러 위험 요인에 속할 수 있습니다.
-          각 요인의 비중은 전체 Tiger 계좌 순자산 대비 값이고 **요인끼리 합산하면 안 됩니다.**
+          각 요인의 비중은 전체 Tiger 계좌 순자산 대비 값이고 <strong>요인끼리 합산하면 안 됩니다.</strong>
           실제 업종 분류나 가격 상관관계를 측정한 결과가 아닙니다.</p>
        {exposure.groups.length?<div className="user-list">
          {exposure.groups.map(g=><div className="user-list-row" key={g.factor}>

@@ -58,6 +58,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);
   await expect(page.locator(".journal-current")).toContainText("QATEST");
+  await expect(page.locator(".journal-guided-workflow")).toContainText("투자 논리 기록됨");
   await page.goto("/private/journal/new?mode=plan&ticker=QATEST");
   await expect(page.locator('textarea[name="invalidationCondition"]')).toHaveValue("Synthetic thesis invalidated when assumptions change");
   await expect(page.locator('select[name="reviewCadence"]')).toHaveValue("MONTHLY");
@@ -71,6 +72,8 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.locator('textarea[name="nextAction"]').fill(mark);
   await page.getByRole("button",{name:"원칙 자기평가 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?ticker=QATEST&saved=checkin/);
+  await page.goto("/private");
+  await expect(page.locator(".next-review-panel")).toContainText("QATEST");
   await page.goto("/private/review");
   await expect(page.locator(".review-action-item").filter({hasText:"QATEST"})).toContainText(mark);
   await page.locator(".review-action-item").filter({hasText:"QATEST"}).getByRole("link",{name:/실행 여부 기록/}).click();
@@ -142,7 +145,7 @@ test("private primary and More menus keep navigating through full documents",asy
    new URL(r.url()).pathname==="/private/settings");
   await details.locator('a[href="/private/settings"]').click();
   expect((await navigation).resourceType()).toBe("document");
-  await expect(page).toHaveURL(/\\/private\\/settings$/);
+  await expect(page).toHaveURL(/\/private\/settings$/);
  }finally{await ctx.close();}
 });
 test("responsive real pages: 320–1024, touch menu, keyboard and overflow",async({browser})=>{

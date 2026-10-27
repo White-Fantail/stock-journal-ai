@@ -6,6 +6,7 @@ import {currentWorkspace} from "../../../../lib/require-workspace";
 import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJournalPlan,submitBrokerFillNote,submitTigerObservationNote,type JournalKind,type InvestmentStrategyType,type InvestmentHorizon,type ReviewCadence} from "../../../../lib/saas-trades-api";
 import {tigerLedgerRead,tigerPersonalRead} from "../../../../lib/tiger-api";
 import {JournalSymbolPicker} from "./symbol-picker";
+import {PlanRiskCheck} from "./plan-risk-check";
 import {formatDecimal} from "../../../../lib/format-decimal";
 
 export const dynamic="force-dynamic";
@@ -159,7 +160,17 @@ export default async function JournalNewPage({searchParams}:{
     ?[...plans].filter(p=>p.ticker===safeTicker)
       .sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0]??null
     :null;
-  const accounts=results[3].status==="fulfilled"?(results[3].value?.accounts??[]):[];
+  const personal=results[3].status==="fulfilled"?results[3].value:null;
+  const accounts=personal?.accounts??[];
+  // Missing/partial owner-only snapshots are UNKNOWN, not proof of zero holdings.
+  const snapshotAvailable=!!personal && accounts.length>0 &&
+    !personal.readWarnings?.length &&
+    accounts.every(a=>!!a.asOf && !a.partial && !a.truncated &&
+      a.positions.every(p=>!!p.currency && !!p.quantity));
+  const observedHoldings=accounts.flatMap(a=>a.positions
+    .filter(p=>p.symbol===safeTicker)
+    .map(p=>({account:a.alias,quantity:p.quantity,averageCost:p.averageCost,
+      currency:p.currency,asOf:a.asOf})));
   if(mode==="observed" && (!safeTicker || observedPage<0 || !sourceKind ||
     !/^[0-9a-f]{64}$/.test(sourceRef) ||
     (sourceKind==="FILL" && observedPage!==0))) notFound();
@@ -312,23 +323,14 @@ export default async function JournalNewPage({searchParams}:{
           <p className="journal-form-hint">비중은 내가 정한 전체 투자 기준일 수 있습니다. 일부 계좌의 관측 비중만으로 자동 준수 판정하지 않습니다.</p>
         </div>
         </details>
-        <details className="data-disclosure">
-          <summary>목표가·손절가 계획 (선택 사항 · 실제 주문 아님)</summary>
-          <div className="journal-form-three">
-            <label>목표가<input name="targetPrice" inputMode="decimal"
-              defaultValue={existingPlan?.targetPrice??""}
-              pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
-            <label>손절가<input name="stopPrice" inputMode="decimal"
-              defaultValue={existingPlan?.stopPrice??""}
-              pattern="(0|[1-9][0-9]{0,23})([.][0-9]{1,12})?" placeholder="미설정"/></label>
-            <label>통화<input name="priceCurrency" defaultValue={existingPlan?.priceCurrency??"USD"}
-              maxLength={3} pattern="[A-Za-z]{3}"/></label>
-          </div>
-          <p className="journal-form-hint">가격 두 개를 모두 비우면 가격 계획을 해제합니다. 투자 전략·검토 주기는 그대로 독립적으로 기록됩니다.</p>
-        </details>
+        <PlanRiskCheck ticker={safeTicker}
+          initialTarget={existingPlan?.targetPrice??""}
+          initialStop={existingPlan?.stopPrice??""}
+          initialCurrency={existingPlan?.priceCurrency??"USD"}
+          observedHoldings={observedHoldings} snapshotAvailable={snapshotAvailable}/>
         <p className="journal-form-hint">세부 항목을 펼치지 않아도 기존 저장값은 입력 요소에 유지됩니다.
           값을 직접 지우면 새 계획 변경 이력에 미설정으로 저장됩니다. 저장한 계획은 과거 기록을 수정하지 않고 새 이력으로 추가합니다.
-          목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다.</p>
+          목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다. 매수 전 위험 점검 결과는 저장되지 않습니다.</p>
         <button type="submit" className="btn btn-primary journal-save">새 투자 계획 저장</button>
       </form>
     :<form action={addJournal} className="journal-compose-form">

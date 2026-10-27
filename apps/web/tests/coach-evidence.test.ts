@@ -67,13 +67,13 @@ test("missing, stale, fraudulent or incomplete month evidence never goes to the 
   months().map((m,i)=>i===2?{...m,month:"2026-09"}:m),
   months().map((m,i)=>i===1?{...m,report:{...m.report,complete:false}}:m),
   months().map((m,i)=>i===2?{...m,report:{...m.report,noteCount:-1}}:m),
-  months().map((m,i)=>i===0?{...m,report:{...m.report,source:"FAKE"} as MonthlyProcessReport}:m),
+  months().map((m,i)=>i===0?{...m,report:{...m.report,source:"FAKE"} as unknown as MonthlyProcessReport}:m),
   months().map((m,i)=>i===1?{...m,report:{...m.report,selfReviewCount:100}}:m),
  ];
  for(const data of cases)assert.throws(()=>buildCoachingEvidence("TSLA",data,context,now));
  assert.throws(()=>buildCoachingEvidence("TSLA",months(),{...context,ticker:"RKLB"},now));
  assert.throws(()=>buildCoachingEvidence("../../",months(),context,now));
- assert.throws(()=>buildCoachingEvidence("TSLA",months(),{...context,source:"FAKE"} as PlanCheckinContext,now));
+ assert.throws(()=>buildCoachingEvidence("TSLA",months(),{...context,source:"FAKE"} as unknown as PlanCheckinContext,now));
  const empty=months().map(x=>({...x,report:{...x.report,
   noteCount:0,planRevisionCount:0,selfReviewCount:0,
   selfReviewBreakdown:{FOLLOWED:0,PARTIAL:0,DEVIATED:0,UNCERTAIN:0}}}));

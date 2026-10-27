@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import {formatDecimal} from "../../../lib/format-decimal";
+import {parseStatementFeeEvidence,resolvedFeeCurrency,statementMatchesOrder} from "../../../lib/tiger-fee-statement";
 
 const when=(raw:string|null)=> {
   if(!raw) return "시각 미확인";
@@ -87,11 +88,38 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
 }
 
 export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPersonalRead,compact?:boolean,page?:number}){
-  const rows=data.accounts.flatMap(account=>account.orders.map(o=>({alias:account.alias,...o})))
-      .sort((a,b)=>Number(b.at??0)-Number(a.at??0));
+  // Private owner-supplied statement facts live in server-only configuration,
+  // never hardcoded in Git or copied into client-side caches. No other Tiger
+  // account, date, amount or symbol can inherit statement-validated USD.
+  const proof=data.accounts.length===1
+    ?parseStatementFeeEvidence(process.env.POSITIONARY_PERSONAL_FEE_STATEMENT_EVIDENCE)
+    :null;
+  const rows=data.accounts.flatMap(account=>account.orders.map(o=>({
+       alias:account.alias,...o,
+       feeView:resolvedFeeCurrency(o,account.alias,account.assets?.currency??null,proof),
+     }))).sort((a,b)=>Number(b.at??0)-Number(a.at??0));
+  const feeRows=data.accounts.flatMap(account=>account.feeObservations.map(f=>{
+    const order=account.orders.find(o=>o.sourceRef===f.sourceRef &&
+      o.symbol===f.symbol && o.fee!==null && f.total===o.fee);
+    const match=order&&statementMatchesOrder(order,account.alias,
+      account.assets?.currency??null,proof);
+    const currency=(f.status==="MATCHED"&&f.currency)?f.currency:
+      f.status==="CURRENCY_UNKNOWN"&&match?"USD":null;
+    return {...f,currencyForDisplay:currency,
+      statementVerified:f.status==="CURRENCY_UNKNOWN"&&currency==="USD"};
+  }));
+  const statementVerifiedCount=rows.filter(o=>o.feeView.basis==="STATEMENT_MATCH").length;
+  const feeLabel=(currency:string|null,statement:boolean)=>currency
+    ?currency+(statement?" (명세서 대조)":""):"통화 미확인";
   return <section className="state-panel">
     <h2>Tiger 주문 및 부분체결 관측 이력</h2>
     {!!data.readWarnings?.length && <p role="status">Tiger 원본 응답의 일부 항목 형식이 맞지 않아 해당 항목만 제외했습니다. 표시된 자료는 부분 조회 결과이며 전체 주문 이력으로 사용하지 마세요.</p>}
+    {statementVerifiedCount>0&&<p className="user-footnote" role="status">
+      Tiger 원본 API의 수수료 통화 누락분 중 {statementVerifiedCount}건을
+      별도로 제공된 Tiger 명세서의 종목·방향·수량·가격·수수료·미국 동부 체결시각과
+      정확히 대조해 USD로 표시합니다. 그 외 주문의 수수료 통화는 추정하지 않습니다.
+      명세서 대조는 전체 주문 원장·손익 검증이나 개별 체결 수수료 배분을 의미하지 않습니다.
+    </p>}
     <details className="data-disclosure"><summary>주문 자료 범위 및 검증 안내</summary>
       <p>증권사 API에서 수집한 주문 단위 관측값입니다. 한 주문이 여러 차례 체결될 수 있으며 수수료·시간·현금 거래의 완전성은 검증 전입니다. 확정 거래 원장이나 손익 계산에 사용하지 않습니다.</p>
     </details>
@@ -115,7 +143,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <dl className="mobile-data-card-fields">
               <div><dt>평균 체결가</dt><dd>{viewNumber(o.price)} {o.currency}</dd></div>
               <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":viewNumber(o.filled)+"주"}</dd></div>
-              <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {o.feeCurrency??"통화 미확인"}</dd></div>
+              <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</dd></div>
               <div><dt>계좌</dt><dd>{o.alias}</dd></div>
             </dl>
             <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
@@ -131,7 +159,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
             <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
-            <td>{viewNumber(o.fee)} {o.feeCurrency??"통화 미확인"}</td>
+            <td>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</td>
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
           </tr>)}</tbody>
@@ -148,17 +176,17 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         수량 불일치 {data.accounts.reduce((n,a)=>n+a.fillProbeDifference,0)}건 ·
         일부만 확인 {data.accounts.reduce((n,a)=>n+a.fillProbePartial,0)}건</p>
       <p>주문별 수수료 세부 조회: 금액·통화 일치 {data.accounts.reduce((n,a)=>n+a.feeProbeMatched,0)}건 ·
-        금액은 일치하나 수수료 통화 미확인 {data.accounts.reduce((n,a)=>n+a.feeProbeCurrencyUnknown,0)}건 ·
+        금액 일치·Tiger API 통화 누락 {data.accounts.reduce((n,a)=>n+a.feeProbeCurrencyUnknown,0)}건 (명세서 대조 별도) ·
         금액 또는 증거 불일치 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
         조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
-      <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. 수수료 금액·통화 모두 확인된 경우만 별도로 구분해.</p>
+      <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. API 수수료 통화가 빠진 경우에도 별도 명세서와 정확하게 대조한 주문은 USD로 표시하고 있어. 조회 통계는 API 원본 상태를 유지해.</p>
       {data.accounts.some(a=>a.feeObservations.length>0) && <>
         <div className="mobile-data-cards" aria-label="주문 수수료 검증 목록">
-          {data.accounts.flatMap(a=>a.feeObservations).map(f=><article className="mobile-data-card" key={f.sourceRef}>
+          {feeRows.map(f=><article className="mobile-data-card" key={f.sourceRef}>
             <div className="mobile-data-card-head"><strong>{f.symbol}</strong>
-              <small>{f.status==="MATCHED"?"금액·통화 확인":"통화 미확인"}</small></div>
+              <small>{f.status==="MATCHED"?"API 금액·통화 확인":f.statementVerified?"명세서 대조 USD":"API 통화 미확인"}</small></div>
             <dl className="mobile-data-card-fields">
-              <div><dt>주문 수수료 합계</dt><dd>{viewNumber(f.total)} {f.currency??"통화 미확인"}</dd></div>
+              <div><dt>주문 수수료 합계</dt><dd>{viewNumber(f.total)} {feeLabel(f.currencyForDisplay,f.statementVerified)}</dd></div>
             </dl>
             <details className="data-disclosure"><summary>수수료 구성 보기</summary>
               <p>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</p>
@@ -168,10 +196,10 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         <div className="responsive-table desktop-data-table">
         <table style={{width:"100%"}}>
           <thead><tr><th>주문 종목</th><th>수수료 합계</th><th>검증 수준</th><th>수수료 구성</th></tr></thead>
-          <tbody>{data.accounts.flatMap(a=>a.feeObservations).map(f=><tr key={f.sourceRef}>
+          <tbody>{feeRows.map(f=><tr key={f.sourceRef}>
             <td>{f.symbol}</td>
-            <td>{viewNumber(f.total)} {f.currency??"통화 미확인"}</td>
-            <td>{f.status==="MATCHED"?"주문 수수료 합계·통화 확인":"주문 수수료 합계 확인 · 통화 미확인"}</td>
+            <td>{viewNumber(f.total)} {feeLabel(f.currencyForDisplay,f.statementVerified)}</td>
+            <td>{f.status==="MATCHED"?"API 주문 수수료 합계·통화 확인":f.statementVerified?"주문 합계 일치 · USD 명세서 대조":"주문 합계 일치 · API 통화 미확인"}</td>
             <td>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</td>
           </tr>)}</tbody>
         </table>

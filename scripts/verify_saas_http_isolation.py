@@ -145,6 +145,25 @@ def main():
         code,_=request("/internal/v1/journal/plan/create",
             {"subject":A,"plan":{**strategy,"maxAllocationPct":"150"}})
         assert code==400,code
+        # Monthly reporting is a signed owner-only DB aggregate, not a capped
+        # "latest trade" view or a brokerage performance computation.
+        code,month=request("/internal/v1/journal/monthly-process",
+                           {"subject":A,"month":"2026-10"})
+        assert code==200 and month["complete"] is True,(code,month)
+        assert month["source"]=="USER_AUTHORED_PROCESS_ONLY"
+        assert month["coverage"]=="MONTH_WINDOW_DB_AGGREGATED"
+        assert month["noteCount"]>=1 and month["planRevisionCount"]>=3
+        assert month["userTradeRecordCount"]>=1
+        code,other_month=request("/internal/v1/journal/monthly-process",
+                                 {"subject":B,"month":"2026-10"})
+        assert code==200 and other_month["noteCount"]==0,(code,other_month)
+        assert other_month["planRevisionCount"]==0
+        code,_=request("/internal/v1/journal/monthly-process",
+                       {"subject":A,"month":"2026-10","workspaceId":"forged"})
+        assert code==400,code
+        code,_=request("/internal/v1/journal/monthly-process",
+                       {"subject":A,"month":"2027-01"})
+        assert code==400,code
         # A signed request is NOT a broker publication certificate. This
         # synthetic HTTP harness has no approved broker login or grant.
         forged_note={"idempotencyKey":str(uuid4()),"ticker":"TSLA",

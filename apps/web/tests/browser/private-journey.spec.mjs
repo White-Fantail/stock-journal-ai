@@ -113,6 +113,38 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(bpage.getByRole("heading",{name:"투자 일지"})).toBeVisible();
  }finally{await a.close();await b.close();}
 });
+test("private primary and More menus keep navigating through full documents",async({browser})=>{
+ const ctx=await signedContext(browser,B);
+ try{
+  const page=await ctx.newPage();
+  await page.setViewportSize({width:1280,height:820});
+  await page.goto("/private/principles");
+  for(const [href,inMore] of [
+   ["/private/trades",true],["/private/portfolio",false],
+   ["/private/risk",true],["/private/review",false],
+   ["/private/settings",true],["/private",false],
+  ]){
+   const menu=page.locator(".app-nav");
+   if(inMore)await menu.locator(".app-desktop-more summary").click();
+   const navigation=page.waitForRequest(r=>r.isNavigationRequest() &&
+     new URL(r.url()).pathname===href);
+   await menu.locator('a[href="'+href+'"]').click();
+   const request=await navigation;
+   expect(request.resourceType()).toBe("document");
+   await expect(page).toHaveURL(new RegExp(href.replaceAll("/","\\/")+"$"));
+   await expect(page.locator("main").first()).toBeVisible();
+  }
+  await page.setViewportSize({width:375,height:780});
+  await page.goto("/private/principles");
+  const details=page.locator(".app-mobile-more");
+  await details.locator("summary").click();
+  const navigation=page.waitForRequest(r=>r.isNavigationRequest()&&
+   new URL(r.url()).pathname==="/private/settings");
+  await details.locator('a[href="/private/settings"]').click();
+  expect((await navigation).resourceType()).toBe("document");
+  await expect(page).toHaveURL(/\\/private\\/settings$/);
+ }finally{await ctx.close();}
+});
 test("responsive real pages: 320–1024, touch menu, keyboard and overflow",async({browser})=>{
  const ctx=await signedContext(browser,B);
  try{

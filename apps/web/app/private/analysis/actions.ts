@@ -12,11 +12,11 @@ import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
 export type AiState={
   status:"idle"|"error"|"success";message:string;result:AiResult|null;
   evidence:AnalysisEvidence[];asOf:string|null;model:string|null;
-  remainingDay:number|null;
+  remainingDay:number|null;mode:AnalysisMode|null;symbol:string|null;
 };
 const initialAiState:AiState={
   status:"idle",message:"",result:null,evidence:[],asOf:null,
-  model:null,remainingDay:null,
+  model:null,remainingDay:null,mode:null,symbol:null,
 };
 
 const error=(message:string):AiState=>({...initialAiState,status:"error",message});
@@ -100,7 +100,8 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     const result=parseAiResult(content,envelope);
     return {status:"success",message:"AI 분석 결과 · 자동 저장하지 않음",
       result,evidence:envelope.evidence,asOf:envelope.asOf,
-      model:process.env.OPENROUTER_MODEL!,remainingDay:claim.remainingDay};
+      model:process.env.OPENROUTER_MODEL!,remainingDay:claim.remainingDay,
+      mode:mode as AnalysisMode,symbol:mode==="HABITS"?null:symbol as string};
   }catch{
     // Never log provider response, private note content or API credentials.
     return error("분석 요청을 완료할 수 없었습니다. 전송 오류나 제공자 응답 형식을 확인해 주세요. 요청 한도는 차감될 수 있습니다.");

@@ -3,7 +3,7 @@
 import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null};
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null};
 
 export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",initialSymbol}:{
   available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
@@ -65,7 +65,8 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
     {state.status==="error"&&<section className="state-panel" role="alert">
       <h2>분석 불가</h2><p>{state.message}</p>
     </section>}
-    {state.status==="success"&&state.result&&<section className="state-panel" aria-live="polite">
+    {state.status==="success"&&state.result&&state.mode===mode&&
+      (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
       <p className="user-footnote">AI가 제시한 행동은 자동 저장하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
       <p>{state.result.summary}</p>

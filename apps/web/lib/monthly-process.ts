@@ -63,10 +63,11 @@ export function stepMonth(value:string,step:number):string|null{
  const d=new Date(Date.UTC(year,month-1+step,1));
  return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0");
 }
+/** Legacy bounded-list helper kept for isolated tests; the private report uses DB aggregates. */
 export function buildMonthlyProcessReport(
  value:string,notes:readonly JournalEntry[],plans:readonly JournalPlan[],
  trades:readonly ManualTradeEvent[],now=new Date(),
-):MonthlyProcessReport|null{
+):Omit<MonthlyProcessReport,"selfReviewCount"|"selfReviewBreakdown">|null{
  const window=monthWindow(value);
  if(!window||!Number.isFinite(now.getTime())||
     window.start>now.getTime())return null;

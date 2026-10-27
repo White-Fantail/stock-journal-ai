@@ -189,3 +189,18 @@
 ### Final validation boundary
 - All changes only in dev. The exact dev-head GitHub Actions must pass including disposable PostgreSQL 18, CI-only HMAC A/B and Next.js.
 - Production backup restore, actual user Google OAuth A/B, live browser/mobile accessibility and Tiger permission gates remain separate B7/prod-release checks; no main fast-forward is authorized yet.
+
+## B7 — synthetic browser QA implementation (2026-10-27, dev)
+
+### Browser integration beyond static JSX tests
+- A GitHub Actions browser-journeys job provisions a fresh disposable localhost PostgreSQL 18 database and non-BYPASSRLS runtime role, starts the real signed Python SaaS API and Next.js development server. No remote Google/Tiger/private production accounts are provisioned.
+- Synthetic subjects A and B are provisioned via real signed HMAC API; only the external Google callback is replaced with short-lived synthetic CI-only Auth.js cookies. This does not exercise or modify production Google authentication.
+- Playwright exercises actual routes: anonymous redirects/export 401, onboarding, authored investment principles, first ticker plan, immutable plan revision, structured self-review, action completion, full JSON export, cross-tenant B denial and forged checkin protection, A deletion and session invalidation, and B unaffected.
+- 320/375/430/768/1024 real Chromium browser viewports exercise main journeys, representative secondary pages, mobile menu, keyboard focus and horizontal overflow. No screenshot or trace artifacts with financial data.
+- The original SaaS job independently builds Next.js in production mode. Local browser tests run in development mode to use the standard localhost auth-origin policy without any code-level authentication bypass.
+
+### Outstanding operational B7 gates
+- Browser CI does not prove live Google provider OAuth callbacks, production Vercel/Railway source coherence, physical iOS/Android touch, full screen-reader accessibility, actual production backup/restore, Tiger entitlements or independently validated investment returns.
+- Before main release, require exact latest dev HEAD success on both SaaS/security and Chromium jobs, actual production backup restoration proof, reviewed migration 027, main-only deployment targets, independent live real Google A/B OAuth and owner-only Tiger boundary, physical-device tests and rollback readiness.
+- Schema migrations 026 and 027 add append-only, tenant-scoped records; the production application rollback does not reverse these forward-only migrations.
+- B7 operational release remains BLOCKED pending those live operator checks. No main merge or deployment is authorized by this document.

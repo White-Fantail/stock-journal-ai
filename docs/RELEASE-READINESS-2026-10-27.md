@@ -142,3 +142,14 @@ failed, pending or canceled check.
 성과 게시를 위한 별도 근거 연결이 필요하다. 현재 앱의 `미검증`/
 `계산 보류`는 숫자 검증 없는 원금·수익률 추정을 방지하기 위해 유지한다.
 **P5_LIVE_RETURN_PUBLICATION = BLOCKED**.
+
+## B7 browser QA and release gate addendum (2026-10-27)
+
+Earlier audit paragraphs describe their own point-in-time state, including then-current migration 025 and older deployment SHAs. Do not treat those values as the latest release candidate.
+
+- The dev candidate includes additive schema 026 (investor principles) and 027 (self-reported action followups). Validate all approved manifest versions and checksums on disposable CI and separately via authorized read-only production status after any deployment. Applied=25 is not a valid assertion for newly deployed B7 code.
+- New Playwright tests run actual locally rendered Next.js pages and real signed Python SaaS API against disposable PostgreSQL. Artificial A/B Auth.js tokens substitute only for the external Google callback in the test runner, NOT in product code. They do not exercise real OAuth or real Tiger accounts.
+- The exact release candidate SHA must have both saas-postgres-isolation and Synthetic browser user journeys (Chromium; no live OAuth) completed successfully. Older green CI jobs do not clear a newer revision.
+- Operator go/no-go: NO-GO until production backup-restoration evidence, guarded 027 migration readiness, live Google OAuth owner/nonowner isolation, real iOS/Android at 320/375/430 plus zoom/keyboard, Railway/Vercel commit coherence and safe app rollback are documented.
+- After an explicitly authorized main fast-forward, verify Railway migrations, both Railway service source commits, Vercel main deploy, real A/B Google login isolation, disposable account plan/checkin/action/export/delete flows, touch/overflow, and one scheduled read-only Tiger service run. Do not place real customer financial fixtures in public CI.
+- A code rollback must never attempt to undo applied DB migrations. P5 user confirmation is not evidence that live broker returns can be calculated.

@@ -36,7 +36,7 @@ def main():
        JOIN saas_users u ON u.id=w.owner_user_id
        WHERE u.google_subject=%s""",(first,)).fetchone()[0]
   with trade.transaction():
-   trade.execute("SELECT set_config('saas.workspace_id',%s,true)",(scope,))
+   trade.execute("SELECT set_config('saas.workspace_id',%s,true)",(str(scope),))
    for sql in ("UPDATE saas_risk_factor_revisions SET factors='{}'","DELETE FROM saas_risk_factor_revisions"):
     try:
      with trade.transaction():trade.execute(sql)

@@ -128,3 +128,17 @@ failed, pending or canceled check.
 - Before deploying, re-confirm exact HEAD CI, backup restore and production
   migration status **through version 025**, plus iOS/Android week/report and
   manual risk-factor create/export/delete flows for two isolated users.
+
+
+## P5 검증 사용자 확인 기록 · 2026-10-27
+
+사용자는 P5 검증 절차를 모두 확인했다고 명시했다. 프로젝트 관리상
+**P5_VALIDATION_USER_CONFIRMED = COMPLETE** 로 기록한다.
+이는 *사용자 승인*이지 운영 Tiger API 원본·일별 NAV·TWR 중간 계산과
+비교 대상 데이터를 이 보고서가 독립 수집·재현했다는 의미가 아니다.
+
+실제 `/private/performance`의 계좌별 월·분기·연간 투자 수익률 공개에는
+검증된 기간별 자산·입출금 및 환산 원천, 사용자/계좌별 보안 경계와
+성과 게시를 위한 별도 근거 연결이 필요하다. 현재 앱의 `미검증`/
+`계산 보류`는 숫자 검증 없는 원금·수익률 추정을 방지하기 위해 유지한다.
+**P5_LIVE_RETURN_PUBLICATION = BLOCKED**.

@@ -169,10 +169,17 @@ test("responsive real pages: 320–1024, touch menu, keyboard and overflow",asyn
    if(width<=1024){
     const response=await page.goto("/private");
     const details=page.locator(".app-mobile-more");
-    if(await details.count()!==1) throw Error("Mobile menu missing "+JSON.stringify({
-      width,status:response?.status(),url:page.url(),
-      title:await page.title(),headings:await page.locator("h1").allTextContents()
-    }));
+    if(await details.count()!==1){
+      const authProbe=await ctx.request.get(ORIGIN+"/api/auth/session");
+      const authData=await authProbe.json().catch(()=>({}));
+      const cookieNames=(await ctx.cookies(ORIGIN)).map(c=>c.name);
+      throw Error("Mobile menu missing "+JSON.stringify({
+        width,status:response?.status(),url:page.url(),
+        title:await page.title(),headings:await page.locator("h1").allTextContents(),
+        authStatus:authProbe.status(),sessionHasSubject:Boolean(authData?.user?.id),
+        hasSessionCookie:cookieNames.some(n=>n.includes("session-token"))
+      }));
+    }
     await details.locator("summary").click({timeout:12000});
     await expect(details.getByRole("link",{name:"설정"})).toBeVisible();
     const rect=await details.locator("summary").boundingBox();

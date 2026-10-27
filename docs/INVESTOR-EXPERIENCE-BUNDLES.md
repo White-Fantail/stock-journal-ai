@@ -169,3 +169,23 @@
 - Mandatory verification: completed full CI on exact dev HEAD, including TypeScript, Next.js production build, synthetic A/B PostgreSQL, and guarded migrations. Static tests are not screenshots or live smartphone/browser proof.
 - No new DB migration or external quote schedule; migration 026 from B1 stays intact.
 - Main deployment and production-state validation remain separately gated; no authorization to perform a merge from this status note.
+
+
+## Third delivery implementation (2026-10-27, dev; B5+B6)
+
+### B5 — Closed-loop self-authored next actions
+- Review hub reads latest per-ticker checkin and explicitly latest owner-reported follow-up state, even for event-driven plans with no artificial due date.
+- A separate editor at /private/review/action/new records DONE, NOT_DONE, NOT_APPLICABLE or UNCERTAIN, with an optional evidence note. Previous self-review/next-action text stays immutable. Latest status can be revised by appending another immutable record; only a newer review can supersede an older action.
+- Forward-only migration 027 grants scoped SELECT/INSERT and FORCE RLS. Independent signed endpoints check fresh identity/membership every time; idempotency prevents replay mutation; UI fetch failure cannot be displayed as "nothing outstanding".
+- Export includes full action follow-up history, account deletion handles child FK ordering, and synthetic A/B HTTP tests cover tenant isolation, old-record preservation and exact user removal.
+- /private/review, /private/alerts, weekly and monthly reports link to this flow; aggregate counts remain unchanged, rather than misrepresenting action follow-ups as brokerage or adherence evidence.
+
+### B6 — Contextual opt-in AI reflection
+- Journal selected ticker links to a preselected AI coaching page; the choice is validated against the authenticated user’s scoped available symbols.
+- Coaching evidence adds at most one relevant explicit owner-reported latest-action status, linked to the latest check-in of the same ticker. The provider receives only scrubbed bounded note text and the user-reported state; no workspace/account IDs, checkin IDs, position values, quote-trigger data or auto-generated conclusions.
+- Existing OpenRouter ZDR/denial routing, per-request consent, strict citation and provider-result parsing, daily/monthly quota, and separate editorial acceptance remain.
+- An absent follow-up proves nothing; the assistant asks whether an action was done rather than asserting its completion. AI suggestions never write a journal revision or place an order.
+
+### Final validation boundary
+- All changes only in dev. The exact dev-head GitHub Actions must pass including disposable PostgreSQL 18, CI-only HMAC A/B and Next.js.
+- Production backup restore, actual user Google OAuth A/B, live browser/mobile accessibility and Tiger permission gates remain separate B7/prod-release checks; no main fast-forward is authorized yet.

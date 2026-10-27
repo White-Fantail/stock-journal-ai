@@ -34,7 +34,7 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   deletion.add("saas_users")
   # Require explicit justification for every exception, or the safety gate fails.
   self.assertEqual(expected-deletion,NON_TENANT|RETIRED|CASCADE)
-  for table in ("saas_journal_plan_checkins","saas_investor_principle_revisions","saas_tiger_personal_sync_health",
+  for table in ("saas_journal_plan_checkins","saas_review_action_followups","saas_investor_principle_revisions","saas_tiger_personal_sync_health",
                 "saas_ai_request_quotas","saas_reconciliation_versions"):
    self.assertIn(table,deletion)
   self.assertIn('if confirmation != "DELETE_MY_ACCOUNT":',code)
@@ -50,6 +50,7 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   self.assertIn("FROM saas_journal_plan_checkins",backend)
   self.assertIn('"planSelfReviews":',backend)
   self.assertIn("len(checkins) > _LIMIT",backend)
+  self.assertIn("len(action_followups) > _LIMIT",backend)
   self.assertIn("Array.isArray(result.planSelfReviews)",frontend)
   self.assertIn("FROM saas_review_action_followups",backend)
   self.assertIn('"actionFollowups":',backend)

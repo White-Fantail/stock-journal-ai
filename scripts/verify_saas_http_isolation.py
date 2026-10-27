@@ -169,6 +169,39 @@ def main():
         code,_=request("/internal/v1/journal/checkin/context",
                        {"subject":A,"ticker":"TSLA","workspaceId":"forged"})
         assert code==400,code
+        # A signed next-action report is explicit and owner-scoped. It does not
+        # mark any broker trade or past self-assessment as verified/compliant.
+        code,action_empty=request("/internal/v1/review/actions",{"subject":A})
+        assert code==200 and action_empty["complete"] and len(action_empty["items"])==1
+        assert action_empty["items"][0]["state"] is None
+        code,other_action=request("/internal/v1/review/actions",{"subject":B})
+        assert code==200 and other_action["items"]==[]
+        followup={"idempotencyKey":str(uuid4()),"checkinId":checkin_created["id"],
+          "state":"NOT_DONE","note":"Synthetic unfinished personal action"}
+        code,first_followup=request("/internal/v1/review/action/resolve",{
+          "subject":A,"actionFollowup":followup})
+        assert code==200 and first_followup["source"]=="USER_REPORTED_ACTION_ONLY",(code,first_followup)
+        code,replay_followup=request("/internal/v1/review/action/resolve",{
+          "subject":A,"actionFollowup":followup})
+        assert code==200 and replay_followup["replayed"]
+        code,_=request("/internal/v1/review/action/resolve",{"subject":A,
+          "actionFollowup":{**followup,"state":"DONE"}})
+        assert code==409,code
+        code,_=request("/internal/v1/review/action/resolve",{"subject":B,
+          "actionFollowup":{**followup,"idempotencyKey":str(uuid4())}})
+        assert code==404,code
+        code,_=request("/internal/v1/review/actions",{"subject":A,"workspaceId":"forged"})
+        assert code==400,code
+        code,_=request("/internal/v1/review/action/resolve",{"subject":A,
+          "actionFollowup":{**followup,"workspaceId":"forged"}})
+        assert code==400,code
+        code,second_followup=request("/internal/v1/review/action/resolve",{
+          "subject":A,"actionFollowup":{**followup,"idempotencyKey":str(uuid4()),
+            "state":"DONE","note":"Synthetic self-reported completion"}})
+        assert code==200 and second_followup["id"]!=first_followup["id"]
+        code,action_ready=request("/internal/v1/review/actions",{"subject":A})
+        assert code==200 and action_ready["items"][0]["state"]=="DONE"
+        assert action_ready["items"][0]["nextAction"]==checkin["nextAction"]
         # Broker-free personal principles are explicitly authored and tenant isolated.
         principles={"idempotencyKey":str(uuid4()),"objective":"GROWTH",
           "horizon":"OVER_TEN_YEARS","baseCurrency":"NZD","maxSinglePct":"15",
@@ -266,6 +299,8 @@ def main():
         assert code==200 and out["complete"] and len(out["journal"])==2 and len(out["trades"])==1
         assert len(out["plans"])==3 and all(p["isBrokerOrder"] is False for p in out["plans"])
         assert any(p["strategyType"]=="LONG_TERM" for p in out["plans"])
+        assert len(out["actionFollowups"])==2
+        assert [x["state"] for x in out["actionFollowups"]]==["NOT_DONE","DONE"]
         assert len(out["planSelfReviews"])==1,(out.get("planSelfReviews"))
         assert out["planSelfReviews"][0]["id"]==checkin_created["id"]
         assert out["planSelfReviews"][0]["planRevisionId"]==strategic["id"]
@@ -277,7 +312,7 @@ def main():
         assert len(out["riskFactors"])==1
         assert out["riskFactors"][0]["id"]==created_factor["id"]
         code,out=request("/internal/v1/journal/export",{"subject":B})
-        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[] and out["investorPrinciples"]==[]
+        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[] and out["investorPrinciples"]==[] and out["actionFollowups"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -329,6 +364,7 @@ def main():
             for table in (
                 "saas_journal_plan_revisions",
                 "saas_journal_plan_checkins",
+                "saas_review_action_followups",
                 "saas_risk_factor_revisions",
                 "saas_investor_principle_revisions",
                 "saas_journal_records",

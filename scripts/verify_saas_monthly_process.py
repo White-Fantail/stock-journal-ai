@@ -4,6 +4,9 @@ Disposable PostgreSQL only; tenant scope always set through the non-BYPASSRLS
 saas_trade_runtime role. The script does not touch operational data.
 """
 import os
+import pathlib
+import sys
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 from datetime import datetime,timezone
 from uuid import uuid4
 import psycopg

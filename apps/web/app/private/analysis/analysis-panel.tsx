@@ -92,7 +92,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
       {state.evidence.some(e=>e.kind==="MONTHLY_PROCESS")&&<p className="user-footnote">
         지난달에 적은 개선 과제를 이번 달에 실제로 수행했는지 확인하려면,
         <Link href="/private/journal"> 투자일지에서 종목을 선택해 새 자기평가</Link>를 작성하세요.
-        AI 답변만으로 행동 완료 여부를 확정하지 않습니다.
+        AI 답변만으로 행동 완료 여부를 확정하지 않습니다. 반복적으로 원칙에서 벗어났다는 표시는 자기평가에서만 도출하며 두려움·충동·탐욕 여부를 자동 판정하지 않습니다.
       </p>}
       <p style={{marginTop:18}}>이 분석은 투자 판단 복기를 돕는 참고 자료이며, 매수·매도 추천이나 수익 보장을 제공하지 않습니다.</p>
     </section>}

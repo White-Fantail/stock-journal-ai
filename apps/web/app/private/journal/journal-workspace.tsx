@@ -252,8 +252,8 @@ export function JournalWorkspace({
               <small>나의 계획 · 주문 아님</small>
                <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>손절가 {active.plan?"변경":"입력"} →</Link>
             </div>
-          </div>}
-          {active&&<div className="journal-current-grid" aria-label="투자 전략과 위험 계획">
+          </div>
+          <div className="journal-current-grid" aria-label="투자 전략과 위험 계획">
             <div><span>투자 전략</span>
               <strong>{active.plan?.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong>
               <small>{active.plan?.investmentHorizon?HORIZON_LABEL[active.plan.investmentHorizon]??"기간 확인 필요":"투자 기간 미설정"}</small>
@@ -266,11 +266,11 @@ export function JournalWorkspace({
               <strong>{active.plan?.reviewCadence?CADENCE_LABEL[active.plan.reviewCadence]??"확인 필요":"미설정"}</strong>
               <small>가격 감시 없이 스스로 검토하는 주기입니다.</small>
             </div>
-          </div>}
+          </div>
           {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
             <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
           </p>}
-          {active&&</details>}
+          </details>}
           {!active&&<div className="journal-actions">
              <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
              <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>

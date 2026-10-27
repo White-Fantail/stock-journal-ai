@@ -154,6 +154,9 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             FROM saas_risk_factor_revisions
             WHERE workspace_id=%s ORDER BY created_at,id LIMIT %s""",
             (scope["workspaceId"],_LIMIT+1)).fetchall()
+        action_followups = trade_conn.execute("""SELECT id,checkin_id,state,note,created_at
+            FROM saas_review_action_followups WHERE workspace_id=%s
+            ORDER BY created_at,id LIMIT %s""",(scope["workspaceId"],_LIMIT+1)).fetchall()
         checkins = trade_conn.execute("""SELECT
             id,ticker,plan_revision_id,journal_id,self_assessment,
             next_action,created_at
@@ -162,7 +165,8 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
         """,(scope["workspaceId"],_LIMIT+1)).fetchall()
         if (len(trades) > _LIMIT or len(notes) > _LIMIT
                 or len(plans) > _LIMIT or len(checkins) > _LIMIT
-                or len(risk_factors) > _LIMIT or len(principles) > _LIMIT):
+                or len(risk_factors) > _LIMIT or len(principles) > _LIMIT
+                or len(action_followups) > _LIMIT):
             raise TradeConflict("Export exceeds safe complete bound; paginated export required")
     from services.saas_api.journal_plans import _row as _plan_row
     from services.saas_api.investor_principles import _row as _principle_row
@@ -175,6 +179,9 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
                 "rationale":row[3],"createdAt":row[4].isoformat(),
                 "source":"USER_CLASSIFIED_ONLY",
             } for row in risk_factors],
+            "actionFollowups":[{"id":str(r[0]),"checkinId":str(r[1]),
+              "state":r[2],"note":r[3],"createdAt":r[4].isoformat(),
+              "source":"USER_REPORTED_ACTION_ONLY"} for r in action_followups],
             "planSelfReviews": [{
                 "id": str(r[0]), "ticker": r[1],
                 "planRevisionId": str(r[2]), "journalId": str(r[3]),

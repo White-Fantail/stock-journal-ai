@@ -32,6 +32,7 @@ def delete_account(identity_conn, subject: str, confirmation: object) -> dict:
         # Any new referencing table must be added here *and* to the disposable
         # delete/export regression suite before release. Failure rolls back all.
         for table in (
+            "saas_review_action_followups",
             "saas_journal_plan_checkins",
             "saas_risk_factor_revisions",
             "saas_investor_principle_revisions",

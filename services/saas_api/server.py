@@ -20,6 +20,7 @@ from services.saas_api.monthly_process import monthly_process
 from services.saas_api.weekly_process import weekly_process
 from services.saas_api.risk_factors import list_risk_factors, save_risk_factors
 from services.saas_api.investor_principles import get_principles, save_principles
+from services.saas_api.action_followups import list_followups, create_followup
 from services.saas_api.journal_broker_links import create_broker_note
 from services.saas_api.journal_observation_links import create_observation_note
 from services.saas_api.journal_plans import list_plans,create_plan
@@ -70,7 +71,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
             "/internal/v1/journal/export", "/internal/v1/journal/monthly-process", "/internal/v1/journal/weekly-process", "/internal/v1/risk-factors/list", "/internal/v1/risk-factors/create",
-            "/internal/v1/principles/get", "/internal/v1/principles/save", "/internal/v1/journal/checkin/context", "/internal/v1/journal/checkin/create", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
+            "/internal/v1/principles/get", "/internal/v1/principles/save",
+            "/internal/v1/review/actions", "/internal/v1/review/action/resolve", "/internal/v1/journal/checkin/context", "/internal/v1/journal/checkin/create", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
             "/internal/v1/journal/plan/create", "/internal/v1/ai/claim", "/internal/v1/account/delete", "/internal/v1/trades/detail",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
@@ -143,7 +145,7 @@ class Handler(BaseHTTPRequestHandler):
                                                 "/internal/v1/journal/create",
                                                 "/internal/v1/journal/plan/create",
                                                 "/internal/v1/journal/checkin/create", "/internal/v1/risk-factors/create",
-                                                "/internal/v1/principles/save")
+                                                "/internal/v1/principles/save", "/internal/v1/review/action/resolve")
                         else _MAX_BYTES)
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
@@ -250,7 +252,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200,out)
             if (path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/") or
                 path.startswith("/internal/v1/risk-factors/") or
-                path.startswith("/internal/v1/principles/") or path == "/internal/v1/ai/claim"):
+                path.startswith("/internal/v1/principles/") or
+                path.startswith("/internal/v1/review/") or path == "/internal/v1/ai/claim"):
                 # Financial operations ALWAYS require a separate
                 # non-BYPASSRLS, SELECT/INSERT-only Postgres login role.
                 scoped_dsn = os.environ.get("SAAS_TRADE_DATABASE_URL")
@@ -270,6 +273,8 @@ class Handler(BaseHTTPRequestHandler):
                                 {"subject","week"} if path == "/internal/v1/journal/weekly-process" else
                                 {"subject"} if path == "/internal/v1/risk-factors/list" else
                                 {"subject"} if path == "/internal/v1/principles/get" else
+                                {"subject"} if path == "/internal/v1/review/actions" else
+                                {"subject","actionFollowup"} if path == "/internal/v1/review/action/resolve" else
                                 {"subject","principles"} if path == "/internal/v1/principles/save" else
                                 {"subject","riskFactors"} if path == "/internal/v1/risk-factors/create" else
                                 {"subject","ticker"} if path == "/internal/v1/journal/checkin/context" else
@@ -299,6 +304,10 @@ class Handler(BaseHTTPRequestHandler):
                             out=monthly_process(identity_conn,trade_conn,data.get("subject"),data.get("month"))
                         elif path == "/internal/v1/journal/weekly-process":
                             out=weekly_process(identity_conn,trade_conn,data.get("subject"),data.get("week"))
+                        elif path == "/internal/v1/review/actions":
+                            out=list_followups(identity_conn,trade_conn,data.get("subject"))
+                        elif path == "/internal/v1/review/action/resolve":
+                            out=create_followup(identity_conn,trade_conn,data.get("subject"),data.get("actionFollowup"))
                         elif path == "/internal/v1/principles/get":
                             out=get_principles(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/principles/save":

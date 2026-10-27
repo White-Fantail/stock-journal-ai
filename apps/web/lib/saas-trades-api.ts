@@ -54,11 +54,12 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" | "/internal/v1/risk-factors/list" | "/internal/v1/risk-factors/create" |
       "/internal/v1/principles/get" | "/internal/v1/principles/save" |
+      "/internal/v1/review/actions" | "/internal/v1/review/action/resolve" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/journal/checkin/context" | "/internal/v1/journal/checkin/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | InvestorPrinciplesInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | InvestorPrinciplesInput | ReviewActionInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -72,6 +73,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/weekly-process" ? {subject,week:payload} :
     path === "/internal/v1/risk-factors/create" ? {subject,riskFactors:payload} :
     path === "/internal/v1/principles/save" ? {subject,principles:payload} :
+    path === "/internal/v1/review/action/resolve" ? {subject,actionFollowup:payload} :
     path === "/internal/v1/journal/checkin/context" ? {subject,ticker:payload} :
     path === "/internal/v1/journal/checkin/create" ? {subject,checkin:payload} :
     path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
@@ -239,12 +241,13 @@ export async function submitJournal(subject: string, entry: JournalEntryInput): 
 export async function exportFullJournal(subject: string): Promise<unknown> {
   const result = await postS2("/internal/v1/journal/export",subject) as {
     complete?: boolean; format?: string; journal?:unknown;
-    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;investorPrinciples?:unknown;
+    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;investorPrinciples?:unknown;actionFollowups?:unknown;
   };
   if (result?.complete !== true || result?.format !== "stock-journal-ai.v1"
       || !Array.isArray(result.journal) || !Array.isArray(result.trades)
       || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews)
-      || !Array.isArray(result.riskFactors) || !Array.isArray(result.investorPrinciples))
+      || !Array.isArray(result.riskFactors) || !Array.isArray(result.investorPrinciples) ||
+      !Array.isArray(result.actionFollowups))
     throw new Error("Journal export is incomplete");
   return result;
 }
@@ -429,4 +432,42 @@ export async function submitInvestorPrinciples(subject:string,input:InvestorPrin
   if(!result||result.source!=="USER_AUTHORED_ONLY"||
     !/^[0-9a-f-]{36}$/i.test(result.id??""))throw new Error("Invalid principles confirmation");
   return result.id!;
+}
+
+
+export type ReviewActionState="DONE"|"NOT_DONE"|"NOT_APPLICABLE"|"UNCERTAIN";
+export type ReviewAction=Readonly<{
+ checkinId:string;ticker:string;nextAction:string;selfAssessment:PlanSelfAssessment;
+ checkinAt:string;state:ReviewActionState|null;note:string|null;resolvedAt:string|null;
+}>;
+export type ReviewActionInput=Readonly<{
+ idempotencyKey:string;checkinId:string;state:ReviewActionState;note:string|null;
+}>;
+export async function fetchReviewActions(subject:string):Promise<readonly ReviewAction[]>{
+ const result=await postS2("/internal/v1/review/actions",subject) as {
+  source?:string;complete?:boolean;items?:ReviewAction[];
+ };
+ const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+ const states=["DONE","NOT_DONE","NOT_APPLICABLE","UNCERTAIN"];
+ if(result?.source!=="USER_REPORTED_ACTION_ONLY"||result.complete!==true||
+    !Array.isArray(result.items)||result.items.length>100||
+    !result.items.every(i=>i&&uuid.test(i.checkinId)&&
+      /^[A-Z0-9.:-]{1,32}$/.test(i.ticker)&&
+      typeof i.nextAction==="string"&&i.nextAction.length>0&&i.nextAction.length<=1500&&
+      ["FOLLOWED","PARTIAL","DEVIATED","UNCERTAIN"].includes(i.selfAssessment)&&
+      Number.isFinite(Date.parse(i.checkinAt))&&
+      (i.state===null||states.includes(i.state))&&
+      (i.note===null||(typeof i.note==="string"&&i.note.length<=1000))&&
+      (i.resolvedAt===null||Number.isFinite(Date.parse(i.resolvedAt)))))
+   throw new Error("Incomplete review action history");
+ return result.items;
+}
+export async function submitReviewAction(subject:string,input:ReviewActionInput):Promise<string>{
+ const result=await postS2("/internal/v1/review/action/resolve",subject,input) as {
+  id?:string;source?:string;
+ };
+ if(result?.source!=="USER_REPORTED_ACTION_ONLY"||
+    !/^[0-9a-f-]{36}$/i.test(result?.id??""))
+   throw new Error("Action follow-up confirmation unavailable");
+ return result.id!;
 }

@@ -35,6 +35,7 @@ REQUIRED_TABLES = (
     "saas_journal_plan_checkins",
     "saas_risk_factor_revisions",
     "saas_investor_principle_revisions",
+    "saas_review_action_followups",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -69,6 +70,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "024_plan_checkins.sql", # append-only user plan-review self assessments
     "025_user_risk_factors.sql", # tenant-authored revision history for thematic exposure
     "026_investor_principles.sql", # append-only investor-authored principles
+    "027_review_action_followups.sql", # immutable user-confirmed previous action status
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

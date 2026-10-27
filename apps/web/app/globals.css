@@ -447,3 +447,21 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
  .app-shell .portfolio-account-values strong,
  .app-shell .portfolio-account-values small{overflow-wrap:anywhere}
 }
+
+/* Completed-period selectors and verification conditions remain touch-friendly. */
+.performance-period-group{margin-top:15px}
+.performance-period-group h3{font-size:.92rem;margin:0 0 9px}
+.performance-period-links{display:flex;gap:8px;flex-wrap:wrap}
+.performance-period-link{display:inline-flex;min-height:44px;align-items:center;padding:9px 12px;
+ border:1px solid var(--line);border-radius:10px;font-size:.86rem;text-decoration:none;max-width:100%}
+.performance-period-link.is-active{font-weight:750;border-color:var(--brand);background:var(--surface-2,#f2f7f5)}
+.performance-proof-row{align-items:flex-start;gap:12px}
+.performance-proof-row>div{min-width:0}
+.performance-proof-row small{display:block;overflow-wrap:anywhere}
+@media(max-width:760px){
+ .performance-period-links{gap:7px}
+ .performance-period-link{min-height:44px;flex:1 1 auto;justify-content:center}
+ .performance-proof-row{flex-direction:column;align-items:flex-start;gap:5px}
+ .performance-proof-row .user-list-value{text-align:left;max-width:100%}
+ .performance-page .portfolio-account-values{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

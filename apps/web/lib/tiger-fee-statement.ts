@@ -29,7 +29,7 @@ const REF=/^[a-f0-9]{64}$/;
 function amount(raw:string|null):bigint|null{
  if(raw===null||!MONEY.test(raw))return null;
  const [whole,fraction=""]=raw.split(".");
- return BigInt(whole)*1000000000000n+BigInt(fraction.padEnd(12,"0"));
+ return BigInt(whole)*BigInt("1000000000000")+BigInt(fraction.padEnd(12,"0"));
 }
 function easternOrderTime(raw:string|null):string|null{
  if(!raw||!/^\d{13}$/.test(raw))return null;
@@ -65,7 +65,7 @@ export function parseStatementFeeEvidence(raw:string|undefined):StatementFeeEvid
        typeof row.symbol!=="string"||!SYM.test(row.symbol)||
        (row.side!=="BUY"&&row.side!=="SELL")||
        typeof row.quantity!=="string"||amount(row.quantity)===null||
-       amount(row.quantity)===0n||
+       amount(row.quantity)===BigInt(0)||
        typeof row.price!=="string"||amount(row.price)===null||
        typeof row.fee!=="string"||amount(row.fee)===null||
        typeof row.tradeTimeEastern!=="string"||!TIME.test(row.tradeTimeEastern)||

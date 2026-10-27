@@ -2,10 +2,10 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {auth} from "../../../../auth";
 import {currentWorkspace} from "../../../../lib/require-workspace";
-import {fetchJournal,fetchJournalPlans,fetchManualTrades} from "../../../../lib/saas-trades-api";
+import {fetchMonthlyProcessReport} from "../../../../lib/saas-trades-api";
 import {tigerLedgerRead} from "../../../../lib/tiger-api";
 import {assessPerformanceReadiness} from "../../../../lib/performance-readiness";
-import {buildMonthlyProcessReport,currentNzMonth,stepMonth} from "../../../../lib/monthly-process";
+import {currentNzMonth,stepMonth} from "../../../../lib/monthly-process";
 
 export const metadata={title:"월간 투자 복기 · Positionary"};
 export const dynamic="force-dynamic";
@@ -24,12 +24,10 @@ export default async function MonthlyReviewReport({searchParams}:{
   const requested=typeof params.month==="string"?params.month:current;
   const month=/^20[2-9][0-9]-(?:0[1-9]|1[0-2])$/.test(requested)&&requested<=current
     ?requested:current;
-  const [notes,plans,trades,broker]=await Promise.allSettled([
-    fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
-    fetchManualTrades(session.user.id),tigerLedgerRead(),
+  const [summary,broker]=await Promise.allSettled([
+    fetchMonthlyProcessReport(session.user.id,month),tigerLedgerRead(),
   ]);
-  const complete=notes.status==="fulfilled"&&plans.status==="fulfilled"&&trades.status==="fulfilled";
-  const report=complete?buildMonthlyProcessReport(month,notes.value,plans.value,trades.value.events,now):null;
+  const report=summary.status==="fulfilled"?summary.value:null;
   const readiness=assessPerformanceReadiness(broker.status==="fulfilled"?broker.value:null,null);
   const prev=stepMonth(month,-1);
   const next=stepMonth(month,1);
@@ -52,8 +50,8 @@ export default async function MonthlyReviewReport({searchParams}:{
     </nav>
     {!report?<section className="state-panel" role="alert">
       <h2>이 달의 기록을 완전하게 계산할 수 없습니다.</h2>
-      <p>투자 기록 조회가 실패했거나 안전한 조회 상한을 넘어섰습니다.
-        일부 기록으로 완전한 월간 활동을 단정하지 않습니다. 종목별 일지는 별도로 계속 볼 수 있습니다.</p>
+      <p>인증된 투자 기록 집계가 실패했거나 종목 수가 안전한 집계 한도를 넘어섰습니다.
+        일부 기록을 전체 월간 활동으로 제시하지 않습니다. 종목별 일지는 계속 확인할 수 있습니다.</p>
       <Link href="/private/journal" className="btn btn-outline">투자일지 확인 →</Link>
     </section>:<>
       <div className="user-summary-grid">
@@ -107,7 +105,7 @@ export default async function MonthlyReviewReport({searchParams}:{
           </div>}
       </section>
       <p className="journal-limit">집계 기간: {label(report.start)}부터 {label(report.end)} 직전까지 (NZ).
-        사용자 작성 기록·투자계획·직접 입력 거래를 읽어 화면에서 계산했습니다.
+        사용자별 DB에서 해당 월의 작성 기록·계획 변경·직접 입력 거래를 전체 기간 기준으로 집계했습니다. 최신 50·200건 목록 제한을 적용하지 않았습니다.
         증권사 원장 전체 이력이나 손익, 배당, 세금, 환율, 수익률 검증에 사용할 수 없습니다.
         생성 결과를 DB에 저장하거나 외부 AI로 전송하지 않습니다.</p>
     </>}

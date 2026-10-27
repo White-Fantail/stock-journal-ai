@@ -245,7 +245,8 @@ class Handler(BaseHTTPRequestHandler):
                     consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
                     out=delete_account(identity_conn,data.get("subject"),data.get("confirmation"))
                 return self.reply(200,out)
-            if path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/") or path == "/internal/v1/ai/claim":
+            if (path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/") or
+                path.startswith("/internal/v1/risk-factors/") or path == "/internal/v1/ai/claim"):
                 # Financial operations ALWAYS require a separate
                 # non-BYPASSRLS, SELECT/INSERT-only Postgres login role.
                 scoped_dsn = os.environ.get("SAAS_TRADE_DATABASE_URL")

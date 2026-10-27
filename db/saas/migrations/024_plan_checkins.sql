@@ -38,5 +38,29 @@ CREATE POLICY saas_plan_checkin_insert ON saas_journal_plan_checkins FOR INSERT
     workspace_id = NULLIF(current_setting('saas.workspace_id',true),'')::uuid
     AND author_user_id = NULLIF(current_setting('saas.user_id',true),'')::uuid
   );
+-- Defense in depth: limited runtime SQL cannot relabel an unrelated PLAN
+-- or claim a non-REVIEW record belongs to the current author's checkin.
+CREATE FUNCTION saas_assert_plan_checkin_integrity()
+RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM saas_journal_plan_revisions p
+    WHERE p.workspace_id=NEW.workspace_id AND p.id=NEW.plan_revision_id
+      AND p.ticker=NEW.ticker
+  ) OR NOT EXISTS (
+    SELECT 1 FROM saas_journal_records j
+    WHERE j.workspace_id=NEW.workspace_id AND j.id=NEW.journal_id
+      AND j.ticker=NEW.ticker AND j.author_user_id=NEW.author_user_id
+      AND j.entry_kind='REVIEW'
+  ) THEN
+    RAISE EXCEPTION 'Invalid plan checkin references'
+      USING ERRCODE='23514';
+  END IF;
+  RETURN NEW;
+END;
+$;
+CREATE TRIGGER trg_saas_assert_plan_checkin_integrity
+  BEFORE INSERT ON saas_journal_plan_checkins
+  FOR EACH ROW EXECUTE FUNCTION saas_assert_plan_checkin_integrity();
 GRANT SELECT,INSERT ON saas_journal_plan_checkins TO saas_trade_runtime;
 -- No UPDATE/DELETE/forced position state, and no historical revision rewrite.

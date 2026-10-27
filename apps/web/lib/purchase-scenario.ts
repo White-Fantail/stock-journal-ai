@@ -1,0 +1,74 @@
+/** Source-neutral hypothetical cash-funded equity purchase. No quote retrieval,
+ * FX conversion, orders, recommendations or realized-loss claims.
+ * Fixed-point arithmetic avoids rounded cap comparisons and float drift.
+ */
+const SCALE=10n**12n;
+const DEC=/^(?:0|[1-9][0-9]{0,20})(?:\.[0-9]{1,12})?$/;
+function decimal(raw:string):bigint|null{
+ if(!DEC.test(raw))return null;
+ const [w,f=""]=raw.split(".");
+ return BigInt(w)*SCALE+BigInt(f.padEnd(12,"0"));
+}
+function format(v:bigint,places=2):string{
+ const factor=10n**BigInt(12-places);
+ const rounded=(v+factor/2n)/factor;
+ const unit=10n**BigInt(places);
+ return (rounded/unit).toString()+"."+(rounded%unit).toString().padStart(places,"0");
+}
+function pct(n:bigint,d:bigint){return format(n*100n*SCALE/d);}
+export type PurchaseScenarioInput={
+ nav:string;cash:string;heldValue:string;heldShares:string;
+ price:string;buyShares:string;maxAllocationPct:string|null;
+ stop:string|null;
+};
+export type PurchaseScenario =
+ | {state:"INVALID";reason:string}
+ | {state:"READY";purchaseAmount:string;beforePercent:string;afterPercent:string;
+    cashLeft:string;withinCash:boolean;capExceeded:boolean|null;
+    capReference:string|null;maxAdditionalUnderCap:string|null;
+    drawdowns:{ten:string;twenty:string;thirty:string};
+    stopImpact:string|null;stopWarning:string|null;
+    existingPositionValue:string;afterPositionValue:string;};
+export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScenario{
+ const nav=decimal(i.nav),cash=decimal(i.cash),heldValue=decimal(i.heldValue),
+   heldShares=decimal(i.heldShares),price=decimal(i.price),buyShares=decimal(i.buyShares);
+ if(nav===null||nav<=0n||cash===null||cash<0n||cash>nav||
+   heldValue===null||heldValue<0n||heldValue>nav||heldShares===null||heldShares<0n||
+   price===null||price<=0n||buyShares===null||buyShares<0n||
+   (heldShares===0n)!==(heldValue===0n)||cash+heldValue>nav+SCALE/100n)
+   return {state:"INVALID",reason:"같은 통화로 된 순자산·가용 현금·기존 보유 평가액·수량을 확인해 주세요."};
+ const amount=price*buyShares/SCALE;
+ const after=heldValue+amount;
+ const cap=i.maxAllocationPct===null?null:decimal(i.maxAllocationPct);
+ if(cap!==null&&(cap<=0n||cap>100n*SCALE))
+   return {state:"INVALID",reason:"최대 비중은 0보다 크고 100% 이하여야 합니다."};
+ const limit=cap===null?null:nav*cap/(100n*SCALE);
+ const budget=limit===null?null:limit>heldValue?limit-heldValue:0n;
+ const maxAddition=budget===null?null:
+   ((budget* SCALE /price)/SCALE).toString();
+ // Ensure rounded display never determines the compliance decision.
+ let stopImpact:string|null=null,stopWarning:string|null=null;
+ if(i.stop){
+   const stop=decimal(i.stop);
+   if(stop===null||stop<=0n)stopWarning="손절 기준가 형식을 확인해 주세요.";
+   else if(stop>=price || (heldShares>0n && stop*heldShares/SCALE>=heldValue))
+     stopWarning="손절 기준가가 매수가 또는 보유분 참고가격 이상이므로 가격 하락 위험을 산출하지 않습니다.";
+   else{
+     const beforeDrop=heldValue-stop*heldShares/SCALE;
+     const newDrop=(price-stop)*buyShares/SCALE;
+     stopImpact=format(beforeDrop+newDrop);
+   }
+ }
+ return {state:"READY",purchaseAmount:format(amount),
+   beforePercent:pct(heldValue,nav),afterPercent:pct(after,nav),
+   cashLeft:format(cash>amount?cash-amount:0n),withinCash:amount<=cash,
+   capExceeded:limit===null?null:after>limit,
+   capReference:cap===null?null:format(cap),
+   maxAdditionalUnderCap:maxAddition,
+   drawdowns:{
+     ten:format(after*10n/nav),
+     twenty:format(after*20n/nav),thirty:format(after*30n/nav),
+   },
+   stopImpact,stopWarning,
+   existingPositionValue:format(heldValue),afterPositionValue:format(after)};
+}

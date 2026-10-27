@@ -248,10 +248,10 @@ jobs:
           python - <<'PY'
           import os, subprocess, sys
           import psycopg
-          from services.saas_api.schema_admin import manifest
+          from services.saas_api.schema_admin import manifest, APPROVED_AUTO_MIGRATIONS
           suites = (("journal_upgrade_empty", False), ("journal_upgrade_occupied", True))
           sources = manifest()
-          assert len(sources)>4 and sources[-1][0] == "023_investment_strategy_plan.sql"
+          assert len(sources)>4 and [name for name,_,_ in sources]==sorted(APPROVED_AUTO_MIGRATIONS)
           with psycopg.connect(os.environ["SAAS_DATABASE_URL"], autocommit=True) as c:
               for name, _ in suites:
                   c.execute("CREATE DATABASE " + name)

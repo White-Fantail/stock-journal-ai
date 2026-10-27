@@ -434,3 +434,16 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .journal-page nav.user-panel-head .home-actions{width:100%;flex-wrap:wrap}
   .app-shell .journal-page nav.user-panel-head .home-actions .btn{min-height:44px;flex:1 1 125px}
 }
+
+/* Consolidated account-risk rows, without forcing horizontal scroll on phones. */
+.portfolio-overview-row{align-items:flex-start;gap:12px;min-width:0}
+.portfolio-overview-row>div{min-width:0}
+.portfolio-overview-row .user-list-value{max-width:55%;text-align:right;overflow-wrap:anywhere}
+.portfolio-overview-row small{display:block;line-height:1.55}
+@media(max-width:760px){
+ .portfolio-overview-row{display:flex;flex-wrap:wrap;align-items:flex-start}
+ .portfolio-overview-row>div:first-child{flex:1 1 120px}
+ .portfolio-overview-row .user-list-value{flex:1 1 125px;max-width:100%}
+ .app-shell .portfolio-account-values strong,
+ .app-shell .portfolio-account-values small{overflow-wrap:anywhere}
+}

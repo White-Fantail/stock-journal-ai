@@ -10,8 +10,8 @@ import {AnalysisPanel} from "./analysis-panel";
 export const dynamic="force-dynamic";
 export const metadata={title:"AI 투자 복기 · Positionary"};
 
-export default async function AnalysisPage(){
-  const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
+export default async function AnalysisPage({searchParams}:{searchParams:Promise<{mode?:string}>}){
+  const [workspace,session,params]=await Promise.all([currentWorkspace(),auth(),searchParams]);
   if(!workspace||!session?.user?.id)redirect("/login");
   const id=session.user.id;
   const data=await Promise.allSettled([
@@ -31,8 +31,9 @@ export default async function AnalysisPage(){
     <div className="page-intro">
       <span className="breadcrumb"><Link href="/private/journal">← 투자 일지</Link></span>
       <h1>AI 투자 복기</h1>
-      <p>어떤 판단을 했는지, 계획을 얼마나 기록했는지, 반복되는 습관은 무엇인지 돌아봅니다.</p>
+      <p>어떤 판단을 했는지, 지난 점검의 다음 행동을 다시 확인했는지, 반복되는 습관은 무엇인지 돌아봅니다.</p>
     </div>
-    <AnalysisPanel available={aiConfigured()} symbols={safe}/>
+    <AnalysisPanel available={aiConfigured()} symbols={safe}
+      initialMode={params.mode==="COACHING"?"COACHING":"STOCK_REVIEW"}/>
   </main>;
 }

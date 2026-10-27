@@ -20,7 +20,7 @@ test("consolidated Tiger account risk is observable but never presented as audit
  const page=read("../app/private/portfolio/page.tsx");
  const view=read("../app/private/portfolio/portfolio-overview.tsx");
  const model=read("../lib/portfolio-overview-risk.ts");
- assert.ok(page.includes("<PortfolioOverview personal={personal} plans={plans}/>"));
+ assert.ok(page.includes("<PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>"));
  assert.ok(page.includes("tigerPersonalRead()"));
  assert.ok(page.includes("fetchJournalPlans(session.user.id)"));
  assert.ok(view.includes("completePortfolioVerified")||view.includes("검증된 거래 원장"));

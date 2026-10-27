@@ -21,8 +21,15 @@ from uuid import UUID
 
 from .backfill import source_key
 
-CATEGORIES=("DEPOSIT_WITHDRAW","FOREX","CORPORATE_ACTION")
-SEGMENTS=("SEC","FUT")
+# A cash posting (TRADE) is NOT evidence of a broker fill. Commission/fees,
+# transfers and awards likewise remain observations until independently matched.
+# Do not include ALL: it duplicates the economic rows from these filters.
+CATEGORIES=(
+    "DEPOSIT_WITHDRAW","FOREX","CORPORATE_ACTION","FEE",
+    "FUNDS_TRANSFER","TRADE","ACTIVITY_AWARD","OTHER",
+)
+# Documented Tiger account segments, including funds if this account supports it.
+SEGMENTS=("SEC","FUT","FUND")
 PAGE_SIZE=50
 MAX_PAGES=20
 MAX_DAYS=89

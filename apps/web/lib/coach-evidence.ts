@@ -48,8 +48,8 @@ export function buildCoachingEvidence(
     const window=monthWindow(schedule.month);
     const currentCutoff=Date.parse(r.checkedAsOf);
     if(!window ||
-       r.start!==new Date(window.start).toISOString() ||
-       r.end!==new Date(window.end).toISOString() ||
+       Date.parse(r.start)!==window.start ||
+       Date.parse(r.end)!==window.end ||
        !(currentCutoff>=window.start && currentCutoff<window.end) ||
        (schedule.partial && currentCutoff>now.getTime()) ||
        r.reviewCount>r.noteCount || r.selfReviewCount>r.reviewCount ||

@@ -1,58 +1,40 @@
 # Positionary
 
-> **Brand:** Positionary is the public product name. The technical repository and deployment identifiers may remain `stock-journal-ai` until a separately reviewed rename.
+**Positionary** is a Google-first, tenant-isolated investment journal for long-term decision quality—not a trading terminal. The public site is [positionary.vercel.app](https://positionary.vercel.app/). The code repository intentionally retains its historical name `stock-journal-ai`.
 
-> **P0–P3 source baseline (2026-10-26):** The active Git branches have been rewritten onto a parentless clean root with no historical customer finance files. GitHub retains old SHA objects/caches pending upstream cleanup. P1/P2 Google identity, HMAC nonce/rate protection, tenant journal, export, account removal and dedicated runtime DB login have CI coverage. **Production P2 activation remains off pending real two-user Google sign-in, production DB-role and backup/restore evidence.** See [P3 readiness gates](docs/P3-READINESS.md).
+## What the application does today
 
-> **Current direction (2026-10-25):** A multi-user, Google-first, privacy-first investment journal and analysis SaaS. **Tiger Trade / Tiger Brokers is the first broker adapter.** The broker is authoritative for broker-provided facts; each authenticated workspace owns its own derived journals, annotations and projections. This public GitHub repository is **source code and documentation only**, never a customer portfolio datastore.
+- **Google sign-in and personal workspace:** Auth.js sessions, server-verified workspace membership, account export/deletion, HMAC-protected Railway API and PostgreSQL FORCE RLS.
+- **Dashboard:** account observations (when authorized), authored investment notes, due plan reviews and unfinished self-reported follow-up actions.
+- **Portfolio:** per-account Tiger observations with timestamps, per-currency guards, concentration and user-classified overlapping risk factors; historical signed-ledger figures **only when separately verified and released**.
+- **Investment journal:** separate pages for new entries and append-only investment-plan revisions; rationale, assumptions/invalidation, horizon, target/stop *annotations*, user reviews and follow-up status.
+- **Transactions:** manually confirmed transactions, Tiger order/partial-fill **observations**, and independently verified broker fills are **different sources**; missing fees/coverage are never inferred.
+- **Review:** weekly/monthly process reports, risk calculator, review center and long-horizon performance-readiness checks. Unverified total returns and P/L are withheld.
+- **Optional AI:** user-initiated, explicit consent, bounded/redacted excerpts to OpenRouter ZDR-only providers, evidence-linked reflection; no automatic trades or implicit background prompts.
+- **Tiger integration:** a restricted **single-owner temporary read-only RSA bridge** can provide private observations to its designated Google account. The separate multi-user Tiger partner OAuth workflow exists in source but requires independent provider approval and read-only scope verification before public enablement.
 
-## Product
-- A customer signs in with Google and receives a private workspace; no GitHub login or account is required.
-- First broker: **Tiger**, with a guarded per-user enterprise OAuth2 authorization-code flow, encrypted grant vault and tenant-scoped asset/position snapshots in the `dev` source. Real authorization stays disabled until commercial approval, exact read-only scopes and dedicated runtime DB are verified. Adapters for other brokers are planned.
-- On approved connection, bounded, replay-safe imports will discover authorized accounts, fetch executions, positions and supported account activity, verify coverage, reconcile differences, and construct a normalized portfolio and journal in a tenant-isolated database.
-- Manually confirmed trades and authored investment notes remain possible independently; they are **clearly distinct** from broker-confirmed facts. The retired customer CSV importer will not be reintroduced.
-- AI-assisted trade reviews, research, strategy tracking and alerts will be opt-in. This is **not** an automated order execution, custody or investment-advice service.
+The service intentionally has **no real-time or delayed-price target/stop alerts, quote polling loop, trade execution, price-triggered buy/sell signals, CSV importer, or GitHub-hosted personal portfolio**. Recorded targets are notes, not broker orders.
 
-## Verified source-code status — not a production acceptance certificate
-| Area | Repository state | Remaining gate |
-| --- | --- | --- |
-| Google/Workspace | Auth.js Google flow, backend provision/resolve and membership checks exist | Verify live signed-in two-user isolation, backend roles and operational safeguards |
-| Multi-tenant SaaS DB | Versioned schema 001–009, FORCE RLS and hostile A/B vault tests exist | Verify actual hosted schema, least-privilege runtime roles, backup/restore |
-| Manual trade log | Tenant event and compensating-VOID code, feature-gated UI | Enable only after negative HTTP isolation and deployment tests |
-| Tiger | Provider picker, guarded OAuth2 callback, AES-GCM grant vault, refresh/revocation, manual account binding after authorized Tiger GET, encrypted asset/position snapshots; CI-tested in `dev` | Obtain Tiger NZ third-party app approval, prove query-only scopes, configure secrets/dedicated RLS DB, test live account and add durable transaction backfill worker |
-| Portfolio, review and AI | Versioned private P4 staging and independently signed **disabled** broker-ledger release gate; user-authored journal UI exists | Verify live Tiger source/coverage, add independent issuer and customer-visible broker ledger/portfolio, then opt-in AI |
-| CSV ingestion | Retired | Keep historic migration 004/005 for checksum continuity, **no uploads** |
+## Documentation
 
-The existing Vercel and Railway service configuration is not evidence that every flow is operational. Tiger live authorization, transaction backfill, reconciliation, payments and public launch are **not** certified by this README. The P3 connection UI is not a functioning production login until official Tiger partner authorization is approved.
+| Guide | Purpose |
+| --- | --- |
+| [Product](docs/PRODUCT.md) | User capabilities, limits and product rules |
+| [Architecture](docs/ARCHITECTURE.md) | Runtime boundaries and security |
+| [Data model](docs/DATA-MODEL.md) | Provenance, migrations, completeness and financial release gates |
+| [Roadmap](docs/ROADMAP.md) | Outstanding engineering and operational work |
+| [Operations](docs/OPERATIONS.md) | Tests, deployments, privacy and incident procedures |
+| [Broker adapters](docs/saas/BROKER-ADAPTERS-V1.md) | Tiger-first read-only integration |
+| [Database deployment](docs/saas/HOSTED-SCHEMA-BOOTSTRAP.md) | Restricted roles and guarded migrations |
+| [Tiger partner OAuth](docs/saas/TIGER-P3-OAUTH.md) | Prerequisites for broad customer authorization |
+| [Temporary personal Tiger bridge](temporary/tiger_personal/README.md) | Current owner-only integration |
 
-## Repository layout
-- `apps/web/` — Next.js authenticated web application
-- `services/saas_api/` — Python internal HMAC API and guarded hosted schema runner
-- `services/broker_connectors/` — provider-neutral read-only contract, registry and initial Tiger adapter
-- `services/tiger_sync/` — reusable **offline-only** bounded Tiger normalization/collection utilities
-- `services/saas_api/tiger_oauth.py` — separate enterprise OAuth2 grant service (currently fail-closed without third-party approval)
-- `db/saas/migrations/` — immutable SaaS schema chain (001–009; 004/005 retained solely for history)
-- `tests/`, `scripts/verify_saas_*.py` — synthetic data and isolation tests
-- `docs/` — current product, design, operating and milestone documents
+Implementation rules: [AGENTS.md](AGENTS.md). Component guides: [SaaS API](services/saas_api/README.md), [normalizers](services/tiger_sync/README.md), [contracts](packages/contracts/README.md).
 
-**Tiger P3 deployment controls:** [Partner OAuth and vault runbook](docs/saas/TIGER-P3-OAUTH.md). Source-code tests on `dev` do not grant Tiger production approval.
+## Repository and release
 
-**P4 release gate:** [Private broker-ledger publication contract](docs/saas/P4-PUBLICATION.md). The dedicated publisher login has no password by default; the release flag is off and no production publication endpoint exists.
+`apps/web/` is the Next.js 16 web application on Vercel; `services/saas_api/` is the Python service on Railway; `db/saas/migrations/` contains 27 immutable incremental migrations; `services/broker_connectors/` contains shared provider contracts and reconciliation code; `temporary/tiger_personal/` contains the isolated owner-only runner.
 
-**Canonical documents:** [Product](docs/PRODUCT.md) · [Architecture](docs/ARCHITECTURE.md) · [Data model](docs/DATA-MODEL.md) · [Tiger / adapter contract](docs/saas/BROKER-ADAPTERS-V1.md) · [Delivery roadmap](docs/ROADMAP.md) · [Operations and privacy](docs/OPERATIONS.md).
+Make changes on `dev`; verify before **fast-forward only** to `main`. Vercel and Railway production follow `main`. The SaaS CI runs TypeScript/Next build, Python and disposable PostgreSQL tenant security, plus synthetic Playwright Chromium journeys. **Green CI does not prove real Google OAuth, Tiger provider entitlements or real-device behavior.** Enforce required checks in GitHub branch rules; this remains an operational task until confirmed.
 
-## Development and deployment
-Implement on `dev`, test, then promote to `main` by fast-forward. Only `main` should be deployed to production. The Railway API pre-deploy schema hook supports **previously reviewed** forward migrations with main/service identity pinning, checksum checking, transaction and backup-policy attestation; it does **not** authorize enabling S2 or real broker use.
-
-```sh
-python scripts/check_public_repo.py
-python -m unittest discover -s tests -p 'test_saas_*.py' -v
-python -m unittest discover -s tests -p 'test_broker_connectors.py' -v
-cd apps/web && npm ci && npm run typecheck
-```
-
-## Public-history privacy limitation
-The historical personal trade files and investment narratives have been removed from the **current** branch tree. Git commit history, old branch references, forks, pull-request diffs and caches can retain copies; a normal deletion commit cannot erase them. See [privacy remediation](docs/OPERATIONS.md#public-git-history-remediation) for the separate history-purge process. Do not treat source-tree deletion as an irreversible deletion of all previously published GitHub copies.
-
-
-**Investment journal links:** the dev-only, forward migration 018 and a signed internal note route let users attach their own immutable `TRADE_NOTE` rationale to a specific independently verified Tiger execution (not simply a matching ticker). A later corrected/blocked provider review removes its *current verified* label but preserves the human note and linked historical reference. This route is inactive for uncertified Tiger data and never places orders.
+This public repository stores **code, synthetic tests and public documentation only**. Never commit API credentials, customer transactions, brokerage statements or private investment rationales. Active refs were rewritten in October 2026; separately hosted old GitHub objects, caches and external clones are not proven erased.

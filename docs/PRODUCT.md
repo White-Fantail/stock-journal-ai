@@ -1,34 +1,46 @@
-# Product specification — Positionary (formerly Stock Journal AI)
-**Version:** 3.0 · **Date:** 2026-10-25 · **Status:** Approved product direction, not a claim of released features.
+# Positionary — current product contract
 
-**User experience:** The public-facing service name is Positionary. The pre-approval UI must distinguish available actions from provider-approval-gated features; it must not simulate portfolio balances or imply that Tiger has approved the hosted OAuth integration.
+**As of:** 2026-10-27. Implementation is available on `main`; feature eligibility still depends on authenticated account permissions, broker approval and verified evidence. A code path does not establish a live financial fact.
 
-## Mission
-Give individual investors a trustworthy, low-friction account of **what actually happened**, why they made each trade, how their strategies are performing and what evidence should prompt a review. Replace GitHub-file-based private ledgers with a tenant-isolated SaaS. Brokerage-reported facts arrive from the connected broker; AI augments reflection rather than making trading decisions.
+## Purpose and audience
 
-## Audience and user journey
-A user signs in with Google, receives a private workspace, reviews broker support, grants read-only access to Tiger when supported, selects authorized accounts and requests an initial history sync. The system reports covered dates and unknown intervals, builds a reconciled journal/positions view, then lets the user annotate rationale, thesis, risk/exit plans and later lessons. Without a broker connection, manually confirmed trades remain available, labeled `USER_ASSERTED`, not broker-verified.
+Help individual investors record **why** they invested, check whether their assumptions still hold, understand concentration, and develop consistent review habits. Positionary does not recommend when to buy or sell and does not execute orders.
 
-## MVP product requirements
-1. Secure signup, independent private workspace, account export/deletion, consent and connection status.
-2. Tiger-first broker authorization **only after official third-party capability approval**; secure grant lifecycle, reauthorization and disconnect.
-3. Reproducible broker import from bounded execution/orders/positions windows, completeness diagnostics, duplicate/fee/FX/corporate-action review, no guesswork.
-4. Trade timeline, holdings, cost basis by declared method, realized/unrealized performance (with clearly cited market price/time and FX provenance), reconciliation status and exceptions.
-5. Per-execution notes, reason, thesis, strategy, target/stop **as journal annotations**, trade review, calendar/tags/search, export.
-6. Transparent audit/source badges: broker-confirmed vs user-entered vs derived; display when data is missing or stale.
-7. User-invoked AI analysis and optional digests only with explicit consent, configured data minimization, LLM cost controls and audit.
+## User journey (implemented)
 
-## Later scope
-Additional adapters (e.g. IBKR), subscription plans, notifications, stock screening and sharing. Other brokers cannot use the Tiger SDK contract directly; every provider must implement a tested versioned adapter. Multi-user team sharing is deferred.
+1. Sign in using Google. Only the verified numeric Google subject resolves the private workspace.
+2. Optionally set investment principles: personal objective, horizon, display currency, review cadence, risk limits and note. This is not a mandatory onboarding gate.
+3. Enter an investment plan on its **own page**: ticker, rationale, optional strategy/horizon, invalidation criteria, target and stop annotations, maximum allocation and review cadence. Plans are append-only revisions.
+4. Use the dashboard to see dated account observations, due reviews and past follow-up tasks. Unavailable sources are labeled, not zeroed.
+5. Open a ticker from the journal to see **current plan → decision history → self-assessment**. Record subsequent review and manually confirm the status of an authored next action.
+6. Review portfolio concentration, overlapping self-classified risk factors, weekly/monthly process metrics and the limits of available performance evidence.
+7. Optionally request AI stock review, habit analysis or coaching after **fresh, explicit consent**; the result cites bounded input evidence and is not persisted automatically.
 
-## Explicit exclusions
-No trade/order execution, transfers, auto rebalancing, guaranteed recommendations, social publication of portfolios, GitHub-account prerequisite, GitHub as financial database, broker password/private-key collection, and **no customer CSV-upload importer**. Never infer that a broker API provides complete historical investment rationale.
+Primary navigation: **Home, Portfolio, Investment journal, Review**, with other tools in **More**. Private navigation uses ordinary full-document anchors to avoid stalled client-side route transitions. Browse/list pages do not embed create/edit forms; use dedicated routes.
 
-## Success measures
-A user can join without GitHub; unrelated users cannot observe each other's state across HTTP, DB, queues and exports; Tiger sync can accurately show covered/partial intervals and recover after reauth; every published fill has a verifiable source key; manual notes survive resync; support can investigate sync failures without inspecting secrets or other users' portfolios.
+## Financial meaning and display requirements
 
-## Privacy
-The public repository contains zero real customer financial records. Private tenant data lives in a protected service DB/secret store with backup/retention and self-service export/deletion. Broker data must never be shipped to a client other than its authorized workspace.
+| Source | User-facing meaning |
+| --- | --- |
+| Tiger owner-only RSA bridge | Observed account snapshots, order/transaction/fee/quote/health observations; partial/unknown coverage is explicitly possible |
+| Authorized partner OAuth (future launch) | Customer-bound Tiger accounts **only after** commercial grant and scope verification |
+| Manual execution entry | `USER_ASSERTED`; neither broker verified nor an instruction to trade |
+| Independently attested released broker ledger | Separate, signed, scoped read model for validated historical fills/FIFO; can disappear from *current verified* display when latest review is BLOCKED |
+| User plan/note/check-in/follow-up | User-authored and versioned; plan target/stop does **not** place an actual order |
+| AI explanation | Generated commentary based on selected evidence; never broker verification or investment advice |
 
-## Investment journal workspace — implemented in dev, gated
-The private journal groups only a freshly authenticated workspace's own authored notes, target/stop revisions and recently **user-asserted** manual executions by ticker. The timeline preserves THESIS, STRATEGY, REVIEW, TRADE_NOTE, WATCHLIST and explicit plan-revision events. Target/stop are user intentions, never placed orders, contingent trades or validated prices. Missing values remain `unset`; each new plan revision is a complete snapshot, so deleting a target or stop is explicit and audit-preserving. An interactive ticker list uses client-side state without putting holdings/watchlist tickers in URLs or persistent browser storage. Neither Tiger historical importer nor AI analysis is implied. S2 remains disabled until production security gates are independently cleared.
+Historical totals, net returns, cross-currency totals, costs, fees and current valuation must **not** be guessed from incomplete provider history. The long-horizon performance page is an evidence-readiness view; it does not publish an unverified return percentage. Daily Tiger delayed-price observations, when permitted, are non-triggering contextual estimates—not live portfolio accounting.
+
+## Privacy and AI
+
+All private routes require a fresh workspace check. Railway stores tenant financial records behind FORCE RLS and restricted runtime roles. Signed API traffic includes replay/rate protections; secrets remain outside browser and repository. User-owned journal data supports bounded export and account deletion.
+
+OpenRouter AI is **per-invocation opt-in** and constrained to ZDR/data-collection-denied provider parameters; the model receives bounded/filtered notes, not structured account IDs, balances, fee amounts or raw order payloads. Redaction of prose is best-effort: a user can still include sensitive details in free text. Do not claim guaranteed anonymization. AI daily/monthly quota and evidence-reference validation are enforced server-side.
+
+## Deliberate exclusions
+
+No trading, order cancel/replace, transfers, customer RSA-key upload, CSV-import product, real-time quote subscriptions, quote-triggered alerts or notifications, background quote polling, unsupervised investment advice, or reconstruction of old GitHub portfolio records.
+
+## Scope and release status
+
+The interactive journal/review/dashboard, OAuth login and tenant API are deployed. Tiger **personal** access is only for one configured owner. Public Tiger partner authorization is distinct and remains approval-gated. Real two-account Google production testing, actual provider account coverage, mobile physical-device acceptance, and financial publication require separate operational evidence. See [Roadmap](ROADMAP.md) and [Operations](OPERATIONS.md).

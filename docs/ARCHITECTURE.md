@@ -1,48 +1,54 @@
-# Current target architecture — Stock Journal AI SaaS
-**Date:** 2026-10-25 · **Canonical design v3.0**
+# Positionary — deployed architecture and trust boundaries
+
+**Reviewed:** 2026-10-27. This describes code deployed from `main`, not future permission to enable gated features.
 
 ```text
-Browser ── HTTPS ── Vercel Next.js
-                   ├─ Auth.js Google OIDC, verified subject
-                   ├─ server-side workspace membership + feature gates
-                   ├─ journal/portfolio/analysis views
-                   └─ signed internal API requests (no broker secrets)
-                                    │
-                                    ▼
-                          Railway Python SaaS API
-                   ├─ identity + tenant membership resolver
-                   ├─ manual-trade event service (flagged)
-                   └─ future broker-job authorization service
-                                    │
-                   ┌────────────────┴────────────────┐
-                   ▼                                 ▼
-         Railway Postgres                    Railway trusted workers
-       ├─ tenant private data               ├─ tenant-bound sync jobs
-       ├─ FORCE RLS + scoped roles           ├─ provider registry / adapters
-       ├─ source and journal events          ├─ encrypted-credential access
-       └─ projections/audit                  ├─ staging + reconciliation
-                                             └─ market/opt-in AI research
-                                                    │
-                                      Tiger read-only first; others later
+Browser (Google Auth.js JWT; no Tiger secret)
+  -> Vercel / apps/web (Next.js 16, server components/actions)
+      -> per-request currentWorkspace() [session + signed resolve]
+      -> private financial UI, journal forms, optional AI action
+      -> HMAC + timestamp + one-use nonce internal requests
+          -> Railway services/saas_api/server.py (Python)
+              -> identity DB: users, memberships, nonces, rate limits
+              -> restricted saas_trade_app: journals, manual trades, reviews
+              -> restricted saas_broker_app: Tiger grant/evidence/ledger reads
+              -> reserved separate dispatch/publication roles for gated flows
+          -> PostgreSQL: private tenant tables, FORCE RLS
+Separate Railway owner-only Tiger runner (RSA key never on Vercel)
+  -> read-only Tiger observations -> signed bridge API -> encrypted snapshots
+Future: approved Tiger partner OAuth -> tenant worker -> staging
+  -> reconciliation + independent attestation -> gated publication
 ```
 
-## Boundaries
-- **Identity:** Google `sub` is immutable authority. Resolve active membership each time; email and client-supplied workspace IDs are NOT authorization. Independent owner workspace created transactionally on first legitimate login.
-- **Private operations:** all endpoints require server verification; service-to-service HMAC is not a browser credential. Protect it against replay, use TLS, rotate secret, minimize privilege, rate-limit and audit. Financial API uses a distinct non-BYPASSRLS role; all queries run with scoped `SET LOCAL` tenant context under a transaction.
-- **Provider connectivity:** adapters can only read. Trusted worker resolves `sync_job_id` -> workspace -> connection -> permitted account -> current consent/grant within the DB. Queue payload may contain only opaque job IDs. Raw account identifiers and tokens never go to browser/analytics or app DB. Encrypted secret store keeps credentials segregated by tenant.
-- **Data:** separate immutable source observations from normalized executions, ledger/accounting events, user narratives and derived snapshots. Worker writes to staging first. Publish only validated, idempotent, reconciled facts. No broker response means `UNKNOWN/PARTIAL`, not success or a zero balance.
-- **Research:** public market data isolated from private workspaces; AI requests only after consent, minimal payload, supported model/provider retention and budget settings. A model can propose commentary, never execute trades.
-- **Operations:** main-only Vercel and Railway production deployments, reviewed automatic pre-deploy SaaS SQL migrations (no DDL during HTTP startup), observable logs with redaction, backup+restore rehearsals, service health and error handling.
+## Authentication and isolation
 
-## Existing code vs target
-| Component | Currently in source | Missing for complete target |
-| --- | --- | --- |
-| `apps/web` | Google Auth.js, private pages, broker readiness, manual trade feature gate | polished portfolio, onboarding, reconciliations, full E2E |
-| `services/saas_api` | internal identity and manual trade service, HMAC, schema admin | broker job API, distinct runtime permission hardening |
-| `db/saas` | identity, broker-link and manual trade tables (001–005) | provider facts, projections, rationale, deletion/retention, market/AI schema |
-| `services/broker_connectors` | strict provider registry, Tiger offline adapter and contract | approved hosted Tiger grant, worker, complete normalized data |
-| `services/tiger_sync` | bounded order/fill/position parser and synthetic tests | refactor as provider-only reusable library; no legacy DB |
-| `scripts/verify_saas_*` | synthetic isolation checks | production-equivalent connected two-user security suite |
+- Auth.js Google verified numeric `sub` identifies a user; email/display name never authorizes a workspace.
+- `apps/web/lib/require-workspace.ts` checks current membership against Railway. React's request-local `cache()` avoids duplicate lookup *within the same render*, **never across HTTP requests, users or workspaces**.
+- Private layout and server actions are protected; forms derive subject from server session, never client workspace/account IDs.
+- Railway `services/saas_api/request_security.py` validates signed HMAC requests, timestamp, nonce replay and per-route/per-subject rate limits. Invalid or exhausted requests fail closed; they should not silently create accounts.
+- Non-superuser runtime logins and transaction-local tenant scope must not bypass FORCE RLS. Identity, trade, broker, dispatch and publication privileges are distinct.
+- Browser navigation uses plain `<a>` in the global authenticated menu to prevent stalled Next.js RSC transitions; mobile menu and 320–1024 px journeys have synthetic Chromium tests.
 
-## Decisions
-Keep the SQL migrations 004 and 005 unchanged **as applied-version evidence**, despite the discontinued CSV feature. Do not reset a live database to remove this history. Do not resurrect deleted personal GitHub files. Preserve ability to add other broker adapters without changing tenant authorization or journal contracts.
+## Source and processing boundaries
+
+- **User-authored:** investment principles, watch entries, plan revisions, annotated target/stop, manual trades, plan check-ins and next-action resolutions.
+- **Provider observed:** owner-only personal Tiger account holdings, order history, partial transactions, itemized fee probes, read-only delayed quotes and sync health. These are never automatically certified fills/cost basis.
+- **Verified/released:** guarded encrypted staging, account coverage verification, source-linked reconciliation, independent attestation, publication signature, immutable released ledger and historical FIFO reads. Source code/tests exist; publication requires separate official approval and evidence. An unavailable grant or superseding BLOCKED review fails closed.
+- **AI:** only user-submitted requests; selects bounded source excerpts and coarse evidence, strips common sensitive data and requires consent + quota + ZDR parameter checks. Output is structured and evidence-linked, not saved as an authenticated journal entry.
+- **Performance:** require validated complete financial coverage (including fees, cash activity, corporate actions and FX) before claiming returns. Unverified periods remain unpriced.
+
+## Components
+
+| Directory | Responsibility |
+| --- | --- |
+| `apps/web/` | Frontend, Auth.js, Google session, private views and server actions |
+| `services/saas_api/` | Signed internal API, tenant/ledger/journal endpoints, schema deploy |
+| `services/broker_connectors/` | Read-only adapter contracts, pagination, FIFO and source evidence |
+| `services/tiger_sync/` | Offline normalization helpers |
+| `temporary/tiger_personal/` | Isolated, allowlisted single-owner Tiger RSA runner |
+| `db/saas/` | Forward SQL migrations and scoped privileges |
+| `packages/contracts/` | Versioned private API shape contracts |
+
+## Deployment
+
+`dev` is the implementation branch. Only `main` deploys (Vercel `apps/web/vercel.json` and Railway service configurations). SaaS schema changes are applied by guarded Railway **pre-deploy**; never during a web request. CI validates code and synthetic A/B tenant isolation, not real Google/provider operations. Refer to [Operations](OPERATIONS.md) and [Schema runbook](saas/HOSTED-SCHEMA-BOOTSTRAP.md).

@@ -1,272 +1,41 @@
-# Delivery roadmap — SaaS-first, Tiger-first
-**Rebaseline:** 2026-10-25 · Statuses describe evidence in repository only unless explicitly stated. No dates promised.
+# Positionary — current delivery roadmap
 
-## P0 — Public code/data separation (**current cleanup**)
-- [x] Remove tracked personal stock folders, executed-trade ledger, import audits, generated research/report directories and private legacy documents from the active source tree.
-- [x] Retire GitHub ledger/import workflows and obsolete owner-only migration scripts; retain only synthetic provider fixtures.
-- [x] Rebaseline product, architecture, data model, deployment rules and agent instructions; add active-tree privacy guard.
-- [x] Rewrite `main`, `dev` and the archive branch to a verified **parentless** clean root. No personal stock files are present in branch trees.
-- [ ] GitHub still serves previous SHA objects directly; request GitHub-hosted cache/object garbage collection and verify remaining external references. `forks_count=0` and repository PR list was empty at inspection, but external clones and cached copies cannot be ruled out.
-- [ ] Audit/delete historical Actions artifacts and request logs/deployment cache cleanup where relevant; production deploy alone does not erase prior builds. No Releases appeared in inspected repository response.
+**Rebaselined:** 2026-10-27 after main branch stabilization. This is a concise list of **remaining work**, not a chronological patch log. Check the implementation/CI to confirm status before changing this document.
 
-## P1 — Identity, tenant boundaries and secure hosting (**partially built**)
-- [x] Google-first Auth.js source with fresh workspace provision/resolve and private pages.
-- [x] Independent SaaS schema 001–005, staged DB RLS tests, guarded main Railway schema pre-deploy implementation.
-- [ ] Validate deployed Google login/logout, session expiry and A/B user negative HTTP access across every private route/API.
-- [x] Add nonce-bound signed internal API calls, atomic DB replay prevention and per-subject route rate limits; verify through HTTP/PG CI.
-- [x] Add dedicated `saas_trade_app` least-privilege login migration with private deploy-time password; verify role restrictions in PostgreSQL 18 CI.
-- [ ] Verify the *production* restricted DB login and connection reuse; review operational audit/rate limits and perform browser-level A/B Google OAuth E2E.
-- [x] Verify Railway tracks `main` with guarded pre-deploy; production migration 006 confirmed via deployment logs.
-- [ ] Confirm production 007 application, live dedicated login, ongoing recoverable backup and **real** restore drill; CI disposable PostgreSQL backup/restore is not proof of production backup.
+## Shipping now (source and deployment verified)
 
-## P2 — Tenant journal MVP (**partially built**)
-- [x] Feature-gated immutable manual execution/VOID log and synthetic tenant accounting tests.
-- [x] Build immutable trade detail and correction routes, typed journal and JSON export (bounded complete-result requirement), guarded explicit account deletion, idempotency and HTTP replay checks in source.
-- [x] Implement append-only, tenant RLS `THESIS`, `STRATEGY`, `REVIEW`, `TRADE_NOTE` and watchlist ADD/REMOVE events with provenance.
-- [x] Synthetic two-identity signed HTTP A/B negative tests with real PostgreSQL limited login, revocation, forgery and export access.
-- [x] Rebuild investment-journal frontend into responsive per-symbol workspace with latest thesis and review, typed chronological updates, watchlist changes, selective user-entered trade linkage and target/stop plan revision timeline; no unverified real-world balances shown.
-- [x] Add tenant-scoped, immutable user-authored target/stop plan revisions (migration 016) with full reset semantics, normalized positive Decimal input, idempotency, bounded history, JSON export and account deletion; exercise HTTP and PostgreSQL A/B isolation in CI.
-- [ ] Real Google browser A/B negative suite + production runtime-role audit + verified restore before wider customer onboarding. User-authored journal/trades no longer depend on an environment feature toggle; authentication and restricted RLS DB access always apply.
-- **Exit:** a new Google user can safely keep a private manual journal without a linked broker.
+- Google-first SaaS workspace; signed Railway API, nonce/rate controls and tenant RLS.
+- Tenant-owned manual trades, journal, revisioned strategy/targets/stops, investor principles, risk factors, check-ins, action follow-ups, JSON export and account deletion.
+- User-focused navigation/onboarding, dashboard tasks, portfolio risk/concentration, weekly/monthly review and conservative performance-readiness views.
+- Owner-only Tiger RSA observations: positions, account/order history, fee/fill/fund shape probes, allowed US quote context and sync diagnostics. **Personal access is not multi-user OAuth approval or complete transaction verification.**
+- Opt-in OpenRouter ZDR-mode source-grounded AI review/coaching with limits and best-effort text minimization.
+- CI for Next build, Python, isolated disposable PostgreSQL and synthetic Chromium A/B workflows; production Vercel and both Railway services deploy `main`. The synthetic browser regression covers navigation, authored flow, export/deletion and 320–1024 px viewport checks.
 
-## P3 — Tiger adapter: first production data source (**high-priority next build**)
-- [x] Provider registry, broker-neutral read-only contract, Tiger offline fixture normalization and bounded-window collector.
-- [ ] Obtain official Tiger approval for hosted third-party NZ customer authorization, app enrollment, exact consent scopes and eligible account types.
-- [ ] Verify whether read-only query grants exclude all trading privileges. If not, **do not connect**.
-- [x] Implement provider-approval-gated enterprise OAuth2 code flow, tenant-bound AES-GCM grants, one-time state/replay defence, static provider hosts, SDK cache exclusion, refresh and local disconnect (offline code; live behavior not yet verified).
-- [x] Add signed Vercel-to-Railway Tiger endpoints, tenant RLS account binding, encrypted asset/position source snapshots and explicit SNAPSHOT_ONLY coverage.
-- [x] Implement bounded backfill planning, durable tenant-scoped staging schema/checkpoints and synthetic A/B RLS regression coverage (offline foundation; no worker execution).
-- [x] Implement offline-injected, owner/member-resolved one-window worker: locked lease claims, fencing tokens, resumable bounded windows, encrypted HMAC-keyed idempotent staging, bounded retries and A/B PostgreSQL tests. Source always staged PARTIAL until independent provider coverage verification.
-- [x] Implement offline provider-neutral paginated read contract and an explicitly invoked, bounded page runner with encrypted continuation cursors, transactional checkpoint/staging, duplicate-page idempotency, page-count and lease fencing (does not certify complete history).
-- [x] Build dispatch-only database role, opaque tenant job queue, SKIP LOCKED claim with token fencing, fresh-owner authorization and bounded scheduler ticks (offline/injected reader only).
-- [ ] Activate a separately deployed background runner only after Tiger read-only historical endpoint, cursor rules, consent scopes, tenant auditing and operational monitoring are independently verified. Publication/reconciliation remains outstanding.
-- [x] Implement a signed, tenant-scoped sync-health read endpoint and private Tiger status UI for window/page progress, known issues, retry/reauth flags, and explicit UNVERIFIED historical coverage. Verify A/B negative queries and session revocation on disposable PG.
-- [x] Add an offline official-doc-based enterprise transaction inquiry probe with strictly documented request parameters, rejected malformed provider envelopes and absolutely no undocumented fill mapping or false full-history claims.
-- [ ] Test real read-only Tiger account in non-production with explicit authorization, isolated account identity and redacted fixtures; establish limits on order/fill/fee/cash/FX/corporate-action/history coverage.
-- **Exit:** a consented Tiger workspace can show repeatable imported facts with source evidence, accurate coverage/partial-status and no ability to trade.
+## Priority 0 — operational release safeguards
 
-## P4 — Reconciliation, holdings and performance (**planned**)
-- [x] Build an offline deterministic P4 reconciliation gate for duplicate/replayed source IDs, conflicting versions, suspected economic duplicates, certified contiguous window coverage, fee/currency/time validation, same-as-of broker snapshot quantity matching and independent cash/order/corporate-action checks; never publish uncertain data.
-- [ ] Integrate verified Tiger order/fill/fee/cash/corporate-action source adapters with durable review/publish ledger; real provider evidence is not yet certified.
-- [x] Build an offline, account-scoped Decimal FIFO native-currency cost-basis/realized-P&L core with adversarial tests (strict verified-history/corporate-action prerequisite; no production data input).
-- [ ] Version and persist authorized projections; reconcile position snapshots at matching as-of time, add verified FX/unrealized returns, user-facing portfolio views and audit provenance.
-- [x] Add account-scoped portfolio readiness UI using freshly authenticated Tiger connection and sync metadata. Unknown cost basis, holdings and performance display as unverified, never zero/dummy values.
-- [x] Implement append-only tenant reconciliation decisions and issue codes (migration 014), versioned *private staging* of execution identities/Decimal FIFO positions only behind independent attestation. Retry idempotency and repaired-input versions verified on disposable PostgreSQL; never publish these as account holdings.
-- [x] Add signed owner-scoped reconciliation review status API and portfolio screen showing latest version/issue codes without raw broker IDs or money.
-- [x] Add immutable P4 source-lineage links (migration 015) to tenant-scoped encrypted staged provider evidence, typed issue categories and strict missing/conflicting source rejection. Attestation signatures now bind both the accounting input and the exact original staged source version; raw evidence is never returned to the browser.
-- [ ] Build independently verified Tiger attestation issuer (provider approval required), expand complete source evidence for cash/FX/corporate-action validation, customer-visible publication gates and source-linked audited correction workflows.
-- **Exit:** portfolio math is deterministic and traceable, with unknown/partial cases explicitly flagged.
+- [ ] Configure/verify **required GitHub status checks** on `main` and restrict direct pushes so broken CI cannot release automatically. Keep required `saas-postgres-isolation` and `browser-journeys` checks synchronized with workflow job names.
+- [ ] Verify real **two-Google-account production** sign-in, privacy isolation, logout/re-login, expiry, account deletion, recovery and unauthorized API export denial. Synthetic CI is not a substitute.
+- [ ] Verify on physical iOS/Android devices: navigation, landscape/portrait, keyboard, long ticker names, tables, dynamic forms, accessibility and on-page errors.
+- [ ] Confirm production backup recovery with a real **restore drill**, scoped DB role grants and a documented incident/key-rotation plan.
 
-### P4 private broker-ledger release foundation (2026-10-26)
-- [x] Implement a **separately signed**, append-only P4 internal review-to-broker-ledger release gate (migration 017). It binds the latest STAGED reconciliation, original encrypted source fingerprints, execution identities, Decimal positions and account to one immutable digest; rejects stale/missing/conflicting raw evidence, cross-tenant access and duplicate release. A new `SAAS_P4_PUBLICATION_ENABLED` switch defaults **off**, with an independent `SAAS_P4_PUBLICATION_KEY`; there is no signing issuer, HTTP publishing endpoint, real Tiger attestation, customer-visible broker ledger or holdings release yet.
-- [ ] Validate this gate with actual official Tiger read-only coverage proofs, fully mapped historical fills/orders/fees/cash/corporate actions and independent signer separation; only then surface tenant-scoped read-only broker ledger and linked investment journal. The current staged input does **not** confer user-visible verified balances.
+## Priority 1 — data quality and responsible use
 
-### P4 signed private read model / per-ticker journal (2026-10-26)
-- [x] Implement an HMAC-authenticated, RLS-scoped `ledger-read` endpoint which revalidates the latest released review, original source evidence, current read-only grant and signed publication before returning bounded Decimal-string fills and position facts. Default off; no Tiger live data/publication is claimed.
-- [x] Add typed Next.js gateway and per-symbol **Tiger 검증 체결** panel in the private journal without overwriting user-authored notes or blending USER_ASSERTED and BROKER_VERIFIED. Partial/conflicted data returns no broker facts.
-- [ ] Confirm read API, TypeScript build and PostgreSQL A/B workflow are green; perform real two-Google-account browser checks and independent Tiger attestation before live activation.
-- [x] Add a **separate, immutable** owner-authored per-fill TRADE_NOTE association (migration 018), signed/tenant-scoped backend guard and inline investor memo form. Every link pins the historical signed P4 publication and verified fill + ticker through composite FKs; user-authored text never becomes broker data.
-- [x] Preserve note history and export after a broker review becomes BLOCKED; do not show a link as currently verified unless the independently released source, account and revision still match.
-- [ ] Run actual PostgreSQL 18 A/B integration and Next.js TypeScript/build tests, then verify with two real Google accounts; Tiger live eligibility and independent source certifier remain required before enabling broker read.
+- [ ] Audit and close Tiger owner-only order/fill **coverage**, itemized fees/currencies, time-zone semantics, cash activity, corporate actions and missing periods; preserve partial/unknown outcomes. Only independent signed verification may publish financial facts.
+- [ ] Verify latest-account sync health, partial-window and read permissions on real Tiger responses. Do not confuse source-staging success with accounting completion.
+- [ ] Validate AI note redaction against more user-entered private formats; consider a readable before-send preview and stricter minimization. Do not promise free-form text is perfectly anonymous.
+- [ ] Review recurring dashboard follow-up presentation under missing history, old check-ins and inaccessible endpoints. Avoid repeated prompts or incorrect completion claims.
 
-## P5 — AI analysis and notifications (**planned**)
-- [ ] Opt-in consent, token/prompt minimization, ZDR/provider terms verification, per-workspace quotas and observability.
-- [ ] Trade critiques, thesis/strategy checks, post-trade reviews and optional scheduled insights with citations and source timestamps.
-- [ ] Not investment orders or guaranteed recommendations. Separate public research from personal account facts.
-- **Exit:** useful explainable analysis without cross-tenant or third-party data leakage.
+## Priority 2 — approved broker SaaS and long-horizon results
 
-## P6 — Product hardening and expansion (**planned**)
-- [ ] UX/mobile, accessibility, support tooling, backups, monitoring, full E2E threat tests, retention/export/delete and incident playbooks.
-- [ ] Additional broker adapters independently qualified (IBKR considered only after Tiger workflow proves out).
-- [ ] Subscription/billing/privacy terms and platform costs; only activate payments following authorization/replay tests.
-- [ ] Staged user onboarding and rollout decision.
+- [ ] Obtain written Tiger NZ third-party **partner OAuth** approval, named read-only scopes, hosted callback approval, legal redisplay/market-data rights and live tenant-specific API coverage.
+- [ ] Independently attest official broker fills and complete financial history; activate staging/dispatch/publication only after strict environment/role/issuer/key reviews. All read/write permissions must remain trade-free.
+- [ ] Add verified cash flows, fees, NAV, corporate actions, FX and reconciliation audit before **any** genuine return or total portfolio-performance percentage.
+- [ ] Evaluate a second read-only broker only after adapter isolation and customer consent are proven; do not generalize private Tiger RSA credentials.
 
-## Pre-P3 release gate
-**P3 offline implementation may be started** using the tested contract, but P0–P2 public/operational release gates are **not all cleared**: old Git SHA objects still resolve, live two-Google-account browser tests and production backups are unverified, and S2 is not activated. See [P3 readiness](P3-READINESS.md). Never mark these complete based only on CI.
+## Explicitly not on the roadmap
 
-## Sequencing and release guardrails
-Priority order: **P0 public data cleanup → P1 secure tenant foundations → P2 private journal → P3 Tiger → P4 accounting → P5 AI → P6 commercial expansion**. P2 and Tiger adapter research may proceed in parallel, but live Tiger auth must not precede provider approval and tenant isolation. After a successful `dev` validation and explicit release request, promote by fast-forward to `main`. Non-breaking reviewed SQL goes with its automatic migration manifest; never reset or delete hosted customer data to make tests pass.
+Order placement/cancellation, options execution, auto-trading, price target/stop push alerts, quote event subscriptions, background price polling, day-trading signals, user-uploaded private RSA keys, and return to GitHub/CSV personal ledgers.
 
+## Definition of done
 
-## Future execution track — gated independently from P3–P6
-A later optional Tiger order flow needs **separate customer trading authorization and Tiger provider/regulatory clearance**, a disjoint trade-capable credential vault/service/DB principal, explicit human preview and confirmation, broker-native idempotency/order reconciliation, audit, rate limits and a stop switch. Existing read-only grants cannot be upgraded implicitly. No order placement/cancel route or trade-capable token is present in P3.
-
-
-### Verified historical portfolio projection (2026-10-26)
-- [x] Verified Tiger release read model is wired into the account-scoped private portfolio UI. Only independently signed, **currently** approved and connected account releases reveal native-currency FIFO remaining cost basis and realized P/L for each ticker; missing or blocked accounts keep **미확인**.
-- [x] Display reference date/version, per-account proof boundary, truncation warning, direct link to the ticker journal and no cross-currency aggregation.
-- [x] Keep current market value, unrealized P/L and total return explicitly **미확인** until a separately scoped, verified market-data/FX calculation exists. Neither a Tiger snapshot nor a manual trade assertion can be used as a live price.
-- [x] Include actual Next.js production build in synthetic-only GitHub Actions CI in addition to TypeScript, security contracts, and disposable PostgreSQL 18 A/B checks.
-- [ ] Test future production Tiger OAuth/API with officially approved **read-only** grants and independent source attestation before activating financial views.
-
-### Step 1 · Tiger personal execution and fee source probe (2026-10-26)
-- [x] Add owner-only bounded read-only `get_transactions` observations for up to six recent STOCK orders over the last 30 days; require SDK cursor pages, broker order/account identity, exact fractional scale, and summed filled quantity comparison. The query is **Prime/Paper-dependent**; unavailable/unsupported replies remain UNAVAILABLE, never inferred from `get_orders`.
-- [x] Store transaction samples independently from order observations as encrypted `PERSONAL_TRANSACTION_OBSERVATION` under existing RLS with an owner-only HMAC bridge. New samples are always `PARTIAL`, cannot enter reconciled P4 ledgers, and do not certify any wider historical range.
-- [x] Distinguish order commission and its potentially missing commission currency from individual fill fees. A fill has no certified fee allocation or certified timezone.
-- [ ] Deploy the worker/API through the approved main-only release, inspect safe status counters on the actual Tiger account, and verify Prime eligibility, cursor support and fee field availability; this source-only change **has not exercised a live credential**.
-- [ ] Extend covered-range executions, provider-verified fees, funding/corporate actions and audit before step 2 FIFO portfolio publication.
-
-- [x] **Deployment wiring:** Railway `positionary-tiger-personal` source was unpinned from historical `a83424d8` and now follows `main`. Railway runner/API accepted deployed commit `06d798c` successfully. The *next runtime cron execution* and real Tiger transaction/fee outcomes are still unverified; do not confuse deployment success with ingestion success.
-
-### Step 1 · Phase 2 itemized fees + complete order paging (2026-10-26)
-- [x] Use Tiger's documented `get_order(account,id,show_charges=True)` alongside `get_transactions` on the same bounded order sample. Normalize category/type/after-discount amounts and independently verify category totals, order commission, transaction identity and source currency, with explicit UNAVAILABLE/DIFFERENCE/CURRENCY_UNKNOWN states. No allocation to fills, no inferred currency.
-- [x] Store fee evidence in existing owner-only encrypted P3 snapshot payloads (optional for backward compatibility); validate all totals and details at the signed ingress. Provide limited masked per-order charge detail on the owner-only trades screen.
-- [x] Fix historic `get_orders` to explicitly request pagination from its first call with `page_token=""` and reject conflicting order pages rather than overwriting observations.
-- [ ] Real-world Tiger read-only fee/transaction access, history completeness, source time zones, and actual charges must be verified in the next cron. P4 trusted ledger publication still blocked until fully independently reconciled.
-
-### Roadmap priority 3 · Tiger market-price integration (2026-10-26, source implementation)
-- [x] Add an owner-only isolated Tiger QuoteClient collector for US stock symbols present in the owner's real USD position snapshot. Require an actual US-only `get_stock_delay_briefs` response as the listing/currency eligibility proof; prefer newer `get_stock_briefs` prices only when independently allowed, and fail back to free 15-minute delayed US quotes. Other currencies/markets remain unsupported, never silently converted.
-- [x] Add reviewed migration 019 extending existing encrypted tenant-RLS Tiger snapshot evidence with a separate `QUOTES` kind; no trade facts or historical balances rewritten, no public market-data endpoint.
-- [x] Validate signed owner-only quote ingest and strictly bounded stock/price/timestamp; expose market quote observed price/source/time with precise Decimal position valuation, **only as unverified reference metrics based on a recent observed average cost, not authenticated FIFO cost basis**.
-- [x] Show provenance, quote delay/staleness, same-currency reference value/P&L/return in the personal portfolio, plus reference value in dashboard. Keep original Tiger portfolio snapshots intact, suppress calculations for stale/missing holdings or missing average cost, and never calculate a multi-currency account-wide return.
-- [ ] Verify deployed quote entitlements using the private Railway runner and its next safe log counters; historic complete fill/fee/cash/FX reconciliation and verified per-account FIFO basis remain prerequisites to **audited** unrealized P&L/total returns.
-- [ ] Official Tiger SaaS OAuth quote entitlements, licensing for redistribution, validated cross-market quote currencies, proper FX conversion and verified account/ledger valuations remain for later phases.
-
-
-### Roadmap priority 4 · Tiger investment journal linking (2026-10-27, dev implementation)
-- [x] Existing author-created ticker thesis and immutable target/stop plan revisions are reused: no inline form in the order list, and no automatic broker order or stop/limit order is created.
-- [x] Add a standalone authenticated observed order/fill review creation page reached from each user's private Tiger trade list and journal observations. Client-supplied refs are opaque, exact symbol and kind; server resolves the Google subject, workspace OWNER privilege, non-BYPASSRLS broker role, and actual encrypted account-scoped order/fill evidence **before** writing a note. No client account/workspace can be chosen.
-- [x] Add forward-only 020 journal observation association table, append-only writer role, composite author+symbol FK and account+workspace FK, FORCE RLS, immutable explicit `OBSERVED_NOT_VERIFIED`. No new fake broker execution, verified ledger publication or manual trade assertion.
-- [x] Notes in the existing authored journal history and export include a separate `observationRef`; journal workspace shows Tiger observed trades with author notes alongside the independent plan/thesis timeline. Existing P4 `brokerRef` links continue to require independently verified releases.
-- [x] Preserve old notes, source separation, idempotency conflict behavior, strict input bounds and origin. Never infer a user's trade reason from the broker order.
-- [ ] Validate real owner Tiger observations and complete origin coverage in production; no claimed accounting-grade fill provenance until reconciliation. The new 020 migration and journal linkage are **dev only** pending explicit fast-forward merge and controlled deployment.
-
-
-### Roadmap priority 5 · User-invoked AI journal analysis (2026-10-27, dev implementation)
-- [x] Dedicated private AI reflection page: stock-specific thesis/plan/observed orders versus history-wide habit review; each run requires fresh checked consent. No automatic jobs, personal data uploads from browser, or AI-generated trading actions.
-- [x] OpenRouter chat completions integration runs only on the trusted Next.js server with `POSITIONARY_AI_ENABLED=1`, server-only `OPENROUTER_API_KEY`, and explicitly chosen `OPENROUTER_MODEL`. Provider routing enforces `zdr=true`, `data_collection=deny` and structured JSON support; no lower-privacy fallback.
-- [x] Minimal evidence: maximum 18 user-authored note excerpts, 10 plan rationale excerpts with target/stop *presence* only, 12 manually asserted trade rationales without monetary values, and 12 Tiger *order* direction/status/date observations without accounts, IDs, quantities or prices. Bound total data size, no private brokerage key and no personal identity to model.
-- [x] Validate model insights using original evidence references, refuse invented source IDs, display provenance and limitations; never claim source attestations, cost basis, realized profit, performance or actionable trade advice. Responses are ephemeral and are not stored in PostgreSQL or browser storage.
-- [x] Forward-only 021 workspace-specific AI quota table with FORCE RLS; freshly resolved Google subject plus scoped trade role atomically claims a maximum of 4 per UTC day and 60 per UTC month; requests consume quota even on provider failure. No prompts/outputs in quota DB. Billing spend caps must also be configured on the OpenRouter API key.
-- [ ] Production activation requires installing and privacy-reviewing `OPENROUTER_MODEL`, `OPENROUTER_API_KEY`, key spending limit and explicitly turning `POSITIONARY_AI_ENABLED=1` in Vercel server environment. Do not treat CI as provider activation or proof that the model supports ZDR.
-- [ ] Historical cost-basis, broker reconciliation and independent source proof remain prerequisites for using confirmed outcome metrics in AI, and must not be inferred from personal Tiger order observations.
-
-
-### Roadmap priority 6 · Daily Tiger sync health and in-app alert center (2026-10-27, dev implementation)
-- [x] Preserve the already configured Railway production **daily cron** (`0 17 * * *` UTC, local daylight saving changes shift Christchurch time). A run attempts independent assets, 85-day-window order history and bounded Prime fill diagnostic stages; one failed stage cannot silently mark the job fully successful.
-- [x] POST a one-time signed HMAC owner-only, account-bound source health receipt, even if a stage fails. Record only allowlisted stage statuses (no account number, credentials, raw exception strings, fills or balances) in reviewed forward-only migration 022. Non-BYPASSRLS broker login has SELECT/INSERT only on append-only per-run health, with a unique run UUID. If bridge is unavailable the Railway cron must exit non-zero, never report success.
-- [x] Distinguish most recent run and most recent successful *account-scoped* asset snapshot; expose owner-only signed HMAC view, no other user's state.
-- [x] Initial in-app alert center for owner-only cron/freshness. **Superseded on 2026-10-27:** market-price/target/stop comparisons removed from source by the long-horizon review track; no price-triggered buy/sell alerts.
-- [x] Review center now derives only account-sync, history coverage and investment plan-completeness suggestions from existing owner-scoped evidence on page read.
-- [ ] Verify actual Railway daily runtime ingestion and full stage health using real owner account without exposing its identifier. CI exercises only synthetic contract/migrations.
-- [ ] Broker-authorized multi-user sync and optional low-frequency review reminders would need separate deployment/consent controls. Price/threshold push or email alerts and frequent market-session scheduling are **out of scope**. Once-per-day read-only cron is for accounting and data health.
-- [ ] Full independent source reconciliation (historical transactions, fees, FX, transfers, corporate actions) remains blocked even with healthy automated sync. No real-money orders/stop-losses are created.
-
-
-
-### Personal long-horizon investment review track (2026-10-27)
-- [x] Remove observed-quote target/stop trigger logic from private review notifications. Keep authored plan target/stop values as annotations only, and retain Tiger sync/coverage alerts.
-- [x] Convert alert navigation to an investor review center: failed/stale sync, partial order history, and missing plans for recently observed held symbols. Suppress missing-plan suggestions if journal retrieval failed.
-- [x] Add a pure fixed-point long-position risk-budget calculator in a separate private route. It is illustrative only, cash capped, has no quotes, no storage, and places no orders.
-- [x] Add snapshot-only, per-account/per-currency invested-equity concentration proportions on portfolio page. Avoid cross-account/FX aggregation and decline unknown or stale position values. These are not audited returns or total NAV exposure.
-- [x] Extend immutable per-ticker investment plans with strategy type, planned horizon, thesis invalidation, personal maximum allocation and review cadence in forward-only migration 023. Build ticker-locked separate edit flow with prefilled prior values and complete revision history. Runtime PG/HTTP and Next build remain for CI/production acceptance.
-- [x] Compare each user-authored maximum allocation percentage with the same Tiger account snapshot using exact account-NAV denominators **only when** account NAV, position market values, timestamps and currencies are coherent. Present an account-only reference, never full multi-account portfolio compliance, investment advice, or a sell trigger. No quote requests or new DB writes.
-- [x] Add an on-demand NZ-calendar monthly *decision-process* report for journal entries, reflection records, plan revisions, and explicitly user-asserted trades. Do not fabricate audited total performance. Fail closed when fetching source records fails or bounded list counts indicate truncation.
-- [x] Show an on-demand, calendar-aware periodic review checklist derived from the latest user-authored cadence and REVIEW events, with a direct link to write a new REVIEW entry. No timers, notifications, quote requests or DB state added.
-- [x] Extend existing explicitly consented, ZDR-gated AI critique with strategy type/horizon, invalidation thesis and review cadence metadata; numerical personal allocation limits remain excluded from the AI evidence envelope.
-- [ ] Later: close-the-loop historical plan compliance metrics based on verified evidence and comparison to past review suggestions; do not invent realized performance or sell recommendations.
-- [x] Add an explicit owner-scoped evidence-readiness panel in monthly investment reports. Published broker execution/position rows are distinguished from just a verified account header; no return numbers are generated without complete cash flows, corporate actions, FX, historical NAV and full-account history proof.
-- [x] Repair hosted disposable PostgreSQL CI assertion for reviewed migration 023. Derive versions from the approved migration manifest instead of maintaining a stale duplicate version list; include an offline regression test and cancel superseded dev CI runs.
-- [ ] Introduce audited monthly contribution-adjusted long-term returns only after complete executed fills, fees, cash flows, corporate actions and FX integrity are evidenced. Do not claim live or guaranteed investment performance.
-- [ ] Verify GitHub CI (Next build, web tests) and authenticated production two-user separation before promoting the new features to main.
-- **Cost policy:** No real-time or delayed-price trade alerts, no background quote polling, no per-tick price database. Reuse existing account snapshots; recompute ephemeral review metrics at read time.
-
-### Tiger funding/corporate-action provenance extension (2026-10-27)
-- [x] Review published Tiger Python SDK `get_fund_details` contract for the `DEPOSIT_WITHDRAW`, `FOREX`, and `CORPORATE_ACTION` filter categories, source account segments, date windows, and offset-based pagination. `get_analytics_asset` exposes historical NAV/deposit/withdrawal estimates but does not certify complete economic event coverage.
-- [x] Implement injectable, read-only `services/broker_connectors/tiger_financial_evidence.py` shadow collector with bounded 50-record paging/20-page maximum, page consistency checks, date/amount/currency validation, account-specific HMAC source references, and no raw provider IDs in output. On any malformed, truncated or empty unbounded page, refuse rather than declaring history complete.
-- [x] Offline tests for monetary precision qualification, missing pages, duplicate source IDs, tenant isolation, invalid categories and provider failures; wire into CI. Collected fund details remain `BROKER_OBSERVED_UNVERIFIED` and **are not recorded in the verified FIFO ledger** or used for returns.
-- [ ] Owner-only trusted worker binding and genuine Tiger SDK entitlement / field mapping probe, with provider-specific pagination coverage. No runtime credentials, real-money orders, transfers, or unapproved OAuth scopes in this phase.
-- [ ] Independent economic event completeness checks, dual-entry accounting and audited source-proof publication for dividends, transfers, corporate actions and FX. Only then consider period NAV verification and contribution-adjusted long-term performance.
-
-### Reporting integrity remediation — priority 1 (2026-10-27)
-- [x] Review gap against the original investor-process plan: the live monthly activity report used the latest 50 manual trade events, 200 journal entries, and 200 plan revisions. Both historic month omissions and report suppression at feed limits made long-term reflection unreliable.
-- [x] Implement signed `/internal/v1/journal/monthly-process`: fresh Google-subject OWNER scope, same least-privilege trade runtime and FORCE RLS, exact NZ calendar UTC boundaries, SQL aggregate of every matched row **without recent-feed limits**, and explicit independent author provenance. Aggregate totals and per-symbol counts; do not transmit raw rationale, fills, account IDs, quotes, or performance to web clients. Reject more than 100 distinct tickers rather than truncating totals.
-- [x] Derive as-of-month-end latest strategy state and user REVIEW cadence from scoped database rows, not capped lists, for up to 100 tracked tickers. Event-based strategy schedules remain without arbitrary dates.
-- [x] Replace the monthly page source with the complete DB summary, retain the separate missing financial-performance-proof panel, and add disposable PostgreSQL A/B tests with 215 notes, 216 plans, 55 manual executions to prove old caps cannot silently alter month totals.
-- [ ] Follow-up: independently audited Tiger historical funding/FX/corporate-action coverage and true execution provenance (external account permission still unverified), then verifiable period cash-adjusted returns. Keep quote polling, price-triggered trade alerts and new orders out of scope.
-
-
-### Long-horizon plan · priority 2 (2026-10-27, dev)
-
-**Implemented, source/CI-verified (not live-provider-verified):**
-- Re-check the priority 1 complete-month report CI success before advancing.
-- Expand the owner-only, disabled-by-default RSA shape probe to the eight documented non-ALL `get_fund_details` filters: `DEPOSIT_WITHDRAW`, `FOREX`, `CORPORATE_ACTION`, `FEE`, `FUNDS_TRANSFER`, `TRADE`, `ACTIVITY_AWARD`, `OTHER`. Include Tiger's `FUND` segment where supported. Never identify a `TRADE` cash posting as a fill or associate fee entries with fills without source proof.
-- Add pure ten-year-capped historical window planning (max 85-day windows with a one-day overlap, max 60 windows) and window/category completeness assessment. Invalid account scopes, window gaps, duplicate categories, malformed batches and incomplete filter coverage fail closed. Even observed shape coverage explicitly leaves transaction completeness, fee linkage, FX, corporate actions and returns **unverified**.
-- Add synthetic CI tests for all categories, data confidentiality, tenancy, segment support and gap detection. Do not collect prices, store quote histories or create trading signals.
-
-**Still externally blocked and not claimed complete:**
-- The private Railway `positionary-tiger-personal` service currently builds from `main`, and `POSITIONARY_PERSONAL_FUND_PROBE_ENABLED` is not configured. This `dev` probe has not been invoked against real RSA account data.
-- Only a deliberately enabled one-shot private owner runtime can verify Tiger account grant, SDK response field fidelity, provider-specific page semantics and permissions. No diagnostics should expose real source rows/account numbers or enter public repositories.
-- Durable history proof next needs stable tenant/account-scoped HMAC identity, tenant-specific encrypted source staging under active worker authorization, actual provider window coverage, independent reconciliation of executions/fees/cash/FX/dividends/corporate actions, and audited NAV. CI success cannot replace these live proofs. No broker orders or transfers.
-
-
-### Priority 3 — user-authored plan adherence reviews (2026-10-27)
-
-- [x] Forward-only migration 024: append-only scoped checkin table with immutable plan revision and companion REVIEW note references, idempotency and FORCE RLS; no UPDATE, DELETE or broker trading permission.
-- [x] Separate per-ticker self-review page: user selects FOLLOWED, PARTIAL, DEVIATED or UNCERTAIN with evidence and the next review action; server rejects stale plan IDs and atomically writes the ordinary REVIEW note and status row. Existing freeform reviews are preserved.
-- [x] Monthly DB aggregation of structured user-assessed outcomes without recent-feed limits, displayed separately from general review counts. User-marked status is NOT audited plan compliance, broker-fill accuracy or profitability.
-- [x] CI tests for input contracts, tenant A/B isolation, plan version changes, immutable revisions and idempotency replay.
-- [ ] Next: verified longitudinal trade-versus-plan assessment after Tiger fill, cash and FX source completeness; never infer a sell instruction or fabricate plan-adherence rates from unverified trades.
-
-### Priority 4 — bounded multi-account Tiger portfolio-risk view (2026-10-27)
-
-- [x] Verify priority 3 SHA `9e0ca3f` has a successful complete CI before continuing.
-- [x] New pure `portfolio-overview-risk.ts` uses only existing owner-scoped Tiger asset/position snapshots. Exact 12-decimal fixed-point BigInt calculation of same-ticker cross-account exposure, NAV, cash, invested share, top-one and top-two concentration, and authored max allocation reference. No new quote calls, FX conversion, trade signals or DB writes.
-- [x] New mobile-readable overview above per-account concentration on the portfolio page. Any unavailable or incomplete source shows an explicit reason instead of pretending portfolio exposure is zero.
-- [x] Fail closed for missing account/cash/NAV, unknown currency, mixed currencies, duplicate account aliases, stale (>7d) or skewed (>1h) account snapshots, negative/short holdings, inconsistent NAV versus cash plus reported long positions, invalid money precision, plan history at the 200-item cap, or dropped Tiger parsed records.
-- [x] Deliberately label any successful result `SYNCHRONIZED_TIGER_ACCOUNT_NAV_ONLY` and `completePortfolioVerified:false`; it is a Tiger-only aggregate, not the user's bank/other-broker/unlisted holdings, a proven financial account statement, or an audited policy compliance finding.
-- [x] Automated tests for multiple same-symbol account holdings, cash share, exact threshold comparison without float rounding, currency gaps, account staleness and duplicate alias ambiguity.
-- [ ] Complete global portfolio risk across mixed currencies after independent FX-at-as-of proof, account identities, non-Tiger account import, full economic liabilities/derivatives and cash proof. Do not backfill with synthetic exchange rates or live quote polling.
-
-
-### P5 검증 상태 · 사용자 확인 (2026-10-27)
-
-- [x] **P5 검증 완료 — 사용자 확인(User-confirmed sign-off).** 사용자가 P5 검증 절차를 모두 직접 확인했다고 명시적으로 승인함. 이 상태는 사용자의 검증 확인 기록이며 자동화된 Tiger 원본 데이터 감사 또는 운영 서비스의 실수익률 공개 승인을 뜻하지 않음.
-- [x] 검증 절차 확인 대상으로 명시된 항목: 기초·기말 NAV, 외부 입출금 및 환전 시점 대조, 현금흐름 조정 수익률(TWR) 검토, Tiger 제공 성과와 독립 비교. **이 항목들의 원본 응답·계산 결과는 현재 저장소와 이 대화에 첨부되어 있지 않아 구현체가 개별 항목의 숫자·일치 여부를 독립 재현한 것으로 기록하지 않음.**
-- [ ] **실제 월·분기·연간 수익률의 자동 공개**는 별개의 릴리스 게이트임. 백엔드에는 검증된 기간별 NAV·현금흐름의 실자료 연결 및 독립 검증된 성과 게시 경로가 아직 없으며, `/private/performance`는 해당 데이터 없이 실제 수익률을 추정하거나 확정 표시하지 않는다.
-- **Milestone:** `P5_VALIDATION_USER_CONFIRMED` (완료) · `P5_LIVE_RETURN_PUBLICATION` (미구현/보류). 다른 사용자 계정이나 전 기간의 투자 성과가 확인되었다는 의미로 확장하지 말 것.
-
-### Priority 5 — long-horizon performance evidence (2026-10-27, dev)
-- [x] Confirmed the Stage 4 multi-account-risk dev head passed synthetic CI before implementing Stage 5.
-- [x] Separate `/private/performance` with completed NZ month/quarter/year selectors, read-only publisher ledger state and explicit period proof checklist. Unverified period returns, contribution-adjusted returns and benchmark comparisons display `미검증` or `계산 보류`, never invented percentages.
-- [x] Synthetic-only Decimal chained time-weighted return model (end-of-subperiod externally timed cashflows) with exact account/window/currency, cashflow completeness, source-coverage and NAV continuity gates, and an unconditional `MODEL_ONLY_NOT_PUBLISHABLE` result. No live provider source is hooked to this model.
-- [x] Added synthetic NAV/cashflow/FX-missing/continuity tests to GitHub CI (not merely to the codebase). The accountant/source attestation path remains a separate unimplemented release gate.
-- [ ] Release of actually audited period returns remains blocked by real Tiger funding, fee, dividend/corporate action, FX-at-time, signed opening/closing NAV and full broker account coverage. No price polling, order placement or speculative return percentages.
-
-### Priority 6 — opt-in month-over-month process coaching (2026-10-27, dev)
-- [x] Add a `COACHING` mode to existing ZDR-only, explicit-consent AI analysis. The mode reads four complete-coverage tenant-scoped DB monthly process aggregates: previous three completed Pacific/Auckland months and the current explicitly PARTIAL month, plus at most four recent user-authored self-review/next-action records of a selected ticker. It never fetches broker orders, prices or fills for the coaching evidence.
-- [x] Distinguish selected ticker decision-process counts from workspace-wide self-assessment totals. Fail closed if any month's aggregate is missing, truncated, not exactly NZ-calendar bounded or internally inconsistent. Sanitize bounded text before model transmission, omit IDs, prices, sizes and personal allocations. AI findings must cite real C#/R# references; do not assert that prior next actions were executed without a later authored note proving it.
-- [x] Reuse one-time consent per request and existing workspace quotas (4/day, 60/month); the model request requires a ZDR provider with no fallback. No AI output is saved or scheduled and no market trade signal or advice is generated. Link to existing structured plan self-review screen to record the user's own next action.
-- [x] Add coaching deep links to dashboard, desktop/mobile navigation and monthly review report. Includes tests for NZ period order, incomplete months, user-authored evidence, citation validation and shared AI quota.
-- [ ] Future: explicit user opt-in to storing AI-drafted commitments separately from actual user judgments; never treat generated recommendations as executed actions. Runtime OpenRouter model availability and real user live UX remain Stage 7 verification tasks.
-
-
-### Priority 7 — production and mobile release audit (2026-10-27)
-
-- [x] Reconfirmed Stage 6 exact dev CI success and inventoried linked Vercel and Railway control-plane configurations with **variable names only**, never credential values. Both services use `main`; all earlier work is unreleased in `dev`. Railway pre-deploy is guarded and applied migrations are not automatically certified by READY status.
-- [x] Found and fixed a release-blocking personal-data lifecycle regression: account deletion did not include newer checkins, review/publication stages, AI quotas, or non-cascading Tiger sync-health records. Transactional owner-authorized deletion now follows 001–024 FK ordering and refuses still-connected secrets. Restored complete user JSON export of structured checkins and next actions, with fail-closed frontend validation.
-- [x] Strengthened signed HTTP A/B integration tests to create, replay, export, then delete an owner's plan/checkin plus non-credentialled broker sync-health and quota row; assert exact workspace isolation with unrelated test users preserved.
-- [x] Added migration table-inventory CI guard so future tenant tables cannot be introduced without updated account deletion or an explicitly documented FK cascade/retired/global exception.
-- [x] Extended small-screen private navigation up to tablet widths, form sizing, focus visibility and newly introduced 3–6 route regression checks (plan self-review, performance and opt-in AI coaching). Only code/CI responsive checks, NOT visual device screenshots.
-- [x] Recorded the actual observed control-plane state, exact preflight and postdeploy browser/security steps, and known unknowns in `docs/RELEASE-READINESS-2026-10-27.md`.
-- [ ] Explicit authorization to FF-merge dev into main and deploy to Vercel/Railway. No production data or variable changes were made during this development step.
-- [ ] Live schema status after release (applied=24/pending=0), actual backup restore verification, owner/nonowner real Google browser testing, real Tiger read-only entitlement probing, actual device mobile smoke tests, and ZDR model live test. **A passing CI never satisfies these independent production gates.**
-
-### Original P2/P3/P4 gap remediation — 2026-10-27 (`dev` only)
-
-**P2 similar-risk exposures, no data-vendor correlation claims**
-- [x] `025_user_risk_factors.sql`: tenant-RLS immutable user-assigned risk-factor versions, 0–3 factors per ticker, explicit unclassification and explanation. Read/write endpoints have strict user scope, idempotency and schema/HTTP A/B tests. History included in complete JSON export and deleted with the private workspace.
-- [x] Compare user-assigned factors to **existing same-currency synchronized Tiger NAV** only. Factor membership can overlap and category totals must never be added; show the unclassified portion. No auto stock tagging, prices, quotes, market correlation or order creation.
-- [ ] Verified industry/correlation exposure requires an independently sourced dataset, schema and deliberate cost/privacy review; currently manual author labels only.
-
-**P3 weekly process review**
-- [x] Signed read-only NZ ISO-week full-DB summaries of notes, plan changes and explicit self-reviews, independent of capped 50/200-item lists. Display next due cadence and latest authored next action without assuming completion.
-- [x] Dedicated mobile-friendly `/private/reports/weekly` with links from dashboard and review centre; partial current weeks clearly distinguished from closed weeks. DB A/B isolation and NZ DST/week-year tests.
-- [ ] Scheduled summaries or push notifications remain out of scope. Week-on-week behavioral improvement must not be equated with positive market returns.
-
-**P4 repeat behavior evidence**
-- [x] The opt-in `COACHING` mode detects >=2 explicit PARTIAL, DEVIATED or UNCERTAIN self-assessments on **distinct dates** and cites the source R# records with derived S# references. It does not diagnose emotion, assume action completion or classify market-trading behavior without evidence.
-- [x] Extend review prompt with open questions about fear, urgency or impulse rather than asserting these mental states from trading outcomes.
-- [ ] A robust emotional-decision self-report taxonomy needs separate opt-in user-input fields and longitudinal validation. Actual Tiger execution-based rule adherence remains blocked by P0 raw financial proof.
-
-**Shared release constraints:** P0 live Tiger full-history/funding/fee/FX validation, audited NAV, and P5 market return/benchmark release remain incomplete; no claim of real returns. `main` / production untouched.
+Documentation must describe **currently enabled** behavior separately from implemented-but-gated source. A release requires verified dev checks, fast-forward promotion to `main`, main CI confirmation, Vercel/Railway deployment checks and user-critical browser QA. DB financial publication is a distinct consent/evidence/security decision and never inferred from green web CI. See [Operations](OPERATIONS.md).

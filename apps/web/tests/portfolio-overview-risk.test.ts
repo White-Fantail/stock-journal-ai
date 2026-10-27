@@ -109,6 +109,9 @@ test("missing funds, stale snapshot, incomplete source and unaccounted risk fail
    const v=assessPortfolioOverviewRisk(source,[],NOW);
    assert.equal(v.state,"UNAVAILABLE");
  }
+ const capped=read([account("saturated","0","100",
+    Array.from({length:100},(_,i)=>position("T"+String(i),"1")))]);
+ assert.equal(assessPortfolioOverviewRisk(capped,[],NOW).state,"UNAVAILABLE");
  assert.equal(assessPortfolioOverviewRisk(null,[],NOW).state,"UNAVAILABLE");
  assert.equal(assessPortfolioOverviewRisk(read([good]),null,NOW).state,"UNAVAILABLE");
  assert.equal(assessPortfolioOverviewRisk(read([good]),

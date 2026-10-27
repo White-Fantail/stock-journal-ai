@@ -9,6 +9,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
   available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";
 }){
   const [mode,setMode]=useState<"STOCK_REVIEW"|"HABITS"|"COACHING">(initialMode);
+  const [consented,setConsented]=useState(false);
   const [state,submit,pending]=useActionState(runAiAnalysis,initialAiState);
   const selectedEvidence=new Map(state.evidence.map(x=>[x.ref,x]));
   return <div style={{display:"grid",gap:24}}>
@@ -18,7 +19,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
         주가를 예측하거나 자동으로 주문하지 않습니다.</p>
       <form action={submit} style={{display:"grid",gap:16,maxWidth:680}}>
         <label>분석 범위
-          <select name="mode" value={mode} onChange={e=>setMode(e.target.value as typeof mode)}>
+          <select name="mode" value={mode} onChange={e=>{setMode(e.target.value as typeof mode);setConsented(false);}}>
             <option value="STOCK_REVIEW">선택 종목의 매매·계획 복기</option>
             <option value="HABITS">전체 기록에서 반복 습관 살펴보기</option>
             <option value="COACHING">최근 3개월과 이번 달의 계획·실천 복기</option>
@@ -43,7 +44,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
             모델 제공자 약관과 데이터 처리 조건도 적용됩니다. 결과는 자동 저장되지 않습니다.</p>
         </div>
         <label style={{display:"flex",alignItems:"flex-start",gap:10}}>
-          <input type="checkbox" required name="consent"
+          <input type="checkbox" required name="consent" checked={consented} onChange={e=>setConsented(e.target.checked)}
             value="SEND_SELECTED_JOURNAL_TO_OPENROUTER"/>
           <span>이번 분석을 위해 위에 설명한 기록 일부를 OpenRouter의 적격 AI 제공자에게 전송하는 데 동의합니다.</span>
         </label>

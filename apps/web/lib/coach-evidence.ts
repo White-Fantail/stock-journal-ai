@@ -5,7 +5,7 @@
  * No market prices, broker fills, sizes, FX, P&L or investment advice.
  */
 import type {MonthlyProcessReport} from "./monthly-process";
-import {currentNzMonth,stepMonth} from "./monthly-process";
+import {currentNzMonth,monthWindow,stepMonth} from "./monthly-process";
 import type {PlanCheckinContext} from "./saas-trades-api";
 import {sanitizedExcerpt,type AnalysisEnvelope} from "./ai-analysis";
 
@@ -45,7 +45,16 @@ export function buildCoachingEvidence(
   if(months.length!==4)throw new Error("COACHING_COVERAGE_INCOMPLETE");
   for(let i=0;i<4;i++){
     const observed=months[i],schedule=expected[i],r=observed.report;
-    if(observed.month!==schedule.month||observed.partial!==schedule.partial||
+    const window=monthWindow(schedule.month);
+    const currentCutoff=Date.parse(r.checkedAsOf);
+    if(!window ||
+       r.start!==new Date(window.start).toISOString() ||
+       r.end!==new Date(window.end).toISOString() ||
+       !(currentCutoff>=window.start && currentCutoff<window.end) ||
+       (schedule.partial && currentCutoff>now.getTime()) ||
+       r.reviewCount>r.noteCount || r.selfReviewCount>r.reviewCount ||
+       r.uniqueSymbols<r.symbols.length ||
+       observed.month!==schedule.month||observed.partial!==schedule.partial||
       r.month!==schedule.month||r.timezone!=="Pacific/Auckland"||
       r.source!=="USER_AUTHORED_PROCESS_ONLY"||
       (r as MonthlyProcessReport&{coverage?:string;complete?:boolean}).coverage!=="MONTH_WINDOW_DB_AGGREGATED"||

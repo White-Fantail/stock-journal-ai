@@ -12,6 +12,7 @@ from uuid import uuid4
 import psycopg
 from services.saas_api.identity import provision
 from services.saas_api.monthly_process import monthly_process
+from services.saas_api.weekly_process import weekly_process
 from services.saas_api.trades import _runtime_safety
 
 NOW=datetime(2026,10,27,tzinfo=timezone.utc)
@@ -85,6 +86,15 @@ def main():
         assert previous["reviewCount"]==35 and previous["plannedSymbols"]==0
         assert previous["uniqueSymbols"]==35 and len(previous["symbols"])==35
         assert previous["symbols"][0]["ticker"]=="S00"
+        week=weekly_process(admin,trade,"1000000000881","2026-W43",now=NOW)
+        assert week["noteCount"]==215 and week["reviewCount"]==7
+        assert week["planRevisionCount"]==216 and week["partial"] is False
+        assert week["activePlans"]==1 and week["duePlans"]==0
+        assert week["symbols"][0]["ticker"]=="TEST"
+        ongoing=weekly_process(admin,trade,"1000000000881","2026-W44",now=NOW)
+        assert ongoing["partial"] is True and ongoing["noteCount"]==0
+        private=weekly_process(admin,trade,"1000000000882","2026-W43",now=NOW)
+        assert private["noteCount"]==0 and private["tasks"]==[]
         # Direct application role may not access cross-tenant rows by forging a WHERE.
         with trade.transaction():
             trade.execute("SELECT set_config('saas.workspace_id',%s,true)",

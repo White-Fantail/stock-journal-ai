@@ -63,9 +63,9 @@ test("a selected stock displays actionable target and stop controls",()=>{
   assert.ok(pricing.includes('name="targetPrice"'));
   assert.ok(pricing.includes('name="stopPrice"'));
   assert.ok(create.includes('name="rationale"'));
-  assert.ok(create.includes('name="strategyType"'));
+  assert.ok(pricing.includes('name="strategyType"'));
   assert.ok(create.includes('name="invalidationCondition"'));
-  assert.ok(create.includes('name="maxAllocationPct"'));
+  assert.ok(pricing.includes('name="maxAllocationPct"'));
   assert.ok(create.includes('name="reviewCadence"'));
   assert.ok(create.includes('name="investmentHorizon"'));
   assert.ok(ui.includes("e.value.invalidationCondition"));

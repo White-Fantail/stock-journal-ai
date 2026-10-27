@@ -1,3 +1,7 @@
+import {RISK_FACTOR_LABELS} from "./risk-factor-labels";
+export {RISK_FACTOR_LABELS} from "./risk-factor-labels";
+export type {UserRiskFactor} from "./risk-factor-labels";
+import type {UserRiskFactor} from "./risk-factor-labels";
 import "server-only";
 import { createHmac, randomUUID } from "node:crypto";
 import { saasAuthConfigured } from "./saas-auth-policy";
@@ -125,13 +129,7 @@ export async function fetchJournal(subject: string): Promise<readonly JournalEnt
 /** Aggregated by the scoped service DB over a complete NZ calendar month.
  * No recent-feed truncation and no raw financial/AI payload in the response.
  */
-export const RISK_FACTOR_LABELS={
- AI_INFRA:"AI 인프라·반도체",HIGH_GROWTH:"고성장 기대",
- US_TECH:"미국 기술주",CONSUMER_CYCLICAL:"경기민감 소비",
- SPACE_DEFENSE:"우주·방산",INTEREST_RATE:"금리 민감",
- CHINA:"중국 시장 노출",OTHER:"기타 공통 요인",
-} as const;
-export type UserRiskFactor=keyof typeof RISK_FACTOR_LABELS;
+
 export type RiskFactorInput=Readonly<{
  idempotencyKey:string;ticker:string;factors:UserRiskFactor[];rationale:string;
 }>;

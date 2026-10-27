@@ -77,6 +77,8 @@ export function assessPortfolioOverviewRisk(
    if(!alias||aliases.has(alias))
      return fail("계좌 식별명이 중복되거나 없어 서로 다른 계좌임을 보장할 수 없습니다.");
    aliases.add(alias);
+   if(account.positions.length>=100)
+     return fail("보유 종목 수가 응답 상한에 도달해 추가 종목 누락 여부를 확인할 수 없습니다.");
    const asOf=account.asOf===null?NaN:Date.parse(account.asOf);
    const age=now.getTime()-asOf;
    if(!Number.isFinite(asOf)||!Number.isFinite(age)||age<0||age>MAX_AGE)

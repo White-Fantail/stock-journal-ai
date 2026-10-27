@@ -232,3 +232,15 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Reuse one-time consent per request and existing workspace quotas (4/day, 60/month); the model request requires a ZDR provider with no fallback. No AI output is saved or scheduled and no market trade signal or advice is generated. Link to existing structured plan self-review screen to record the user's own next action.
 - [x] Add coaching deep links to dashboard, desktop/mobile navigation and monthly review report. Includes tests for NZ period order, incomplete months, user-authored evidence, citation validation and shared AI quota.
 - [ ] Future: explicit user opt-in to storing AI-drafted commitments separately from actual user judgments; never treat generated recommendations as executed actions. Runtime OpenRouter model availability and real user live UX remain Stage 7 verification tasks.
+
+
+### Priority 7 — production and mobile release audit (2026-10-27)
+
+- [x] Reconfirmed Stage 6 exact dev CI success and inventoried linked Vercel and Railway control-plane configurations with **variable names only**, never credential values. Both services use `main`; all earlier work is unreleased in `dev`. Railway pre-deploy is guarded and applied migrations are not automatically certified by READY status.
+- [x] Found and fixed a release-blocking personal-data lifecycle regression: account deletion did not include newer checkins, review/publication stages, AI quotas, or non-cascading Tiger sync-health records. Transactional owner-authorized deletion now follows 001–024 FK ordering and refuses still-connected secrets. Restored complete user JSON export of structured checkins and next actions, with fail-closed frontend validation.
+- [x] Strengthened signed HTTP A/B integration tests to create, replay, export, then delete an owner's plan/checkin plus non-credentialled broker sync-health and quota row; assert exact workspace isolation with unrelated test users preserved.
+- [x] Added migration table-inventory CI guard so future tenant tables cannot be introduced without updated account deletion or an explicitly documented FK cascade/retired/global exception.
+- [x] Extended small-screen private navigation up to tablet widths, form sizing, focus visibility and newly introduced 3–6 route regression checks (plan self-review, performance and opt-in AI coaching). Only code/CI responsive checks, NOT visual device screenshots.
+- [x] Recorded the actual observed control-plane state, exact preflight and postdeploy browser/security steps, and known unknowns in `docs/RELEASE-READINESS-2026-10-27.md`.
+- [ ] Explicit authorization to FF-merge dev into main and deploy to Vercel/Railway. No production data or variable changes were made during this development step.
+- [ ] Live schema status after release (applied=24/pending=0), actual backup restore verification, owner/nonowner real Google browser testing, real Tiger read-only entitlement probing, actual device mobile smoke tests, and ZDR model live test. **A passing CI never satisfies these independent production gates.**

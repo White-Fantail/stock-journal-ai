@@ -27,7 +27,8 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                            "020_journal_tiger_observation_links.sql",
                            "021_ai_request_quotas.sql",
                            "022_personal_sync_health.sql",
-                           "023_investment_strategy_plan.sql"])
+                           "023_investment_strategy_plan.sql",
+                           "024_plan_checkins.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_strategy_plan_extension_is_nullable_append_only_and_forward_only(self):
@@ -41,6 +42,17 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                           "GRANT UPDATE","GRANT DELETE"):
             self.assertNotIn(forbidden,sql.upper() if forbidden.startswith("DROP") else sql)
         self.assertEqual(len([x for x in manifest() if x[0]=="023_investment_strategy_plan.sql"]),1)
+
+    def test_plan_adherence_checkins_are_tenant_isolated_and_append_only(self):
+        source=next(body for name,_,body in manifest()
+                    if name=="024_plan_checkins.sql")
+        self.assertIn("CREATE TABLE saas_journal_plan_checkins",source)
+        self.assertIn("REFERENCES saas_journal_plan_revisions",source)
+        self.assertIn("REFERENCES saas_journal_records",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT,INSERT",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertNotIn("GRANT DELETE",source)
 
     def test_ci_deploy_uses_approved_manifest_instead_of_a_stale_version_list(self):
         workflow=(Path(__file__).resolve().parents[1]/

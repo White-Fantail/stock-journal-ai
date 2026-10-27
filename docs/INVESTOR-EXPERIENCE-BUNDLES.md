@@ -138,3 +138,11 @@
 - `B0 구현해. dev에서 정보구조·모바일 메뉴를 정리하고 전체 사용 경로를 유지한 뒤 테스트해. main 머지는 하지 마.`
 - `B1 구현해. 신규 가입자가 증권사 연결 없이 투자원칙과 첫 계획을 작성하도록 해. migration 필요 시 먼저 검증하고 dev에 반영해.`
 - `B0~B2 번들 한 번에 진행해. 번들별 테스트/커밋을 구분하고 main 머지는 내가 지시할 때만 해.`
+
+
+## First delivery implementation status (2026-10-27)
+
+- B0 navigation: four primary destinations + more menu on desktop and mobile; old deep links retained.
+- B1: dedicated /private/getting-started and /private/principles with append-only, tenant RLS, read/save signed server endpoints, optional inputs, export and account deletion.
+- B2: /private home shows up to three actionable tasks grounded in authored principles, due authored checkins, observed holdings or explicitly incomplete records. No quote polling, price alerts or trade instructions.
+- Verify with the exact dev-HEAD GitHub CI run. Static tests are not a substitute for a production restore drill or live browser OAuth A/B, and no prod activation or main merge is authorized by this document.

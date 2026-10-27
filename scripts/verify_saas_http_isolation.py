@@ -169,6 +169,32 @@ def main():
         code,_=request("/internal/v1/journal/checkin/context",
                        {"subject":A,"ticker":"TSLA","workspaceId":"forged"})
         assert code==400,code
+        # Broker-free personal principles are explicitly authored and tenant isolated.
+        principles={"idempotencyKey":str(uuid4()),"objective":"GROWTH",
+          "horizon":"OVER_TEN_YEARS","baseCurrency":"NZD","maxSinglePct":"15",
+          "riskLimitPct":None,"reviewCadence":"QUARTERLY",
+          "note":"Synthetic self-authored long-term objective"}
+        code,empty=request("/internal/v1/principles/get",{"subject":A})
+        assert code==200 and empty["current"] is None and empty["complete"],(code,empty)
+        code,pcreated=request("/internal/v1/principles/save",{"subject":A,"principles":principles})
+        assert code==200 and pcreated["source"]=="USER_AUTHORED_ONLY",(code,pcreated)
+        code,replayed=request("/internal/v1/principles/save",{"subject":A,"principles":principles})
+        assert code==200 and replayed["replayed"] and replayed["id"]==pcreated["id"]
+        code,_=request("/internal/v1/principles/save",{
+          "subject":A,"principles":{**principles,"objective":"INCOME"}})
+        assert code==409,code
+        code,own_principles=request("/internal/v1/principles/get",{"subject":A})
+        assert code==200 and own_principles["current"]["objective"]=="GROWTH"
+        code,other_principles=request("/internal/v1/principles/get",{"subject":B})
+        assert code==200 and other_principles["current"] is None
+        code,_=request("/internal/v1/principles/get",{"subject":A,"workspaceId":"forged"})
+        assert code==400,code
+        code,_=request("/internal/v1/principles/save",{
+          "subject":A,"principles":{**principles,"workspaceId":"forged"}})
+        assert code==400,code
+        code,revised=request("/internal/v1/principles/save",{"subject":A,"principles":{
+          **principles,"idempotencyKey":str(uuid4()),"maxSinglePct":"10"}})
+        assert code==200 and revised["id"]!=pcreated["id"]
         # Owner manual risk tagging is independent from broker positions.
         factors={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
                  "factors":["AI_INFRA","HIGH_GROWTH"],
@@ -245,10 +271,13 @@ def main():
         assert out["planSelfReviews"][0]["planRevisionId"]==strategic["id"]
         assert out["planSelfReviews"][0]["selfAssessment"]=="PARTIAL"
         assert out["planSelfReviews"][0]["nextAction"]=="Review the original strategy memo"
+        assert len(out["investorPrinciples"])==2
+        assert out["investorPrinciples"][0]["objective"]=="GROWTH"
+        assert out["investorPrinciples"][1]["maxSinglePct"]=="10.00"
         assert len(out["riskFactors"])==1
         assert out["riskFactors"][0]["id"]==created_factor["id"]
         code,out=request("/internal/v1/journal/export",{"subject":B})
-        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[]
+        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[] and out["investorPrinciples"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -301,6 +330,7 @@ def main():
                 "saas_journal_plan_revisions",
                 "saas_journal_plan_checkins",
                 "saas_risk_factor_revisions",
+                "saas_investor_principle_revisions",
                 "saas_journal_records",
                 "saas_ai_request_quotas",
                 "saas_tiger_personal_sync_health",

@@ -8,7 +8,7 @@ import { PersonalPortfolioBlock } from "../tiger/personal-preview";
 import {assessConcentration} from "../../../lib/portfolio-risk";
 import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
 import {PortfolioOverview} from "./portfolio-overview";
-import {fetchJournalPlans,type JournalPlan} from "../../../lib/saas-trades-api";
+import {fetchJournalPlans,fetchUserRiskFactors,type JournalPlan} from "../../../lib/saas-trades-api";
 import {auth} from "../../../auth";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import { tigerStatus, tigerSyncStatus, tigerReviewStatus, tigerLedgerRead, type TigerReviewAccount, type TigerReviewStatus, type TigerAccount, type TigerSyncJob, type TigerStatus, type TigerSyncStatus, type TigerLedgerRead, type VerifiedBrokerPosition } from "../../../lib/tiger-api";
@@ -208,11 +208,12 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
 export default async function PortfolioPage() {
   const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
   if(!workspace||!session?.user?.id) redirect("/login");
-  const [accountResult,planResult]=await Promise.allSettled([
-    tigerPersonalRead(),fetchJournalPlans(session.user.id),
+  const [accountResult,planResult,factorResult]=await Promise.allSettled([
+    tigerPersonalRead(),fetchJournalPlans(session.user.id),fetchUserRiskFactors(session.user.id),
   ]);
   const personal=accountResult.status==="fulfilled"?accountResult.value:null;
   const plans=planResult.status==="fulfilled"?planResult.value:null;
+  const userFactors=factorResult.status==="fulfilled"?factorResult.value:null;
   if(personal && personal.accounts.length>0) return <main className="portfolio-data">
     <div className="page-intro home-data-heading">
       <div><h1>포트폴리오</h1><p>보유 종목과 계좌별 평가 정보를 확인하세요.</p></div>
@@ -222,7 +223,7 @@ export default async function PortfolioPage() {
         <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
       </div>
     </div>
-    <PortfolioOverview personal={personal} plans={plans}/>
+    <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>
     <PortfolioConcentration data={personal} plans={plans}/>
     <PersonalPortfolioBlock data={personal}/>
   </main>;

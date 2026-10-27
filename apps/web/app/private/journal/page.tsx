@@ -55,6 +55,7 @@ export default async function JournalPage({
     </div>}
     {!unavailable && params.saved && <p role="status">
       {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":
+       params.saved==="checkin"?"현재 계획에 연결된 자기평가와 투자 복기를 저장했습니다.":
        params.saved==="broker-note"?"검증 체결에 연결한 투자일지 메모를 저장했습니다.":
        params.saved==="observed-note"?"Tiger 관측 주문·체결에 연결한 나의 매매 복기를 저장했습니다.":"새 투자일지 기록을 저장했습니다."}
     </p>}

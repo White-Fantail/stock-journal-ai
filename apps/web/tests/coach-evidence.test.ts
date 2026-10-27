@@ -57,6 +57,12 @@ test("four months: current partial and three previous complete, NZ boundaries",(
  }}:item);
  assert.equal(buildCoachingEvidence("TSLA",offsetMonths,context,now).evidence.length,6);
  assert.ok(result.evidence[4].detail.includes("본인이 정한 다음 점검 행동"));
+ const longNote={...context,recent:[{
+    ...context.recent[0],content:"long review ".repeat(500),
+    nextAction:"Read original strategy memo before next review",
+ }]};
+ const longEvidence=buildCoachingEvidence("TSLA",months(),longNote,now);
+ assert.ok(longEvidence.evidence[4].detail.includes("Read original strategy memo"));
  assert.ok(result.limits.some(s=>s.includes("partial")));
  const data=JSON.stringify(result);
  for(const secret of ["sensitive-record-id","sensitive-plan-id",

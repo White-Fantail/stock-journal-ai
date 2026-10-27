@@ -91,7 +91,7 @@ export default async function MonthlyReviewReport({searchParams}:{
           <Link href="/private/journal">종목 선택 후 자기평가 →</Link>
         </div>
         <p>계획에 연결하여 직접 평가한 복기 <strong>{report.selfReviewCount}건</strong>입니다.
-          기존 일반 REVIEW 메모 {report.reviewCount}건과 별도로 구분합니다.</p>
+          전체 REVIEW 메모 {report.reviewCount}건에 포함되며, 이 중 자기평가를 명시한 기록만 별도로 집계합니다.</p>
         <div className="account-summary-values portfolio-account-values">
           <div><small>원칙을 지켰다고 기록</small><strong>{report.selfReviewBreakdown.FOLLOWED}건</strong></div>
           <div><small>일부만 지켰다고 기록</small><strong>{report.selfReviewBreakdown.PARTIAL}건</strong></div>

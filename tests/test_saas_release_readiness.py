@@ -51,6 +51,9 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   self.assertIn('"planSelfReviews":',backend)
   self.assertIn("len(checkins) > _LIMIT",backend)
   self.assertIn("Array.isArray(result.planSelfReviews)",frontend)
+  self.assertIn("FROM saas_investor_principle_revisions",backend)
+  self.assertIn('"investorPrinciples":',backend)
+  self.assertIn("Array.isArray(result.investorPrinciples)",frontend)
   self.assertIn("FROM saas_risk_factor_revisions",backend)
   self.assertIn('"riskFactors":',backend)
   self.assertIn("Array.isArray(result.riskFactors)",frontend)
@@ -63,7 +66,7 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   self.assertEqual(PRODUCTION_RAILWAY_IDENTITY["RAILWAY_GIT_BRANCH"],"main")
   names=[name for name,_,_ in manifest()]
   self.assertEqual(set(names),APPROVED_AUTO_MIGRATIONS)
-  self.assertEqual(names[-1],"025_user_risk_factors.sql")
+  self.assertEqual(names[-1],"026_investor_principles.sql")
   workflow=(ROOT/".github/workflows/saas.yml").read_text()
   self.assertIn("branches: [dev, main]",workflow)
   self.assertIn("python scripts/verify_saas_http_isolation.py",workflow)

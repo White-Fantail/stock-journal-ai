@@ -53,11 +53,12 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" | "/internal/v1/risk-factors/list" | "/internal/v1/risk-factors/create" |
+      "/internal/v1/principles/get" | "/internal/v1/principles/save" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/journal/checkin/context" | "/internal/v1/journal/checkin/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | InvestorPrinciplesInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -70,6 +71,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/monthly-process" ? {subject,month:payload} :
     path === "/internal/v1/journal/weekly-process" ? {subject,week:payload} :
     path === "/internal/v1/risk-factors/create" ? {subject,riskFactors:payload} :
+    path === "/internal/v1/principles/save" ? {subject,principles:payload} :
     path === "/internal/v1/journal/checkin/context" ? {subject,ticker:payload} :
     path === "/internal/v1/journal/checkin/create" ? {subject,checkin:payload} :
     path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
@@ -237,12 +239,12 @@ export async function submitJournal(subject: string, entry: JournalEntryInput): 
 export async function exportFullJournal(subject: string): Promise<unknown> {
   const result = await postS2("/internal/v1/journal/export",subject) as {
     complete?: boolean; format?: string; journal?:unknown;
-    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;
+    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;investorPrinciples?:unknown;
   };
   if (result?.complete !== true || result?.format !== "stock-journal-ai.v1"
       || !Array.isArray(result.journal) || !Array.isArray(result.trades)
       || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews)
-      || !Array.isArray(result.riskFactors))
+      || !Array.isArray(result.riskFactors) || !Array.isArray(result.investorPrinciples))
     throw new Error("Journal export is incomplete");
   return result;
 }
@@ -399,4 +401,32 @@ export async function claimAiAnalysis(subject:string,mode:AiClaimInput["mode"]):
   if(result?.claimed!==true || !Number.isInteger(result.remainingDay) ||
      !Number.isInteger(result.remainingMonth))throw new Error("AI_QUOTA_FAILED");
   return {remainingDay:result.remainingDay!,remainingMonth:result.remainingMonth!};
+}
+
+/** User-authored portfolio-wide intentions; never broker-confirmed or suitability advice. */
+export type InvestorPrinciples=Readonly<{
+  id:string;objective:string|null;horizon:string|null;baseCurrency:string|null;
+  maxSinglePct:string|null;riskLimitPct:string|null;reviewCadence:string|null;
+  note:string|null;createdAt:string;source:"USER_AUTHORED_ONLY";
+}>;
+export type InvestorPrinciplesInput=Readonly<{
+  idempotencyKey:string;objective:string|null;horizon:string|null;baseCurrency:string|null;
+  maxSinglePct:string|null;riskLimitPct:string|null;reviewCadence:string|null;note:string|null;
+}>;
+export async function fetchInvestorPrinciples(subject:string):Promise<InvestorPrinciples|null>{
+  const result=await postS2("/internal/v1/principles/get",subject) as {
+    complete?:boolean;source?:string;current?:InvestorPrinciples|null;
+  };
+  if(result?.complete!==true||result.source!=="USER_AUTHORED_ONLY"||
+    !("current" in result))throw new Error("Investor principles unavailable");
+  const p=result.current;
+  if(p!==null&&(!p||typeof p.id!=="string"||p.source!=="USER_AUTHORED_ONLY"||
+    !Number.isFinite(Date.parse(p.createdAt))))throw new Error("Invalid investor principles");
+  return p;
+}
+export async function submitInvestorPrinciples(subject:string,input:InvestorPrinciplesInput):Promise<string>{
+  const result=await postS2("/internal/v1/principles/save",subject,input) as {id?:string;source?:string};
+  if(!result||result.source!=="USER_AUTHORED_ONLY"||
+    !/^[0-9a-f-]{36}$/i.test(result.id??""))throw new Error("Invalid principles confirmation");
+  return result.id!;
 }

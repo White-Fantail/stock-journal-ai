@@ -146,6 +146,10 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             strategy_type,investment_horizon,invalidation_condition,
             max_allocation_pct,review_cadence FROM saas_journal_plan_revisions
             ORDER BY created_at,id LIMIT %s""",(_LIMIT+1,)).fetchall()
+        principles = trade_conn.execute("""SELECT id,objective,horizon,base_currency,
+            max_single_pct,risk_limit_pct,review_cadence,note,created_at
+            FROM saas_investor_principle_revisions WHERE workspace_id=%s
+            ORDER BY created_at,id LIMIT %s""",(scope["workspaceId"],_LIMIT+1)).fetchall()
         risk_factors = trade_conn.execute("""SELECT id,ticker,factors,rationale,created_at
             FROM saas_risk_factor_revisions
             WHERE workspace_id=%s ORDER BY created_at,id LIMIT %s""",
@@ -158,12 +162,14 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
         """,(scope["workspaceId"],_LIMIT+1)).fetchall()
         if (len(trades) > _LIMIT or len(notes) > _LIMIT
                 or len(plans) > _LIMIT or len(checkins) > _LIMIT
-                or len(risk_factors) > _LIMIT):
+                or len(risk_factors) > _LIMIT or len(principles) > _LIMIT):
             raise TradeConflict("Export exceeds safe complete bound; paginated export required")
     from services.saas_api.journal_plans import _row as _plan_row
+    from services.saas_api.investor_principles import _row as _principle_row
     return {"format": "stock-journal-ai.v1", "generatedAt": datetime.now(timezone.utc).isoformat(),
             "workspaceId": scope["workspaceId"], "trades": [_as_json(r) for r in trades],
             "journal": [_entry(r) for r in notes], "plans":[_plan_row(p) for p in plans],
+            "investorPrinciples":[_principle_row(r) for r in principles],
             "riskFactors": [{
                 "id":str(row[0]),"ticker":row[1],"factors":row[2],
                 "rationale":row[3],"createdAt":row[4].isoformat(),

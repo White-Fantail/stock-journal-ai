@@ -34,6 +34,7 @@ def delete_account(identity_conn, subject: str, confirmation: object) -> dict:
         for table in (
             "saas_journal_plan_checkins",
             "saas_risk_factor_revisions",
+            "saas_investor_principle_revisions",
             "saas_journal_records",  # cascades journal broker/observation links
             "saas_journal_plan_revisions",
             "saas_broker_ledger_sources",

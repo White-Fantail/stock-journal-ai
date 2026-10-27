@@ -273,6 +273,9 @@ export function JournalWorkspace({
               <small>가격 감시 없이 스스로 검토하는 주기입니다.</small>
             </div>
           </div>
+          {active?.plan?.riskDecisionNote&&<p className="journal-form-hint">
+            <strong>당시 내가 확인한 매수 가정 · 사용자 작성:</strong> {active.plan.riskDecisionNote}
+          </p>}
           {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
             <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
           </p>}
@@ -328,6 +331,9 @@ export function JournalWorkspace({
                         <strong>논리 무효화 조건:</strong> {e.value.invalidationCondition}
                       </p>}
                       <p className="journal-entry-text">{e.value.rationale}</p>
+                      {e.value.riskDecisionNote&&<p className="journal-form-hint">
+                        <strong>당시 매수 전 점검 · 사용자 승인 가정, 증권사 검증 아님:</strong> {e.value.riskDecisionNote}
+                      </p>
                     </> : <>
                       {e.value.content && <p className="journal-entry-text">{e.value.content}</p>}
                       {e.value.observationRef && <p className="journal-form-hint">

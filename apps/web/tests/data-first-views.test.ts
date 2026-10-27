@@ -110,7 +110,7 @@ test("B4 plan editing retains all existing strategy fields as a new full immutab
  const api=read("../lib/saas-trades-api.ts");
  for(const field of ["rationale","invalidationCondition","reviewCadence","strategyType",
    "investmentHorizon","maxAllocationPct","targetPrice","stopPrice","priceCurrency"]){
-  const markup=["targetPrice","stopPrice","priceCurrency"].includes(field)?pricing:page;
+  const markup=["targetPrice","stopPrice","priceCurrency","strategyType","maxAllocationPct"].includes(field)?pricing:page;
   assert.equal(markup.split('name="'+field+'"').length-1,1,field);
  }
  assert.ok(page.includes("initialTarget={existingPlan?.targetPrice??"));

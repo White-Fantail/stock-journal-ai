@@ -72,3 +72,16 @@ export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScena
    stopImpact,stopWarning,
    existingPositionValue:format(heldValue),afterPositionValue:format(after)};
 }
+
+/** Observed share-price approximation: market value / shares, never a live quote. */
+export function referencePrice(marketValue:string,shares:string):string|null{
+ const mv=decimal(marketValue),qty=decimal(shares);
+ if(mv===null||qty===null||qty<=0n||mv<=0n)return null;
+ return format(mv*SCALE/qty,4);
+}
+export function sumObservedShares(values:readonly string[]):string|null{
+ let sum=0n;
+ for(const raw of values){const v=decimal(raw);if(v===null)return null;sum+=v;}
+ const w=sum/SCALE,f=sum%SCALE;
+ return w.toString()+(f===0n?"":"."+f.toString().padStart(12,"0").replace(/0+$/,""));
+}

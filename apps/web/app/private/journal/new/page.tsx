@@ -7,6 +7,9 @@ import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJou
 import {tigerLedgerRead,tigerPersonalRead} from "../../../../lib/tiger-api";
 import {JournalSymbolPicker} from "./symbol-picker";
 import {PlanRiskCheck} from "./plan-risk-check";
+import {fetchInvestorPrinciples} from "../../../../lib/saas-trades-api";
+import {assessPortfolioOverviewRisk} from "../../../../lib/portfolio-overview-risk";
+import {sumObservedShares} from "../../../../lib/purchase-scenario";
 import {formatDecimal} from "../../../../lib/format-decimal";
 
 export const dynamic="force-dynamic";
@@ -112,6 +115,7 @@ async function addPlan(form:FormData) {
       invalidationCondition:field(form,"invalidationCondition")||null,
       maxAllocationPct:field(form,"maxAllocationPct")||null,
       reviewCadence:(field(form,"reviewCadence")||null) as ReviewCadence|null,
+      riskDecisionNote:field(form,"riskDecisionNote")||null,
     });
   }catch{
     redirect("/private/journal/new?error=unavailable");
@@ -151,6 +155,7 @@ export default async function JournalNewPage({searchParams}:{
     fetchJournal(session.user.id),
     fetchJournalPlans(session.user.id),
     tigerPersonalRead(mode==="observed"?Math.max(0,observedPage):0),
+    mode==="plan"?fetchInvestorPrinciples(session.user.id):Promise.resolve(null),
   ]);
   const manual=results[0].status==="fulfilled"?results[0].value.events:[];
   const entries=results[1].status==="fulfilled"?results[1].value:[];
@@ -162,15 +167,20 @@ export default async function JournalNewPage({searchParams}:{
     :null;
   const personal=results[3].status==="fulfilled"?results[3].value:null;
   const accounts=personal?.accounts??[];
-  // Missing/partial owner-only snapshots are UNKNOWN, not proof of zero holdings.
-  const snapshotAvailable=!!personal && accounts.length>0 &&
-    !personal.readWarnings?.length &&
-    accounts.every(a=>!!a.asOf && !a.partial && !a.truncated &&
-      a.positions.every(p=>!!p.currency && !!p.quantity));
-  const observedHoldings=accounts.flatMap(a=>a.positions
-    .filter(p=>p.symbol===safeTicker)
-    .map(p=>({account:a.alias,quantity:p.quantity,averageCost:p.averageCost,
-      currency:p.currency,asOf:a.asOf})));
+  const principle=results[4].status==="fulfilled"?results[4].value:null;
+  const portfolio=assessPortfolioOverviewRisk(personal,planHistoryAvailable?plans:null);
+  const holdings=accounts.flatMap(a=>a.positions.filter(p=>p.symbol===safeTicker));
+  const heldShares=sumObservedShares(holdings.map(p=>p.quantity));
+  const tickerExposure=portfolio.state==="READY"?
+    portfolio.positions.find(p=>p.ticker===safeTicker):null;
+  const reference=portfolio.state==="READY"&&heldShares!==null?{
+    currency:portfolio.currency,asOf:portfolio.asOf,
+    accountCount:portfolio.accountCount,nav:portfolio.nav,cash:portfolio.cash,
+    heldValue:tickerExposure?.marketValue??"0",
+    heldShares,heldPercent:tickerExposure?.observedTigerPct??"0.00",
+  }:null;
+  const unavailableReason=portfolio.state==="UNAVAILABLE"?
+    portfolio.reason:heldShares===null?"보유수량 형식이 불완전합니다.":null;
   if(mode==="observed" && (!safeTicker || observedPage<0 || !sourceKind ||
     !/^[0-9a-f]{64}$/.test(sourceRef) ||
     (sourceKind==="FILL" && observedPage!==0))) notFound();
@@ -291,17 +301,7 @@ export default async function JournalNewPage({searchParams}:{
           </label>
         </div>
         <details className="data-disclosure">
-          <summary>투자 유형·기간·최대 비중 (선택 사항)</summary>
-        <div className="journal-form-two">
-          <label>투자 전략 유형
-            <select name="strategyType" defaultValue={existingPlan?.strategyType??""}>
-              <option value="">미정</option>
-              <option value="LONG_TERM">장기 투자</option>
-              <option value="TECHNICAL">기술적 근거 진입</option>
-              <option value="EVENT_DRIVEN">이벤트·실적 기반</option>
-              <option value="OTHER">기타 전략</option>
-            </select>
-          </label>
+          <summary>예상 투자 기간 (선택 사항)</summary>
           <label>예상 투자 기간
             <select name="investmentHorizon" defaultValue={existingPlan?.investmentHorizon??""}>
               <option value="">미정</option>
@@ -312,25 +312,18 @@ export default async function JournalNewPage({searchParams}:{
               <option value="OPEN_ENDED">장기·종료 시점 미정</option>
             </select>
           </label>
-        </div>
-        <div className="journal-form-two">
-          <label>단일 종목 최대 보유 비중 (%) · 선택 사항
-            <input name="maxAllocationPct" inputMode="decimal" type="text"
-              defaultValue={existingPlan?.maxAllocationPct??""}
-              pattern="(?:[0-9]{1,3}(?:[.][0-9]{1,2})?)"
-              placeholder="예: 15"/>
-          </label>
-          <p className="journal-form-hint">비중은 내가 정한 전체 투자 기준일 수 있습니다. 일부 계좌의 관측 비중만으로 자동 준수 판정하지 않습니다.</p>
-        </div>
         </details>
         <PlanRiskCheck ticker={safeTicker}
           initialTarget={existingPlan?.targetPrice??""}
           initialStop={existingPlan?.stopPrice??""}
           initialCurrency={existingPlan?.priceCurrency??"USD"}
-          observedHoldings={observedHoldings} snapshotAvailable={snapshotAvailable}/>
+          initialStrategy={existingPlan?.strategyType??null}
+          initialMaxPct={existingPlan?.maxAllocationPct??null}
+          principleMaxPct={principle?.maxSinglePct??null}
+          reference={reference} unavailableReason={unavailableReason}/>
         <p className="journal-form-hint">세부 항목을 펼치지 않아도 기존 저장값은 입력 요소에 유지됩니다.
           값을 직접 지우면 새 계획 변경 이력에 미설정으로 저장됩니다. 저장한 계획은 과거 기록을 수정하지 않고 새 이력으로 추가합니다.
-          목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다. 매수 전 위험 점검 결과는 저장되지 않습니다.</p>
+          목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다. 위험 점검 가정과 사용자 판단은 명시적으로 체크했을 때만 새 계획의 변경 이력에 저장됩니다.</p>
         <button type="submit" className="btn btn-primary journal-save">새 투자 계획 저장</button>
       </form>
     :<form action={addJournal} className="journal-compose-form">

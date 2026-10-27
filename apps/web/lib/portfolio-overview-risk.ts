@@ -73,6 +73,8 @@ export function assessPortfolioOverviewRisk(
  let nav=BigInt(0),cash=BigInt(0),invested=BigInt(0);
  const byTicker=new Map<string,{amount:bigint;accounts:Set<string>}>();
  for(const account of personal.accounts){
+   if(account.partial||account.truncated||account.hasMore)
+     return fail("일부 보유 내역이 잘렸거나 수집 범위가 불완전해 자동 합산을 중단합니다.");
    const alias=account.alias;
    if(!alias||aliases.has(alias))
      return fail("계좌 식별명이 중복되거나 없어 서로 다른 계좌임을 보장할 수 없습니다.");

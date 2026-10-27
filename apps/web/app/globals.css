@@ -294,8 +294,8 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .app-shell .data-disclosure{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:14px 0;background:#f8fbf9}
 .app-shell .data-disclosure summary{font-size:.84rem;font-weight:750;color:#356758}
 .app-shell .data-disclosure p{font-size:.82rem;margin:8px 0 0}
-@media(max-width:760px){
-  /* The original horizontally scrolling header hid links and kept its scroll position. */
+@media(max-width:1100px){
+  /* Give a discoverable five-item navigation to tablet screens as well. */
   .app-header .container{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 10px;align-items:center;min-height:0;padding:10px 0 0}
   .app-header .brand{font-size:1.17rem;min-width:0}
   .app-header .brand-icon{width:34px;height:34px;font-size:1.4rem}
@@ -464,4 +464,28 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
  .performance-proof-row{flex-direction:column;align-items:flex-start;gap:5px}
  .performance-proof-row .user-list-value{text-align:left;max-width:100%}
  .performance-page .portfolio-account-values{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* Stage 7: touch and keyboard accessibility for long-horizon workflows. */
+@media(max-width:1100px){
+  .app-mobile-more-panel{max-height:min(72dvh,510px);overflow-y:auto;
+    overscroll-behavior:contain;scrollbar-gutter:stable}
+  .app-mobile-more summary{cursor:pointer}
+  .app-mobile-nav :is(a,summary):focus-visible,
+  .performance-period-link:focus-visible{
+    outline:3px solid #177d60;outline-offset:2px}
+}
+@media(max-width:760px){
+  .app-shell :is(.user-panel,.state-panel,.journal-compose){min-width:0;max-width:100%}
+  .app-shell :is(.user-panel-head,.journal-page-heading)>*{min-width:0}
+  .app-shell .user-panel-head>a{display:inline-flex;align-items:center;min-height:44px}
+  .app-shell .journal-compose-form :is(input:not([type="hidden"]),select,textarea){
+    box-sizing:border-box;max-width:100%;min-width:0;width:100%;font-size:16px}
+  .app-shell .journal-compose-form button[type="submit"]{min-height:48px;max-width:100%}
+  .app-shell .performance-proof-row,.app-shell .portfolio-overview-row,
+  .app-shell .user-list-row{overflow-wrap:anywhere}
+}
+@media(max-width:390px){
+  .app-mobile-nav>a,.app-mobile-more summary{white-space:normal;line-height:1.18}
+  .app-mobile-more-panel{right:0;max-width:calc(100vw - 28px)}
 }

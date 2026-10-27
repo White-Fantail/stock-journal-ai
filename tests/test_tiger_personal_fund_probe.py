@@ -52,20 +52,21 @@ class OwnerFundsProbeTests(unittest.TestCase):
                                    client_factory=factory,now=NOW)
         return result,source,seen
 
-    def test_owner_opt_in_and_three_read_only_account_bound_queries(self):
+    def test_owner_opt_in_and_all_documented_cash_activity_queries(self):
         r,source,seen=self.setup_call()
         self.assertEqual(r["source"],"OWNER_ONLY_RSA_SHADOW_PROBE")
         self.assertIs(r["verified"],False)
         self.assertIs(r["historyComplete"],False)
-        self.assertEqual(len(r["checks"]),3)
+        from services.broker_connectors.tiger_financial_evidence import CATEGORIES, SEGMENTS
+        self.assertEqual(len(r["checks"]),len(CATEGORIES))
         self.assertEqual(seen,[("test-tiger-id","ABC12345","private-rsa-test")])
-        self.assertEqual([x["fund_type"] for x in source.calls],
-            ["DEPOSIT_WITHDRAW","FOREX","CORPORATE_ACTION"])
+        self.assertEqual([x["fund_type"] for x in source.calls],list(CATEGORIES))
+        self.assertTrue(all(x["seg_types"]==list(SEGMENTS) for x in source.calls))
         self.assertTrue(all(x["account"]=="ABC12345" for x in source.calls))
         self.assertTrue(all(x["start_date"]=="2026-10-20" for x in source.calls))
         self.assertTrue(all(x["end_date"]=="2026-10-26" for x in source.calls))
-        self.assertEqual([x["limit"] for x in source.calls],[50,50,50])
-        self.assertEqual([x["start"] for x in source.calls],[0,0,0])
+        self.assertEqual([x["limit"] for x in source.calls],[50]*len(CATEGORIES))
+        self.assertEqual([x["start"] for x in source.calls],[0]*len(CATEGORIES))
         self.assertTrue(all(x["status"]=="SHAPE_OBSERVED_UNVERIFIED"
                             for x in r["checks"]))
         # Neither raw IDs nor amounts nor credentials appear in returned metadata.

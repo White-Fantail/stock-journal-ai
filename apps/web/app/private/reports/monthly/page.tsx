@@ -129,7 +129,7 @@ export default async function MonthlyReviewReport({searchParams}:{
       <section className="user-panel">
         <div className="user-panel-head">
           <h2>검증된 투자 성과 계산 준비 상태</h2>
-          <Link href="/private/portfolio">원장 상태 확인 →</Link>
+          <Link href="/private/performance">장기 성과 준비 상태 →</Link>
         </div>
         <p>현재는 <strong>{readiness.label}</strong> 상태입니다. 일부 Tiger 주문이나 계좌 평가액만으로
           확정 수익률을 계산하지 않습니다. 이 상태는 실제 투자 성과가 나쁘거나 좋다는 뜻이 아닙니다.</p>

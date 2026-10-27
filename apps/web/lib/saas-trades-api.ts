@@ -319,10 +319,12 @@ export type JournalPlan = Readonly<{
   id:string; ticker:string; targetPrice:string|null; stopPrice:string|null;
   priceCurrency:string|null; rationale:string; createdAt:string;
   provenance:"USER_AUTHORED"; isBrokerOrder:false;
+  riskDecisionNote?:string|null;
 } & JournalStrategyFields>;
 export type JournalPlanInput = {
   idempotencyKey:string; ticker:string; targetPrice:string|null;
   stopPrice:string|null; priceCurrency:string|null; rationale:string;
+  riskDecisionNote?:string|null;
 } & JournalStrategyFields;
 export async function fetchJournalPlans(subject:string):Promise<readonly JournalPlan[]> {
   const result=await postS2("/internal/v1/journal/plans",subject) as {
@@ -336,6 +338,8 @@ export async function fetchJournalPlans(subject:string):Promise<readonly Journal
        (p.targetPrice===null || typeof p.targetPrice==="string") &&
        (p.stopPrice===null || typeof p.stopPrice==="string") &&
        (p.priceCurrency===null || typeof p.priceCurrency==="string") &&
+       (p.riskDecisionNote==null || (typeof p.riskDecisionNote==="string" &&
+          p.riskDecisionNote.length>=1 && p.riskDecisionNote.length<=1200)) &&
        (p.strategyType==null || ["LONG_TERM","TECHNICAL","EVENT_DRIVEN","OTHER"].includes(p.strategyType)) &&
        (p.investmentHorizon==null || ["UNDER_3_MONTHS","THREE_TO_TWELVE_MONTHS",
           "ONE_TO_THREE_YEARS","OVER_THREE_YEARS","OPEN_ENDED"].includes(p.investmentHorizon)) &&

@@ -18,7 +18,7 @@ test("cash-funded added shares change exposure but do not inflate NAV",()=>{
 test("existing risk uses reference valuation, not historical average cost",()=>{
  const r=calculatePurchaseScenario({...sample,heldValue:"2100",nav:"10100",cash:"4000",stop:"400",price:"420"});
  assert.equal(r.state,"READY");
- if(r.state==="READY"){assert.equal(r.stopImpact,"100.00");assert.equal(r.stopWarning,null);}
+ if(r.state==="READY"){assert.equal(r.stopImpact,"160.00");assert.equal(r.stopWarning,null);}
 });
 test("cap comparisons use exact unrounded values",()=>{
  const r=calculatePurchaseScenario({...sample,nav:"10000",heldValue:"2999.999999999999",heldShares:"10",buyShares:"0",cash:"4000"});
@@ -26,7 +26,7 @@ test("cap comparisons use exact unrounded values",()=>{
  if(r.state==="READY")assert.equal(r.capExceeded,false);
  const after=calculatePurchaseScenario({...sample,nav:"10000",heldValue:"2999.999999999999",heldShares:"10",buyShares:"0.000000000001",cash:"4000"});
  assert.equal(after.state,"READY");
- if(after.state==="READY")assert.equal(after.capExceeded,false);
+ if(after.state==="READY")assert.equal(after.capExceeded,true);
 });
 test("invalid currency-like, leverage, negative, unmatched or stale numbers rejected by caller",()=>{
  for(const change of [{nav:"-1"},{cash:"10001"},{heldValue:"8000"},

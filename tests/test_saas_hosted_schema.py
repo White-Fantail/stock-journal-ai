@@ -31,7 +31,8 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                            "024_plan_checkins.sql",
                            "025_user_risk_factors.sql",
                            "026_investor_principles.sql",
-                           "027_review_action_followups.sql"])
+                           "027_review_action_followups.sql",
+                            "028_plan_risk_decision_note.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_strategy_plan_extension_is_nullable_append_only_and_forward_only(self):

@@ -28,6 +28,7 @@ _EXTRA_FIELDS = frozenset((
     "strategyType","investmentHorizon","invalidationCondition",
     "maxAllocationPct","reviewCadence",
 ))
+_DECISION_FIELDS = frozenset(("riskDecisionNote",))
 _STRATEGIES = frozenset(("LONG_TERM","TECHNICAL","EVENT_DRIVEN","OTHER"))
 _HORIZONS = frozenset((
     "UNDER_3_MONTHS","THREE_TO_TWELVE_MONTHS","ONE_TO_THREE_YEARS",
@@ -81,9 +82,18 @@ def _price(raw):
     return value
 
 
+def _decision_note(value):
+    if value is None:
+        return None
+    if not isinstance(value,str) or not 1 <= len(value) <= 1200 or not value.strip():
+        raise TradeInputError("Invalid user risk-decision note")
+    return value.strip()
+
+
 def normalize_plan(raw):
     if not isinstance(raw,dict) or frozenset(raw) not in (
         _BASE_FIELDS, _BASE_FIELDS|_EXTRA_FIELDS,
+        _BASE_FIELDS|_EXTRA_FIELDS|_DECISION_FIELDS,
     ):
         raise TradeInputError("Invalid plan fields")
     try:
@@ -116,6 +126,8 @@ def normalize_plan(raw):
             "maxAllocationPct":_allocation(raw["maxAllocationPct"]),
             "reviewCadence":_enum(raw["reviewCadence"],_CADENCES,"review cadence"),
         })
+    if _DECISION_FIELDS.issubset(raw):
+        result["riskDecisionNote"]=_decision_note(raw["riskDecisionNote"])
     # Do not add new NULL keys for historical six-field requests:
     # their persisted idempotency digest must remain stable after migration.
     return result
@@ -132,6 +144,7 @@ def _row(row):
             "invalidationCondition":row[9],
             "maxAllocationPct":str(row[10]) if row[10] is not None else None,
             "reviewCadence":row[11],
+            "riskDecisionNote":row[12],
             "isBrokerOrder":False}
 
 
@@ -143,7 +156,7 @@ def list_plans(identity_conn, trade_conn, subject):
         rows=trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
           price_currency,rationale,created_at,
           strategy_type,investment_horizon,invalidation_condition,
-          max_allocation_pct,review_cadence
+          max_allocation_pct,review_cadence,risk_decision_note
           FROM saas_journal_plan_revisions
           ORDER BY created_at DESC,id DESC LIMIT %s""",(_LIST_LIMIT,)).fetchall()
     return {"plans":[_row(row) for row in rows],"source":"USER_AUTHORED_ONLY",
@@ -168,15 +181,15 @@ def create_plan(identity_conn,trade_conn,subject,raw):
           (workspace_id,author_user_id,idempotency_key,request_hash,ticker,
            target_price,stop_price,price_currency,rationale,
            strategy_type,investment_horizon,invalidation_condition,
-           max_allocation_pct,review_cadence)
-          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           max_allocation_pct,review_cadence,risk_decision_note)
+          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
           ON CONFLICT(workspace_id,idempotency_key) DO NOTHING RETURNING id""",
           (scope["workspaceId"],scope["userId"],entry["idempotencyKey"],digest,
            entry["ticker"],entry["targetPrice"],entry["stopPrice"],
            entry["priceCurrency"],entry["rationale"],
            entry.get("strategyType"),entry.get("investmentHorizon"),
            entry.get("invalidationCondition"),entry.get("maxAllocationPct"),
-           entry.get("reviewCadence"))).fetchone()
+           entry.get("reviewCadence"),entry.get("riskDecisionNote"))).fetchone()
         if not inserted:
             old=trade_conn.execute("""SELECT id,request_hash
                  FROM saas_journal_plan_revisions WHERE idempotency_key=%s""",

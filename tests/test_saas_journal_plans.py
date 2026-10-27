@@ -81,6 +81,23 @@ class JournalPlanInputTests(unittest.TestCase):
         with self.assertRaises(TradeInputError):
             normalize_plan({**BASE,**fields,"unknownQuoteAlert":True})
 
+    def test_optional_risk_decision_note_and_old_hash_shapes(self):
+        f={"strategyType":"LONG_TERM","investmentHorizon":None,
+           "invalidationCondition":None,"maxAllocationPct":None,
+           "reviewCadence":None}
+        old=normalize_plan({**BASE,**f})
+        self.assertNotIn("riskDecisionNote",old)
+        note=normalize_plan({**BASE,**f,
+                            "riskDecisionNote":"  I checked an illustrative 3-share scenario  "})
+        self.assertEqual(note["riskDecisionNote"],
+                         "I checked an illustrative 3-share scenario")
+        self.assertIsNone(normalize_plan({**BASE,**f,"riskDecisionNote":None})["riskDecisionNote"])
+        for invalid in ("", " ", "x"*1201, 8, [], {"source":"BROKER_VERIFIED"}):
+            with self.subTest(invalid=invalid),self.assertRaises(TradeInputError):
+                normalize_plan({**BASE,**f,"riskDecisionNote":invalid})
+        with self.assertRaises(TradeInputError):
+            normalize_plan({**BASE,"riskDecisionNote":"unexpected partial"})
+
     def test_no_guessing_invalid_money_or_currency(self):
         invalid=[
             {"targetPrice":"NaN"},{"targetPrice":"Infinity"},{"targetPrice":"0"},

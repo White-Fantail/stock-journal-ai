@@ -92,6 +92,12 @@ def monthly_process(identity, trade, subject, month, *, now=None):
             WHERE workspace_id=%s AND created_at < %s
             ORDER BY ticker,created_at DESC,id DESC""",
             (wid,cutoff),label="active strategy")
+        # Immutable user self-assessments: this is a process metric, not
+        # audited adherence to brokerage positions or the investment thesis.
+        assessments=trade.execute("""SELECT self_assessment,count(*)
+            FROM saas_journal_plan_checkins
+            WHERE workspace_id=%s AND created_at >= %s AND created_at < %s
+            GROUP BY self_assessment""",(wid,start,cutoff)).fetchall()
         tickers=[row[0] for row in latest]
         reviews=(_query_rows(trade, """SELECT ticker,max(created_at)
             FROM saas_journal_records
@@ -137,6 +143,11 @@ def monthly_process(identity, trade, subject, month, *, now=None):
       "uniqueSymbols":len(symbols),"symbols":items,
       "plannedSymbols":len(latest),"completeStrategySymbols":complete,
       "dueAsOfCutoff":due,
+      "selfReviewCount":sum(int(r[1]) for r in assessments),
+      "selfReviewBreakdown":{status:next((int(count) for item,count in assessments
+                               if item==status),0)
+                            for status in ("FOLLOWED","PARTIAL","DEVIATED","UNCERTAIN")},
+      "adherenceBasis":"USER_SELF_ASSESSED_NOT_BROKER_VERIFIED",
       "source":"USER_AUTHORED_PROCESS_ONLY",
       "coverage":"MONTH_WINDOW_DB_AGGREGATED","complete":True,
     }

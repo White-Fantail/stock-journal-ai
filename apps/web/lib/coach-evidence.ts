@@ -100,8 +100,9 @@ export function buildCoachingEvidence(
       ref:"R"+(i+1),kind:"SELF_REVIEW",ticker,
       on:new Date(c.createdAt).toISOString().slice(0,10),
       source:"USER_SELF_ASSESSED_NOT_BROKER_VERIFIED",
-      detail:sanitizedExcerpt(`사용자 평가 ${c.selfAssessment}; 당시 복기:
-${c.content}; 본인이 정한 다음 점검 행동: ${c.nextAction}`,560),
+      detail:`사용자 평가 ${c.selfAssessment}; 당시 복기:
+${sanitizedExcerpt(c.content,180)}; 본인이 정한 다음 점검 행동:
+${sanitizedExcerpt(c.nextAction,240)}`.replace(/\s+/g," ").trim(),
     });
   }
   const activity=months.some(x=>x.report.symbols.some(v=>v.ticker===ticker&&

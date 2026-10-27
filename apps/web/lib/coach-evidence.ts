@@ -104,8 +104,8 @@ export function buildCoachingEvidence(
 ${c.content}; 본인이 정한 다음 점검 행동: ${c.nextAction}`,560),
     });
   }
-  const activity=months.some(x=>x.report.noteCount+x.report.planRevisionCount+
-    x.report.selfReviewCount>0)||sorted.length>0;
+  const activity=months.some(x=>x.report.symbols.some(v=>v.ticker===ticker&&
+    v.notes+v.reviews+v.plans>0))||sorted.length>0;
   if(!activity)throw new Error("COACHING_NO_AUTHORED_ACTIVITY");
   const envelope:AnalysisEnvelope={mode:"COACHING",symbol:ticker,
     asOf:now.toISOString().slice(0,10),evidence,limits:[

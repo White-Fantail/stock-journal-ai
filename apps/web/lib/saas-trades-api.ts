@@ -305,7 +305,7 @@ export async function submitTigerObservationNote(subject:string,note:TigerObserv
 /** Atomic, identity-verified, tenant-scoped daily/monthly AI quota.
  * No private notes or financial data ever go to the quota endpoint.
  */
-export type AiClaimInput={mode:"STOCK_REVIEW"|"HABITS";consented:true};
+export type AiClaimInput={mode:"STOCK_REVIEW"|"HABITS"|"COACHING";consented:true};
 export async function claimAiAnalysis(subject:string,mode:AiClaimInput["mode"]):Promise<{
   remainingDay:number;remainingMonth:number
 }>{

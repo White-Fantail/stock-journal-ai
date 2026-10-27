@@ -64,17 +64,32 @@ class TigerFundEvidenceTests(unittest.TestCase):
         self.assertEqual(len(e.source_ref),64)
         self.assertNotEqual(e.source_ref,"101")
         self.assertEqual(source.calls,[{
-            "seg_types":["SEC","FUT"],"fund_type":"DEPOSIT_WITHDRAW",
+            "seg_types":["SEC","FUT","FUND"],"fund_type":"DEPOSIT_WITHDRAW",
             "account":"SYNTH12345","start":0,"limit":50,
             "start_date":"2026-10-01","end_date":"2026-10-30"}])
 
     def test_all_three_documented_categories_remain_unverified(self):
-        for category in ("DEPOSIT_WITHDRAW","FOREX","CORPORATE_ACTION"):
+        from services.broker_connectors.tiger_financial_evidence import CATEGORIES
+        for category in CATEGORIES:
             batch=collect_fund_observations(FakeSource([[row(77)]]),WINDOW,
                                             category,account="SYNTH12345",hmac_secret=KEY)
             self.assertEqual(batch.category,category)
             self.assertFalse(batch.history_certified)
             self.assertEqual(batch.records[0].filter_category,category)
+
+    def test_fund_segment_and_cash_fee_filters_never_claim_trades(self):
+        categories=("FEE","TRADE","FUNDS_TRANSFER","ACTIVITY_AWARD","OTHER")
+        for category in categories:
+            with self.subTest(category=category):
+                batch=collect_fund_observations(
+                    FakeSource([[row(202,seg_type="FUND",type="Commission")]]),
+                    WINDOW,category,account="SYNTH12345",hmac_secret=KEY)
+                self.assertEqual(batch.records[0].segment,"FUND")
+                self.assertEqual(batch.records[0].filter_category,category)
+                self.assertEqual(batch.records[0].provenance,
+                                 "BROKER_OBSERVED_UNVERIFIED")
+                self.assertFalse(batch.history_certified)
+                self.assertFalse(batch.records[0].amount_precision_verified)
 
     def test_pagination_all_records_accounted_before_accepting(self):
         first=[row(i,page=1,item_count=51,page_count=2)

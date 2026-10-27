@@ -8,12 +8,15 @@ const read=(path:string)=>readFileSync(fileURLToPath(new URL(path,import.meta.ur
 test("private navigation keeps all destinations accessible on a narrow phone",()=>{
   const layout=read("../app/private/layout.tsx");
   const css=read("../app/globals.css");
-  for(const route of ["/private","/private/portfolio","/private/trades","/private/journal",
-    "/private/analysis","/private/analysis?mode=COACHING","/private/alerts","/private/reports/monthly","/private/performance","/private/brokers","/private/settings"]){
+  for(const route of ["/private","/private/portfolio","/private/journal","/private/review","/private/principles",
+    "/private/trades","/private/risk","/private/analysis","/private/analysis?mode=COACHING",
+    "/private/alerts","/private/reports/weekly","/private/reports/monthly","/private/performance",
+    "/private/brokers","/private/settings"]){
     assert.ok(layout.includes('href="'+route+'"'),route);
   }
   assert.ok(layout.includes('aria-label="모바일 주 메뉴"'));
   assert.ok(layout.includes('<details className="app-mobile-more">'));
+  assert.ok(layout.includes('<details className="app-desktop-more">'));
   assert.ok(css.includes(".app-mobile-nav{display:grid"));
   assert.ok(css.includes(".app-nav{display:none}"));
   assert.ok(css.includes("min-height:45px"));

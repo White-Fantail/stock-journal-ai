@@ -4,7 +4,8 @@ import {auth} from "../../auth";
 import type {Metadata} from "next";
 import {currentWorkspace} from "../../lib/require-workspace";
 import {formatDecimal} from "../../lib/format-decimal";
-import {fetchJournal,fetchJournalPlans} from "../../lib/saas-trades-api";
+import {fetchJournal,fetchJournalPlans,fetchInvestorPrinciples} from "../../lib/saas-trades-api";
+import {deriveNextReviewActions} from "../../lib/next-review-actions";
 import {tigerStatus,tigerPersonalRead,type TigerStatus} from "../../lib/tiger-api";
 
 export const metadata:Metadata={title:"내 대시보드 · Positionary"};
@@ -33,11 +34,16 @@ export default async function WorkspaceHome(){
   const results=await Promise.allSettled([
     tigerPersonalRead(),tigerStatus(),
     fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
+    fetchInvestorPrinciples(session.user.id),
   ]);
   const personal=results[0].status==="fulfilled"?results[0].value:null;
   const tiger: TigerStatus|null=results[1].status==="fulfilled"?results[1].value:null;
   const notes=results[2].status==="fulfilled"?results[2].value:null;
   const plans=results[3].status==="fulfilled"?results[3].value:null;
+  const principles=results[4].status==="fulfilled"?results[4].value:null;
+  const actions=deriveNextReviewActions({principles,
+    principlesAvailable:results[4].status==="fulfilled",
+    notes,plans,personal});
   const accounts=personal?.accounts??[];
   const allPositions=accounts.flatMap(a=>a.positions.map(p=>({alias:a.alias,...p,
     quote:a.marketObservations.find(q=>q.symbol===p.symbol && q.currency===p.currency)})));
@@ -55,20 +61,28 @@ export default async function WorkspaceHome(){
   return <main className="home-data">
     <div className="page-intro home-data-heading">
       <div>
-        <h1>대시보드</h1>
-        <p>내 투자 현황과 최근 기록을 확인하세요.</p>
+        <h1>내 투자 홈</h1>
+        <p>오늘 확인할 투자 원칙과 기록부터 살펴보세요.</p>
       </div>
       <div className="home-actions">
-        <Link className="btn btn-outline" href="/private/alerts">투자 점검</Link>
-        <Link className="btn btn-outline" href="/private/reports/weekly">주간 점검</Link>
-        <Link className="btn btn-outline" href="/private/reports/monthly">월간 복기</Link>
-        <Link className="btn btn-outline" href="/private/analysis?mode=COACHING">AI 코칭</Link>
-        <Link className="btn btn-outline" href="/private/performance">장기 성과 검증</Link>
-        <Link className="btn btn-outline" href="/private/risk">위험 계산기</Link>
-        <Link className="btn btn-primary" href="/private/journal/new">+ 투자 일지 작성</Link>
+        <Link className="btn btn-outline" href="/private/principles">내 투자 원칙</Link>
+        <Link className="btn btn-primary" href="/private/journal/new">+ 투자 기록</Link>
       </div>
     </div>
 
+    <section className="user-panel next-review-panel" aria-label="오늘 확인할 일">
+      <div className="user-panel-head"><h2>오늘 확인할 일</h2>
+        <Link href="/private/review">전체 점검 →</Link></div>
+      {actions.length? <div className="next-review-grid">
+        {actions.map(action=><article className="next-review-item" key={action.id}>
+          <h3>{action.title}</h3><p>{action.detail}</p>
+          <Link className="btn btn-outline" href={action.href}>확인하기 →</Link>
+        </article>)}
+      </div>:<p>지금 확인 가능한 기록에서 예정된 점검이 없습니다.
+        데이터가 완전하거나 투자 위험이 없다는 뜻은 아닙니다.</p>}
+      <p className="user-footnote">사용자가 작성한 투자 계획과 조회 가능한 계좌 관측에만 기반합니다.
+        가격 감시·매매 추천은 제공하지 않습니다.</p>
+    </section>
     <div className="user-summary-grid">
       <section className="user-summary-card">
         <small>연결 상태</small>

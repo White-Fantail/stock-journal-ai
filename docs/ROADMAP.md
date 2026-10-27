@@ -198,3 +198,12 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - The private Railway `positionary-tiger-personal` service currently builds from `main`, and `POSITIONARY_PERSONAL_FUND_PROBE_ENABLED` is not configured. This `dev` probe has not been invoked against real RSA account data.
 - Only a deliberately enabled one-shot private owner runtime can verify Tiger account grant, SDK response field fidelity, provider-specific page semantics and permissions. No diagnostics should expose real source rows/account numbers or enter public repositories.
 - Durable history proof next needs stable tenant/account-scoped HMAC identity, tenant-specific encrypted source staging under active worker authorization, actual provider window coverage, independent reconciliation of executions/fees/cash/FX/dividends/corporate actions, and audited NAV. CI success cannot replace these live proofs. No broker orders or transfers.
+
+
+### Priority 3 — user-authored plan adherence reviews (2026-10-27)
+
+- [x] Forward-only migration 024: append-only scoped checkin table with immutable plan revision and companion REVIEW note references, idempotency and FORCE RLS; no UPDATE, DELETE or broker trading permission.
+- [x] Separate per-ticker self-review page: user selects FOLLOWED, PARTIAL, DEVIATED or UNCERTAIN with evidence and the next review action; server rejects stale plan IDs and atomically writes the ordinary REVIEW note and status row. Existing freeform reviews are preserved.
+- [x] Monthly DB aggregation of structured user-assessed outcomes without recent-feed limits, displayed separately from general review counts. User-marked status is NOT audited plan compliance, broker-fill accuracy or profitability.
+- [x] CI tests for input contracts, tenant A/B isolation, plan version changes, immutable revisions and idempotency replay.
+- [ ] Next: verified longitudinal trade-versus-plan assessment after Tiger fill, cash and FX source completeness; never infer a sell instruction or fabricate plan-adherence rates from unverified trades.

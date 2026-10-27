@@ -561,3 +561,13 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .journal-plan-first>label{display:grid;gap:6px}
 @media(max-width:1100px){.journal-guided-workflow{grid-template-columns:1fr}}
 @media(max-width:760px){.journal-guided-step{padding:12px}.journal-primary-reason{padding:12px}}
+
+/* B5 user-authored follow-ups, explicit author confirmation only. */
+.review-action-list{display:grid;gap:10px}
+.review-action-item{border:1px solid var(--line);border-radius:13px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:15px;min-width:0}
+.review-action-item>div{min-width:0;flex:1}
+.review-action-item strong{font-size:.9rem}
+.review-action-item p{white-space:pre-wrap;overflow-wrap:anywhere;margin:5px 0;font-size:.89rem}
+.review-action-item small{color:var(--muted);font-size:.78rem}
+.review-action-item .btn{flex:0 0 auto;min-height:44px}
+@media(max-width:640px){.review-action-item{flex-direction:column;align-items:stretch}.review-action-item .btn{align-self:flex-start}}

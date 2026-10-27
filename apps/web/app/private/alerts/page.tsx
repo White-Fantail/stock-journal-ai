@@ -34,9 +34,10 @@ export default async function NotificationsPage(){
     <div className="page-intro journal-page-heading">
       <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
         <h1>투자 점검 센터</h1>
-        <p>Tiger 수집 상태와 아직 계획을 작성하지 않은 보유 종목을 확인합니다. 가격 감시나 매매 알림은 제공하지 않습니다.</p>
+        <p>직접 작성한 점검 주기와 최근 계좌 수집 상태를 확인합니다. 지난번에 정한 행동은 점검 허브에서 직접 완료 여부를 기록할 수 있습니다.</p>
       </div>
       <div className="home-actions">
+        <Link className="btn btn-primary" href="/private/review">지난 행동 확인</Link>
         <Link className="btn btn-outline" href="/private/reports/weekly">주간 점검 보고서</Link>
         <Link className="btn btn-outline" href="/private/reports/monthly">월간 복기 보고서</Link>
         <Link className="btn btn-outline" href="/private/portfolio">포트폴리오 확인</Link>

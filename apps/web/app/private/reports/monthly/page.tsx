@@ -74,7 +74,7 @@ export default async function MonthlyReviewReport({searchParams}:{
       <section className="user-panel">
         <div className="user-panel-head">
           <h2>투자계획과 정기 복기 현황</h2>
-          <Link href="/private/analysis?mode=COACHING">지난달 기록 AI 코칭 →</Link>
+          <Link href="/private/review">지난 행동 완료 여부 확인 →</Link>
         </div>
         <div className="account-summary-values portfolio-account-values">
           <div><small>보고서 기준일까지 작성된 종목별 계획</small><strong>{report.plannedSymbols}개</strong></div>
@@ -88,7 +88,7 @@ export default async function MonthlyReviewReport({searchParams}:{
       <section className="user-panel">
         <div className="user-panel-head">
           <h2>투자 원칙 자기평가 · 이번 달</h2>
-          <Link href="/private/journal">종목 선택 후 자기평가 →</Link>
+          <Link href="/private/review">지난 행동 상태와 새 자기평가 →</Link>
         </div>
         <p>계획에 연결하여 직접 평가한 복기 <strong>{report.selfReviewCount}건</strong>입니다.
           전체 REVIEW 메모 {report.reviewCount}건에 포함되며, 이 중 자기평가를 명시한 기록만 별도로 집계합니다.</p>

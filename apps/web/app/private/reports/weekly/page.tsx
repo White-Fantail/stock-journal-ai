@@ -23,7 +23,7 @@ export default async function WeeklyReviewPage({searchParams}:{
  const report=selected?await fetchWeeklyProcessReport(session.user.id,selected).catch(()=>null):null;
  return <main className="journal-page">
    <div className="page-intro journal-page-heading">
-     <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
+     <div><span className="breadcrumb"><Link href="/private/review">← 투자 점검</Link></span>
        <h1>주간 투자 점검</h1>
        <p>이번 주의 투자 기록과 점검할 계획을 정리합니다.
          투자 원칙을 지켰는지는 직접 작성한 자기평가로만 표시합니다.</p>
@@ -46,7 +46,7 @@ export default async function WeeklyReviewPage({searchParams}:{
    </section>:<>
      <section className="user-panel">
        <div className="user-panel-head"><h2>{report.week} · {report.partial?"진행 중인 주":"완료된 주"}</h2>
-         <Link href="/private/alerts">점검 센터 →</Link></div>
+         <Link href="/private/review">지난 행동 확인 →</Link></div>
        <p className="user-footnote">{time(report.start)}부터 {time(report.end)} 직전까지 ·
          집계 기준: {time(report.checkedAsOf)} · Pacific/Auckland</p>
        <div className="account-summary-values portfolio-account-values">
@@ -72,7 +72,8 @@ export default async function WeeklyReviewPage({searchParams}:{
              <small>이전 자기평가: {task.lastAssessment?
                statusLabels[task.lastAssessment]??"사용자 기록": "기록 없음"}</small>
              {task.lastNextAction&&<p>지난번에 적은 다음 행동: {task.lastNextAction}</p>}
-             <small>이전 행동을 실제로 완료했는지는 별도 확인이 필요합니다.</small></div>
+             <small>실제 실행 여부는 주간 집계가 아니라 사용자의 별도 기록으로만 확인합니다.</small>
+             {task.lastNextAction&&<small><Link href="/private/review">최신 행동 상태 확인·기록 →</Link></small>}</div>
            <Link className="btn btn-outline" href={
              "/private/journal/review/new?ticker="+encodeURIComponent(task.ticker)}>
               원칙 복기 →

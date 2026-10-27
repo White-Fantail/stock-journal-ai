@@ -231,6 +231,27 @@ def main():
         assert code==404,code
         code,_=request("/internal/v1/journal/plans",{"subject":B})
         assert code==404,code
+        # A non-credentialled synthetic broker link and sync-health row
+        # previously blocked account deletion via an unhandled FK.
+        with psycopg.connect(dsn) as db:
+            a_scope=resolve(db,A)
+            assert a_scope is not None
+            wid=a_scope["workspaceId"]
+            conn_id=db.execute("""INSERT INTO saas_broker_connections
+                (workspace_id,provider_code,auth_mode,status)
+                VALUES (%s,'TIGER','SIGNATURE','DISCONNECTED') RETURNING id""",
+                (wid,)).fetchone()[0]
+            account_id=db.execute("""INSERT INTO saas_broker_accounts
+                (workspace_id,connection_id,external_account_fingerprint,alias)
+                VALUES (%s,%s,%s,'synthetic only') RETURNING id""",
+                (wid,conn_id,"f"*64)).fetchone()[0]
+            db.execute("""INSERT INTO saas_tiger_personal_sync_health
+                (workspace_id,account_id,run_id,assets_status,orders_status,fills_status)
+                VALUES (%s,%s,%s,'OK','PARTIAL','UNAVAILABLE')""",
+                (wid,account_id,str(uuid4())))
+            db.execute("""INSERT INTO saas_ai_request_quotas
+                (workspace_id,period_type,period_start,request_count)
+                VALUES (%s,'MONTH','2026-10-01',1)""",(wid,))
         code,_=request("/internal/v1/account/delete",{"subject":A,"confirmation":"not confirmed"})
         assert code==400,code
         code,out=request("/internal/v1/account/delete",{"subject":A,"confirmation":"DELETE_MY_ACCOUNT"})
@@ -243,6 +264,9 @@ def main():
             assert db.execute("SELECT count(*) FROM saas_journal_plan_checkins").fetchone()[0]==0
             assert db.execute("SELECT count(*) FROM saas_journal_records").fetchone()[0]==0
             assert db.execute("SELECT count(*) FROM saas_ai_request_quotas").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_tiger_personal_sync_health").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_broker_accounts").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_broker_connections").fetchone()[0]==0
             assert db.execute("SELECT count(*) FROM saas_users").fetchone()[0]==1
         print("P1/P2 HTTP PASS: provision, replay, trade, journal, export, A/B denial, revocation, deletion")
     finally:

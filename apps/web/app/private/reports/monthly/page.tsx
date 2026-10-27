@@ -39,7 +39,7 @@ export default async function MonthlyReviewReport({searchParams}:{
         <p>매월 어떤 판단을 기록했고 계획을 얼마나 점검했는지 확인합니다.
           수익률 예측이나 실시간 매매 분석이 아닙니다.</p>
       </div>
-      <Link className="btn btn-outline" href="/private/journal/new?kind=REVIEW">새 복기 작성</Link>
+      <Link className="btn btn-outline" href="/private/journal">새 복기 작성</Link>
     </div>
     <nav className="user-panel-head" aria-label="보고서 월 이동">
       <div><strong>{month}</strong> <small>뉴질랜드 시간 기준</small></div>
@@ -84,6 +84,23 @@ export default async function MonthlyReviewReport({searchParams}:{
         <p className="user-footnote">점검 기준: {label(report.checkedAsOf)} (NZ). 전략 핵심 항목은 전략 유형, 기간, 논리 무효화 조건, 개인 최대 비중,
           정기 점검 주기의 작성 여부만 확인합니다. 수익률이나 판단의 옳고 그름을 평가하지 않습니다.
           이벤트 기반 점검은 날짜를 임의로 부여하지 않습니다.</p>
+      </section>
+      <section className="user-panel">
+        <div className="user-panel-head">
+          <h2>투자 원칙 자기평가 · 이번 달</h2>
+          <Link href="/private/journal">종목 선택 후 자기평가 →</Link>
+        </div>
+        <p>계획에 연결하여 직접 평가한 복기 <strong>{report.selfReviewCount}건</strong>입니다.
+          기존 일반 REVIEW 메모 {report.reviewCount}건과 별도로 구분합니다.</p>
+        <div className="account-summary-values portfolio-account-values">
+          <div><small>원칙을 지켰다고 기록</small><strong>{report.selfReviewBreakdown.FOLLOWED}건</strong></div>
+          <div><small>일부만 지켰다고 기록</small><strong>{report.selfReviewBreakdown.PARTIAL}건</strong></div>
+          <div><small>원칙에서 벗어났다고 기록</small><strong>{report.selfReviewBreakdown.DEVIATED}건</strong></div>
+          <div><small>판단 유보</small><strong>{report.selfReviewBreakdown.UNCERTAIN}건</strong></div>
+        </div>
+        <p className="user-footnote">모든 수치는 사용자가 직접 표시한 자기평가 건수입니다.
+          자동 계산한 준수율이나 실제 매매 계획 준수 증명은 아닙니다.
+          일반 복기 메모는 별도의 자기평가를 하지 않는 한 준수 판정에서 제외합니다.</p>
       </section>
       <section className="user-panel">
         <div className="user-panel-head">

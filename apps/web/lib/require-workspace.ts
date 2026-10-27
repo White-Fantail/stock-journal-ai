@@ -10,7 +10,7 @@ import { resolveGoogleSubject } from "./saas-api";
  */
 export const currentWorkspace=cache(async (): Promise<{
   userId: string; workspaceId: string; role: "OWNER"
-} | null> {
+} | null> => {
   const session = await auth();
   const subject = session?.user?.id;
   if (!subject || !/^[0-9]{3,255}$/.test(subject)) return null;

@@ -333,7 +333,7 @@ export function JournalWorkspace({
                       <p className="journal-entry-text">{e.value.rationale}</p>
                       {e.value.riskDecisionNote&&<p className="journal-form-hint">
                         <strong>당시 매수 전 점검 · 사용자 승인 가정, 증권사 검증 아님:</strong> {e.value.riskDecisionNote}
-                      </p>
+                      </p>}
                     </> : <>
                       {e.value.content && <p className="journal-entry-text">{e.value.content}</p>}
                       {e.value.observationRef && <p className="journal-form-hint">

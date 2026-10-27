@@ -522,3 +522,20 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .principles-page .journal-compose-form{max-width:820px;display:grid;gap:16px}
 .principles-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 @media(max-width:900px){.getting-started-steps{grid-template-columns:1fr}}
+
+/* B3: risks before diagnostics; never badge a snapshot as verified financial history. */
+.portfolio-scope-banner{background:#f1f7f4;border:1px solid #d4e7df;padding:14px 16px;border-radius:14px;margin:0 0 16px}
+.portfolio-scope-banner strong,.portfolio-scope-banner span{display:block}
+.portfolio-scope-banner strong{font-size:.89rem}
+.portfolio-scope-banner span,.portfolio-scope-banner p{font-size:.79rem;color:var(--muted);margin:4px 0 0}
+.portfolio-action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.portfolio-action-card{border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.portfolio-action-card h3{font-size:.94rem;margin:0 0 5px}
+.portfolio-action-card p{font-size:.83rem;color:var(--muted);margin:0 0 12px}
+.portfolio-action-card .btn{min-height:44px;display:inline-flex;align-items:center}
+.portfolio-technical-details{margin-block:18px}
+.portfolio-technical-details>summary{font-weight:750;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.portfolio-technical-details .user-panel{margin:12px 0 0}
+.portfolio-unclassified-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.portfolio-unclassified-list a{min-height:44px;padding:10px;background:#f2f8f5;border-radius:9px}
+@media(max-width:640px){.portfolio-action-grid{grid-template-columns:1fr}.portfolio-scope-banner{padding:12px}}

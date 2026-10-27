@@ -8,6 +8,7 @@ import { PersonalPortfolioBlock } from "../tiger/personal-preview";
 import {assessConcentration} from "../../../lib/portfolio-risk";
 import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
 import {PortfolioOverview} from "./portfolio-overview";
+import {PortfolioAttention} from "./portfolio-attention";
 import {fetchJournalPlans,fetchUserRiskFactors,type JournalPlan} from "../../../lib/saas-trades-api";
 import {auth} from "../../../auth";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
@@ -216,16 +217,24 @@ export default async function PortfolioPage() {
   const userFactors=factorResult.status==="fulfilled"?factorResult.value:null;
   if(personal && personal.accounts.length>0) return <main className="portfolio-data">
     <div className="page-intro home-data-heading">
-      <div><h1>포트폴리오</h1><p>보유 종목과 계좌별 평가 정보를 확인하세요.</p></div>
+      <div><h1>포트폴리오</h1><p>내 보유 현황에서 투자 집중도와 계획을 먼저 살펴보세요.</p></div>
       <div className="home-actions">
-        <Link className="btn btn-outline" href="/private/trades">거래 기록</Link>
+        <Link className="btn btn-primary" href="/private/journal">종목별 투자 계획 →</Link>
         <Link className="btn btn-outline" href="/private/risk">위험 계산기</Link>
-        <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
       </div>
     </div>
+    <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>
     <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>
-    <PortfolioConcentration data={personal} plans={plans}/>
-    <PersonalPortfolioBlock data={personal}/>
+    <section className="user-panel">
+      <div className="user-panel-head"><h2>계좌별 보유 내역</h2>
+        <Link href="/private/trades">원본 거래 기록 →</Link></div>
+      <p className="user-footnote">실제 Tiger 계좌에서 조회한 값이며, 거래이력 전체의 검증이나 현재 투자 성과 확정은 아닙니다.</p>
+      <PersonalPortfolioBlock data={personal}/>
+    </section>
+    <details className="portfolio-technical-details user-panel">
+      <summary>계좌별 집중도와 검증 범위 자세히 보기</summary>
+      <PortfolioConcentration data={personal} plans={plans}/>
+    </details>
   </main>;
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
@@ -248,12 +257,17 @@ export default async function PortfolioPage() {
       <span className="pill pill-warning">조회 불가</span>
       <h2>포트폴리오 준비 상태를 확인할 수 없습니다.</h2>
       <p>계좌 연결 또는 동기화 서버에 접근하지 못했습니다. 연결되지 않았다고 단정하거나 포트폴리오를 0으로 표시하지 않습니다.</p>
-      <Link href="/private/portfolio" className="btn btn-outline">다시 확인</Link>
+      <div className="home-actions"><Link href="/private/portfolio" className="btn btn-outline">다시 확인</Link>
+        <Link href="/private/journal" className="btn btn-primary">내 투자계획 확인 →</Link></div>
     </section> : accounts.length===0 ? <section className="state-panel">
       <span className="pill pill-neutral">연결된 계좌 없음</span>
       <h2>연결된 계좌가 아직 없습니다.</h2>
-      <p>계좌가 연결되면 여기에서 보유 현황을 확인할 수 있습니다.</p>
-      <Link href="/private/tiger" className="btn btn-outline">Tiger 연동 상태 보기</Link>
+      <p>증권사를 연결하지 않아도 관심 종목의 투자 이유와 위험 기준을 작성할 수 있습니다.
+        공식 승인이 필요한 계좌 연결은 별도 진행됩니다.</p>
+      <div className="home-actions">
+        <Link href="/private/journal/new?mode=plan" className="btn btn-primary">첫 종목 투자계획 작성 →</Link>
+        <Link href="/private/tiger" className="btn btn-outline">Tiger 연동 상태 보기</Link>
+      </div>
     </section> : <>
       <div className="dashboard-heading"><h2>계좌별 검증 상태</h2><span className="pill pill-neutral">{accounts.length}개 계좌</span></div>
       <div className="sync-jobs">{accounts.map(account=>{

@@ -17,8 +17,8 @@ export function PortfolioOverview({personal,plans,factors}:{
  const exposure=assessRiskFactors(risk,factors);
  return <section className="user-panel" aria-label="전체 계좌 통합 위험 참고">
    <div className="user-panel-head">
-     <div><h2>여러 Tiger 계좌 통합 위험</h2>
-       <p className="user-footnote">순자산·현금·종목을 포함한 읽기 전용 참고 현황</p></div>
+     <div><h2>보유 종목 집중도와 공통 위험</h2>
+       <p className="user-footnote">같은 조건에서 조회된 Tiger 계좌만 합산한 관측 참고치</p></div>
      <Link href="/private/risk">위험 계산기 →</Link>
    </div>
    {risk.state==="UNAVAILABLE"?<>
@@ -54,8 +54,12 @@ export function PortfolioOverview({personal,plans,factors}:{
        </div>:<p>아직 사용자 분류가 등록된 보유 종목이 없습니다.</p>}
        <p>미분류 보유 종목: {exposure.unclassifiedTickers.length}개 ·
          관측 순자산 대비 {exposure.unclassifiedNavPct}%</p>
-       {exposure.unclassifiedTickers.length>0&&<p className="user-footnote">
-         {exposure.unclassifiedTickers.join(", ")}</p>}
+       {exposure.unclassifiedTickers.length>0&&<div className="portfolio-unclassified-list">
+         {exposure.unclassifiedTickers.map(ticker=><Link
+           key={ticker} href={"/private/portfolio/risk-groups/edit?ticker="+encodeURIComponent(ticker)}>
+           {ticker} 위험 분류하기 →
+         </Link>)}
+       </div>}
      </>}
      <div className="user-panel-head"><h3>종목별 계좌 합산 비중</h3>
        <Link href="/private/journal">개인 투자계획 →</Link></div>
@@ -70,7 +74,9 @@ export function PortfolioOverview({personal,plans,factors}:{
              {" · "}{item.accounts}개 Tiger 계좌</small></div>
          <div className="user-list-value">
            <strong>{item.observedTigerPct}%</strong>
-           <small>내 최대 비중: {item.personalMaxAllocationPct===null?"미설정":item.personalMaxAllocationPct+"%"}</small>
+           <small>내가 작성한 최대 비중: {item.personalMaxAllocationPct===null?"미설정":item.personalMaxAllocationPct+"%"}</small>
+           <small><Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(item.ticker)}>
+             {item.personalMaxAllocationPct===null?"종목별 투자계획 보완":"투자계획 점검"} →</Link></small>
            {item.aboveObservedTigerReference!==null&&<small>
              {item.aboveObservedTigerReference?"Tiger 관측 합계가 내 계획 수치보다 높음":
                "Tiger 관측 합계가 내 계획 수치 이하"}

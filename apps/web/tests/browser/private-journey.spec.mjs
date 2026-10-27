@@ -41,6 +41,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.goto("/private/getting-started");
   await expect(page.getByRole("heading",{name:/투자 기록 시작하기/}).first()).toBeVisible();
   await page.goto("/private/principles",{waitUntil:"networkidle"});
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.getByRole("heading",{name:"나의 투자 원칙",exact:true})).toBeVisible();
   await page.locator('select[name="objective"]').selectOption("LEARNING");
   await page.locator('textarea[name="note"]').fill("Synthetic B7 principles in workspace A only.");
@@ -51,6 +52,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
    throw Error("Principles submit did not finish: "+JSON.stringify({url:page.url(),status,actions})+"; "+String(e).slice(0,350));
   });
   await page.goto("/private/journal/new?mode=plan&ticker=QATEST");
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.locator('input[name="ticker"]')).toHaveValue("QATEST");
   await page.locator('textarea[name="rationale"]').fill("Synthetic B7 initial investment rationale");
   await page.locator('textarea[name="invalidationCondition"]').fill("Synthetic thesis invalidated when assumptions change");
@@ -60,12 +62,14 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(page.locator(".journal-current")).toContainText("QATEST");
   await expect(page.locator(".journal-guided-workflow")).toContainText("투자 논리 기록됨");
   await page.goto("/private/journal/new?mode=plan&ticker=QATEST");
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.locator('textarea[name="invalidationCondition"]')).toHaveValue("Synthetic thesis invalidated when assumptions change");
   await expect(page.locator('select[name="reviewCadence"]')).toHaveValue("MONTHLY");
   await page.locator('textarea[name="rationale"]').fill("Synthetic B7 revised investment reasoning");
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);
   await page.goto("/private/journal/review/new?ticker=QATEST");
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.getByRole("heading",{name:"투자 원칙 자기평가"})).toBeVisible();
   await page.locator('select[name="selfAssessment"]').selectOption("PARTIAL");
   await page.locator('textarea[name="content"]').fill("Synthetic B7 review of my recorded reasoning.");
@@ -77,6 +81,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.goto("/private/review");
   await expect(page.locator(".review-action-item").filter({hasText:"QATEST"})).toContainText(mark);
   await page.locator(".review-action-item").filter({hasText:"QATEST"}).getByRole("link",{name:/실행 여부 기록/}).click();
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await page.locator('select[name="state"]').selectOption("DONE");
   await page.locator('textarea[name="note"]').fill("Synthetic self-reported review, not independently verified");
   await page.getByRole("button",{name:"내 확인 결과 저장"}).click();
@@ -107,6 +112,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   expect(bData.planSelfReviews).toHaveLength(0);
   expect(bData.actionFollowups).toHaveLength(0);
   await page.goto("/private/settings");
+  await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await page.locator('input[name="confirm"]').fill("DELETE_MY_ACCOUNT");
   await page.getByRole("button",{name:"내 계정과 데이터 영구 삭제"}).click();
   await expect(page).toHaveURL(/\/login\?deleted=1/);

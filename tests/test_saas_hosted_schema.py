@@ -28,7 +28,8 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                            "021_ai_request_quotas.sql",
                            "022_personal_sync_health.sql",
                            "023_investment_strategy_plan.sql",
-                           "024_plan_checkins.sql"])
+                           "024_plan_checkins.sql",
+                           "025_user_risk_factors.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
 
     def test_strategy_plan_extension_is_nullable_append_only_and_forward_only(self):
@@ -53,6 +54,16 @@ class HostedSchemaPolicyTests(unittest.TestCase):
         self.assertIn("GRANT SELECT,INSERT",source)
         self.assertNotIn("GRANT UPDATE",source)
         self.assertNotIn("GRANT DELETE",source)
+
+    def test_user_risk_factors_are_tenant_scoped_and_immutable(self):
+        source=next(body for name,_,body in manifest()
+                    if name=="025_user_risk_factors.sql")
+        self.assertIn("CREATE TABLE saas_risk_factor_revisions",source)
+        self.assertIn("FORCE ROW LEVEL SECURITY",source)
+        self.assertIn("GRANT SELECT,INSERT",source)
+        self.assertNotIn("GRANT UPDATE",source)
+        self.assertNotIn("GRANT DELETE",source)
+        self.assertIn("cardinality(factors)<=3",source)
 
     def test_ci_deploy_uses_approved_manifest_instead_of_a_stale_version_list(self):
         workflow=(Path(__file__).resolve().parents[1]/

@@ -184,3 +184,17 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Derive as-of-month-end latest strategy state and user REVIEW cadence from scoped database rows, not capped lists, for up to 100 tracked tickers. Event-based strategy schedules remain without arbitrary dates.
 - [x] Replace the monthly page source with the complete DB summary, retain the separate missing financial-performance-proof panel, and add disposable PostgreSQL A/B tests with 215 notes, 216 plans, 55 manual executions to prove old caps cannot silently alter month totals.
 - [ ] Follow-up: independently audited Tiger historical funding/FX/corporate-action coverage and true execution provenance (external account permission still unverified), then verifiable period cash-adjusted returns. Keep quote polling, price-triggered trade alerts and new orders out of scope.
+
+
+### Long-horizon plan · priority 2 (2026-10-27, dev)
+
+**Implemented, source/CI-verified (not live-provider-verified):**
+- Re-check the priority 1 complete-month report CI success before advancing.
+- Expand the owner-only, disabled-by-default RSA shape probe to the eight documented non-ALL `get_fund_details` filters: `DEPOSIT_WITHDRAW`, `FOREX`, `CORPORATE_ACTION`, `FEE`, `FUNDS_TRANSFER`, `TRADE`, `ACTIVITY_AWARD`, `OTHER`. Include Tiger's `FUND` segment where supported. Never identify a `TRADE` cash posting as a fill or associate fee entries with fills without source proof.
+- Add pure ten-year-capped historical window planning (max 85-day windows with a one-day overlap, max 60 windows) and window/category completeness assessment. Invalid account scopes, window gaps, duplicate categories, malformed batches and incomplete filter coverage fail closed. Even observed shape coverage explicitly leaves transaction completeness, fee linkage, FX, corporate actions and returns **unverified**.
+- Add synthetic CI tests for all categories, data confidentiality, tenancy, segment support and gap detection. Do not collect prices, store quote histories or create trading signals.
+
+**Still externally blocked and not claimed complete:**
+- The private Railway `positionary-tiger-personal` service currently builds from `main`, and `POSITIONARY_PERSONAL_FUND_PROBE_ENABLED` is not configured. This `dev` probe has not been invoked against real RSA account data.
+- Only a deliberately enabled one-shot private owner runtime can verify Tiger account grant, SDK response field fidelity, provider-specific page semantics and permissions. No diagnostics should expose real source rows/account numbers or enter public repositories.
+- Durable history proof next needs stable tenant/account-scoped HMAC identity, tenant-specific encrypted source staging under active worker authorization, actual provider window coverage, independent reconciliation of executions/fees/cash/FX/dividends/corporate actions, and audited NAV. CI success cannot replace these live proofs. No broker orders or transfers.

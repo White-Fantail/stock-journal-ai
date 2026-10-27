@@ -146,9 +146,23 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             strategy_type,investment_horizon,invalidation_condition,
             max_allocation_pct,review_cadence FROM saas_journal_plan_revisions
             ORDER BY created_at,id LIMIT %s""",(_LIMIT+1,)).fetchall()
-        if len(trades) > _LIMIT or len(notes) > _LIMIT or len(plans) > _LIMIT:
+        checkins = trade_conn.execute("""SELECT
+            id,ticker,plan_revision_id,journal_id,self_assessment,
+            next_action,created_at
+            FROM saas_journal_plan_checkins
+            WHERE workspace_id=%s ORDER BY created_at,id LIMIT %s
+        """,(scope["workspaceId"],_LIMIT+1)).fetchall()
+        if (len(trades) > _LIMIT or len(notes) > _LIMIT
+                or len(plans) > _LIMIT or len(checkins) > _LIMIT):
             raise TradeConflict("Export exceeds safe complete bound; paginated export required")
     from services.saas_api.journal_plans import _row as _plan_row
     return {"format": "stock-journal-ai.v1", "generatedAt": datetime.now(timezone.utc).isoformat(),
             "workspaceId": scope["workspaceId"], "trades": [_as_json(r) for r in trades],
-            "journal": [_entry(r) for r in notes], "plans":[_plan_row(p) for p in plans], "complete": True}
+            "journal": [_entry(r) for r in notes], "plans":[_plan_row(p) for p in plans],
+            "planSelfReviews": [{
+                "id": str(r[0]), "ticker": r[1],
+                "planRevisionId": str(r[2]), "journalId": str(r[3]),
+                "selfAssessment": r[4], "nextAction": r[5],
+                "createdAt": r[6].isoformat(),
+                "provenance": "USER_SELF_ASSESSED_NOT_BROKER_VERIFIED",
+            } for r in checkins], "complete": True}

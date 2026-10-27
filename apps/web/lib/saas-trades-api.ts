@@ -48,12 +48,12 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
-      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" |
+      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" | "/internal/v1/risk-factors/list" | "/internal/v1/risk-factors/create" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/journal/checkin/context" | "/internal/v1/journal/checkin/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
@@ -65,6 +65,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/observation-note/create" ? {subject, observationNote:payload} :
     path === "/internal/v1/journal/monthly-process" ? {subject,month:payload} :
     path === "/internal/v1/journal/weekly-process" ? {subject,week:payload} :
+    path === "/internal/v1/risk-factors/create" ? {subject,riskFactors:payload} :
     path === "/internal/v1/journal/checkin/context" ? {subject,ticker:payload} :
     path === "/internal/v1/journal/checkin/create" ? {subject,checkin:payload} :
     path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
@@ -124,6 +125,43 @@ export async function fetchJournal(subject: string): Promise<readonly JournalEnt
 /** Aggregated by the scoped service DB over a complete NZ calendar month.
  * No recent-feed truncation and no raw financial/AI payload in the response.
  */
+export const RISK_FACTOR_LABELS={
+ AI_INFRA:"AI 인프라·반도체",HIGH_GROWTH:"고성장 기대",
+ US_TECH:"미국 기술주",CONSUMER_CYCLICAL:"경기민감 소비",
+ SPACE_DEFENSE:"우주·방산",INTEREST_RATE:"금리 민감",
+ CHINA:"중국 시장 노출",OTHER:"기타 공통 요인",
+} as const;
+export type UserRiskFactor=keyof typeof RISK_FACTOR_LABELS;
+export type RiskFactorInput=Readonly<{
+ idempotencyKey:string;ticker:string;factors:UserRiskFactor[];rationale:string;
+}>;
+export type RiskFactorRevision=Readonly<{
+ id:string;ticker:string;factors:UserRiskFactor[];
+ rationale:string;createdAt:string;
+}>;
+export async function fetchUserRiskFactors(subject:string):Promise<readonly RiskFactorRevision[]>{
+ const r=await postS2("/internal/v1/risk-factors/list",subject) as {
+   complete?:boolean;source?:string;riskFactors?:RiskFactorRevision[];
+ };
+ const valid=new Set(Object.keys(RISK_FACTOR_LABELS));
+ if(r?.complete!==true||r.source!=="USER_CLASSIFIED_ONLY"||
+    !Array.isArray(r.riskFactors)||r.riskFactors.length>100||
+    !r.riskFactors.every(x=>x&&/^[A-Z0-9.:-]{1,32}$/.test(x.ticker)&&
+       /^[a-f0-9-]{36}$/i.test(x.id)&&typeof x.rationale==="string"&&
+       x.rationale.length>=1&&x.rationale.length<=1500&&
+       Number.isFinite(Date.parse(x.createdAt))&&Array.isArray(x.factors)&&
+       x.factors.length<=3&&new Set(x.factors).size===x.factors.length&&
+       x.factors.every(a=>valid.has(a))))
+   throw new Error("Risk factor history incomplete");
+ return r.riskFactors;
+}
+export async function submitRiskFactors(subject:string,input:RiskFactorInput):Promise<string>{
+ const r=await postS2("/internal/v1/risk-factors/create",subject,input) as {id?:string;source?:string};
+ if(!r||r.source!=="USER_CLASSIFIED_ONLY"||typeof r.id!=="string"||
+   !/^[a-f0-9-]{36}$/i.test(r.id))throw new Error("Risk factor confirmation invalid");
+ return r.id;
+}
+
 export type WeeklyProcessReport=Readonly<{
   week:string;timezone:"Pacific/Auckland";start:string;end:string;
   checkedAsOf:string;partial:boolean;source:"USER_AUTHORED_PROCESS_ONLY";
@@ -201,11 +239,12 @@ export async function submitJournal(subject: string, entry: JournalEntryInput): 
 export async function exportFullJournal(subject: string): Promise<unknown> {
   const result = await postS2("/internal/v1/journal/export",subject) as {
     complete?: boolean; format?: string; journal?:unknown;
-    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;
+    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;
   };
   if (result?.complete !== true || result?.format !== "stock-journal-ai.v1"
       || !Array.isArray(result.journal) || !Array.isArray(result.trades)
-      || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews))
+      || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews)
+      || !Array.isArray(result.riskFactors))
     throw new Error("Journal export is incomplete");
   return result;
 }

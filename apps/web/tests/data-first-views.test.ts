@@ -85,3 +85,38 @@ test("journal shows investment notes and target-stop plan revisions in one chron
   assert.ok(ui.includes('href={"/private/journal/new?mode=plan&ticker="'));
   assert.ok(!ui.includes("<form"));
 });
+
+
+test("B3 investor-centered portfolio links to source-aware risks without suppressing original holdings",()=>{
+ const page=read("../app/private/portfolio/page.tsx");
+ const focus=read("../app/private/portfolio/portfolio-attention.tsx");
+ const actions=read("../lib/portfolio-review-actions.ts");
+ assert.ok(page.includes("<PortfolioAttention personal={personal}"));
+ assert.ok(page.includes("<PersonalPortfolioBlock data={personal}/>"));
+ assert.ok(page.includes("portfolio-technical-details"));
+ assert.ok(focus.includes("확정 투자 원장 아님"));
+ assert.ok(focus.includes('risk.state==="READY"'));
+ assert.ok(actions.includes("personal.readWarnings?.length"));
+ assert.ok(actions.includes("plans.length>=200"));
+ assert.ok(actions.includes("factors.length>100"));
+});
+
+test("B4 plan editing retains all existing strategy fields as a new full immutable revision",()=>{
+ const page=read("../app/private/journal/new/page.tsx");
+ const client=read("../app/private/journal/journal-workspace.tsx");
+ const api=read("../lib/saas-trades-api.ts");
+ for(const field of ["rationale","invalidationCondition","reviewCadence","strategyType",
+   "investmentHorizon","maxAllocationPct","targetPrice","stopPrice","priceCurrency"]){
+  assert.equal(page.split('name="'+field+'"').length-1,1,field);
+ }
+ assert.ok(page.includes("defaultValue={existingPlan?.targetPrice??"));
+ assert.ok(page.includes("defaultValue={existingPlan?.strategyType??"));
+ assert.ok(page.includes("defaultValue={existingPlan?.reviewCadence??"));
+ assert.ok(page.includes("action={addPlan}"));
+ assert.ok(page.includes("submitJournalPlan(subject"));
+ assert.ok(client.includes("journal-guided-workflow"));
+ assert.ok(client.includes("journal-investment-details"));
+ assert.ok(client.includes("useEffect(()=>{if(initialTicker"));
+ assert.ok(client.includes("history.map(e=>"));
+ assert.ok(api.includes("export type JournalPlan"));
+});

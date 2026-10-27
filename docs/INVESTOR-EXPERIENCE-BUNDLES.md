@@ -146,3 +146,26 @@
 - B1: dedicated /private/getting-started and /private/principles with append-only, tenant RLS, read/save signed server endpoints, optional inputs, export and account deletion.
 - B2: /private home shows up to three actionable tasks grounded in authored principles, due authored checkins, observed holdings or explicitly incomplete records. No quote polling, price alerts or trade instructions.
 - Verify with the exact dev-HEAD GitHub CI run. Static tests are not a substitute for a production restore drill or live browser OAuth A/B, and no prod activation or main merge is authorized by this document.
+
+
+## Second delivery implementation (2026-10-27, dev; B3+B4)
+
+### B3 — Portfolio
+- A top-of-page decision panel indicates Tiger SNAPSHOT_ONLY provenance, account count, earliest observable account timestamp, and whether the strict same-currency/synchronized-risk comparison is eligible.
+- Scoped read-only suggestions for missing user-authored plans and user-authored common-risk labels link directly to the matching symbol edit page. On partial source, fetch failure, or bounded history the UI **does not** label symbols unplanned or unclassified.
+- Existing risk calculations and per-account concentration logic remain unchanged; no cross-FX or global-wealth risk score. Verified broker ledger and customer-authored records remain separate.
+- Original per-account holdings remain visible, but advanced account concentration and status diagnostics are collapsed behind an explicit disclosure. Missing broker authorization continues to allow manual journal planning.
+- Key paths: apps/web/app/private/portfolio, apps/web/lib/portfolio-review-actions.ts.
+
+### B4 — Journal
+- Selected symbol shows a three-step authored workflow: latest immutable plan and invalidation, separate investment thesis, and next user-selected periodic check-in. No automatic adherence score or price signal.
+- Optional, existing strategy/target/stop controls remain available in a disclosure; the timeline retains separate user assertions, observed Tiger orders/fills and independently published broker fills.
+- The dedicated plan editor begins with reason for change, thesis invalidation and user review cadence; strategy classification, horizon, maximum allocation and target/stop remain under disclosures. Previously saved values remain intact even while a disclosure is closed. Saving still creates an immutable full revision.
+- Navigating from a portfolio symbol to another journal ticker updates the selected symbol in client state. Broker account and tenant identifiers stay off URLs.
+- Key paths: apps/web/app/private/journal, apps/web/lib/journal-decision-guide.ts.
+
+### Proof and release boundary
+- Synthetic frontend tests: portfolio-journey.test.ts, journal-decision-guide.test.ts, and prior original-route/history/privacy tests.
+- Mandatory verification: completed full CI on exact dev HEAD, including TypeScript, Next.js production build, synthetic A/B PostgreSQL, and guarded migrations. Static tests are not screenshots or live smartphone/browser proof.
+- No new DB migration or external quote schedule; migration 026 from B1 stays intact.
+- Main deployment and production-state validation remain separately gated; no authorization to perform a merge from this status note.

@@ -156,8 +156,13 @@ export async function submitJournal(subject: string, entry: JournalEntryInput): 
   return result.id;
 }
 export async function exportFullJournal(subject: string): Promise<unknown> {
-  const result = await postS2("/internal/v1/journal/export",subject) as { complete?: boolean; format?: string };
-  if (result?.complete !== true || result?.format !== "stock-journal-ai.v1")
+  const result = await postS2("/internal/v1/journal/export",subject) as {
+    complete?: boolean; format?: string; journal?:unknown;
+    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;
+  };
+  if (result?.complete !== true || result?.format !== "stock-journal-ai.v1"
+      || !Array.isArray(result.journal) || !Array.isArray(result.trades)
+      || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews))
     throw new Error("Journal export is incomplete");
   return result;
 }

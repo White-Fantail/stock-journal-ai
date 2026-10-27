@@ -188,6 +188,7 @@ export function JournalWorkspace({
             </div>
             {active&&<div className="journal-current-actions">
                <Link className="btn btn-outline" href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>+ 투자 판단 작성</Link>
+               <Link className="btn btn-outline" href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>투자 원칙 복기</Link>
                <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>투자 전략·계획 관리</Link>
              </div>}
              {active?.watched&&<span className="pill">관심종목</span>}

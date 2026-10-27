@@ -54,3 +54,10 @@ Ticker rationale and self-reviews are append-only. Changing a stop or target cre
 ## Retention and privacy
 
 Public GitHub is not a database or archive for client data. Only synthetic test fixtures belong in the tree. See [Operations](OPERATIONS.md) for active-history privacy limitation, secret handling, backup and verified restore tasks, and [Broker adapters](saas/BROKER-ADAPTERS-V1.md) for source paging/coverage.
+
+
+## Optional risk-decision note (migration 028)
+
+- `saas_journal_plan_revisions.risk_decision_note` is nullable, 1–1200 characters when present, append-only, tenant-owned and user-authorized. Legacy revision content/digests are preserved.
+- Only user-approved hypothetical scenario assumptions and user judgment are persisted, never a quote feed, broker-verified balance, computed real trading profit or broker order. This narrative may become stale and is historical context, not a live risk grade.
+- Complete read/write permissions continue under existing FORCE RLS scoped to the authenticated workspace/user.

@@ -585,3 +585,22 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
  .plan-risk-check{padding:14px}
  .plan-risk-check .account-summary-values{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Invest-before-you-buy review, responsive and informational. */
+.plan-scenario-result{display:grid;gap:12px;min-width:0}
+.plan-scenario-result h4{margin:4px 0 0;font-size:.92rem;color:#355b50}
+.plan-drawdown-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.plan-drawdown-grid>div{padding:13px;border:1px solid #d5e5dc;border-radius:12px;min-width:0;background:#fff}
+.plan-drawdown-grid small{display:block;color:#627d71;font-size:.72rem}
+.plan-drawdown-grid strong{display:block;color:#b44738;font-size:1.18rem;margin-top:4px;overflow-wrap:anywhere}
+.plan-risk-warning{margin:0;border:1px solid #e0c2b7;border-radius:11px;padding:12px;color:#8a3f2f;font-size:.86rem}
+.plan-risk-decision{display:grid;gap:10px}
+.plan-risk-decision .journal-confirm{display:flex;align-items:center;gap:10px}
+.plan-risk-decision .journal-confirm input{width:18px;height:18px;min-height:18px;flex:0 0 18px}
+.plan-risk-decision textarea{width:100%}
+.plan-risk-note-preview{padding:12px;border-radius:10px;font-size:.78rem;color:#406a5b;background:#f1f8f4;overflow-wrap:anywhere}
+@media(max-width:520px){
+ .plan-drawdown-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .plan-drawdown-grid>div{padding:10px 7px}
+ .plan-drawdown-grid strong{font-size:1rem}
+}

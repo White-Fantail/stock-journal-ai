@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {calculatePurchaseScenario} from "../lib/purchase-scenario";
+import {calculatePurchaseScenario,referencePrice,sumObservedShares} from "../lib/purchase-scenario";
 const sample={nav:"10000",cash:"4000",heldValue:"2000",heldShares:"5",
  price:"400",buyShares:"3",maxAllocationPct:"30",stop:"380"};
 test("cash-funded added shares change exposure but do not inflate NAV",()=>{
@@ -43,4 +43,12 @@ test("no stop and no cap keep scenario interpretable without invented limits",()
   buyShares:"1",cash:"100",maxAllocationPct:null,stop:null});
  assert.equal(r.state,"READY");
  if(r.state==="READY"){assert.equal(r.withinCash,false);assert.equal(r.capExceeded,null);assert.equal(r.stopImpact,null);}
+});
+
+test("reference unit price and cross-account quantity remain fixed-point",()=>{
+ assert.equal(referencePrice("1260","3"),"420.0000");
+ assert.equal(referencePrice("10","0"),null);
+ assert.equal(sumObservedShares(["1.25","2.75"]),"4");
+ assert.equal(sumObservedShares(["0.000000000001","0.000000000002"]),"0.000000000003");
+ assert.equal(sumObservedShares(["1","-2"]),null);
 });

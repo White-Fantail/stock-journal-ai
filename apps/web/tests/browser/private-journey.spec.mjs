@@ -167,9 +167,13 @@ test("responsive real pages: 320–1024, touch menu, keyboard and overflow",asyn
     expect.soft(size.width-size.client,route+" at "+width+"px horizontal overflow").toBeLessThanOrEqual(1);
    }
    if(width<=1024){
-    await page.goto("/private");
+    const response=await page.goto("/private");
     const details=page.locator(".app-mobile-more");
-    await details.locator("summary").click();
+    if(await details.count()!==1) throw Error("Mobile menu missing "+JSON.stringify({
+      width,status:response?.status(),url:page.url(),
+      title:await page.title(),headings:await page.locator("h1").allTextContents()
+    }));
+    await details.locator("summary").click({timeout:12000});
     await expect(details.getByRole("link",{name:"설정"})).toBeVisible();
     const rect=await details.locator("summary").boundingBox();
     expect(rect?.height??0).toBeGreaterThanOrEqual(40);

@@ -4,7 +4,7 @@
  */
 import type {PortfolioOverviewRisk} from "./portfolio-overview-risk";
 import type {RiskFactorRevision,UserRiskFactor} from "./saas-trades-api";
-import {RISK_FACTOR_LABELS} from "./saas-trades-api";
+import {RISK_FACTOR_LABELS} from "./risk-factor-labels";
 
 const DEC=/^(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
 const SCALE=BigInt(10)**BigInt(12);

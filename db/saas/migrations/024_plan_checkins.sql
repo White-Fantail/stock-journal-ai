@@ -41,7 +41,7 @@ CREATE POLICY saas_plan_checkin_insert ON saas_journal_plan_checkins FOR INSERT
 -- Defense in depth: limited runtime SQL cannot relabel an unrelated PLAN
 -- or claim a non-REVIEW record belongs to the current author's checkin.
 CREATE FUNCTION saas_assert_plan_checkin_integrity()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $checkin$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM saas_journal_plan_revisions p
@@ -58,7 +58,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$;
+$checkin$;
 CREATE TRIGGER trg_saas_assert_plan_checkin_integrity
   BEFORE INSERT ON saas_journal_plan_checkins
   FOR EACH ROW EXECUTE FUNCTION saas_assert_plan_checkin_integrity();

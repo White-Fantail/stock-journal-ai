@@ -144,7 +144,7 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
         plans = trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
             price_currency,rationale,created_at,
             strategy_type,investment_horizon,invalidation_condition,
-            max_allocation_pct,review_cadence FROM saas_journal_plan_revisions
+            max_allocation_pct,review_cadence,risk_decision_note FROM saas_journal_plan_revisions
             ORDER BY created_at,id LIMIT %s""",(_LIMIT+1,)).fetchall()
         principles = trade_conn.execute("""SELECT id,objective,horizon,base_currency,
             max_single_pct,risk_limit_pct,review_cadence,note,created_at

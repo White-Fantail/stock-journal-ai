@@ -14,7 +14,7 @@ LIMIT_MONTH=60
 def claim_ai(identity, trade, subject, payload):
     if (not isinstance(payload,dict) or set(payload)!={"mode","consented"}
             or payload["consented"] is not True
-            or payload["mode"] not in ("STOCK_REVIEW","HABITS")):
+            or payload["mode"] not in ("STOCK_REVIEW","HABITS","COACHING")):
         raise TradeInputError("AI_CONSENT_REQUIRED")
     scope=_confirmed_scope(identity,subject)
     now=datetime.now(timezone.utc)

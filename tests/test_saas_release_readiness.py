@@ -70,7 +70,7 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   self.assertEqual(PRODUCTION_RAILWAY_IDENTITY["RAILWAY_GIT_BRANCH"],"main")
   names=[name for name,_,_ in manifest()]
   self.assertEqual(set(names),APPROVED_AUTO_MIGRATIONS)
-  self.assertEqual(names[-1],"027_review_action_followups.sql")
+  self.assertEqual(names[-1],"028_plan_risk_decision_note.sql")
   workflow=(ROOT/".github/workflows/saas.yml").read_text()
   self.assertIn("branches: [dev, main]",workflow)
   self.assertIn("python scripts/verify_saas_http_isolation.py",workflow)

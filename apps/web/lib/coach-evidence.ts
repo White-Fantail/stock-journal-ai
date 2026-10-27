@@ -91,7 +91,7 @@ export function buildCoachingEvidence(
         .replace(/\s+/g," ").trim(),
     });
   }
-  const sorted=[...context.recent].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,4);
+  const sorted=[...context.recent].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8);
   for(let i=0;i<sorted.length;i++){
     const c=sorted[i];
     if(!ASSESS.has(c.selfAssessment)||!Number.isFinite(Date.parse(c.createdAt)))
@@ -104,6 +104,23 @@ export function buildCoachingEvidence(
 ${sanitizedExcerpt(c.content,180)}; 본인이 정한 다음 점검 행동:
 ${sanitizedExcerpt(c.nextAction,240)}`.replace(/\s+/g," ").trim(),
     });
+  }
+  // Evidence-cited repeat signals use EXPLICIT user marks only.
+  // They do not infer fear, greed, FOMO or objective brokerage compliance.
+  for(const [status,label] of [
+    ["DEVIATED","계획에서 벗어났다고 기록"],["PARTIAL","일부만 지켰다고 기록"],
+    ["UNCERTAIN","판단 근거가 부족하다고 기록"],
+  ] as const){
+    const indexes=sorted.flatMap((c,i)=>c.selfAssessment===status?[i+1]:[]);
+    const dates=new Set(indexes.map(i=>sorted[i-1].createdAt.slice(0,10)));
+    if(indexes.length<2||dates.size<2)continue;
+    evidence.push({ref:"S"+(evidence.filter(e=>e.kind==="BEHAVIOR_SIGNAL").length+1),
+      kind:"BEHAVIOR_SIGNAL",ticker,on:now.toISOString().slice(0,10),
+      source:"DERIVED_USER_SELF_REPORTS_ONLY",
+      detail:`서로 다른 작성일의 자기평가에서 ‘${label}’ 상태를
+        ${indexes.length}차례 사용자가 직접 선택했습니다. 근거: ${indexes.map(i=>"R"+i).join(", ")}.
+        동일한 판단 오류·감정적 매매 또는 객관적 원칙 위반을 증명하지 않습니다.`
+        .replace(/\s+/g," ").trim()});
   }
   const activity=months.some(x=>x.report.symbols.some(v=>v.ticker===ticker&&
     v.notes+v.reviews+v.plans>0))||sorted.length>0;

@@ -19,7 +19,7 @@ test("no actual quote threshold or buy/sell execution exists in the task queue",
 
 test("unfinished self-reported next actions appear on home, completed ones do not",()=>{
  const row={checkinId:"00000000-0000-4000-8000-000000000001",ticker:"QATEST",
-  nextAction:"Review business risks",selfAssessment:"PARTIAL",checkinAt:"2026-10-26T00:00:00Z",
+  nextAction:"Review business risks",selfAssessment:"PARTIAL" as const,checkinAt:"2026-10-26T00:00:00Z",
   state:null,note:null,resolvedAt:null};
  const base={principles:null,principlesAvailable:true,notes:[],plans:[],personal:null};
  const pending=deriveNextReviewActions({...base,followups:[row]});

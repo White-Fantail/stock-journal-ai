@@ -72,6 +72,30 @@ test("four months: current partial and three previous complete, NZ boundaries",(
  }
 });
 
+test("repeated user-marked plan departures are evidence-only, never automatic emotion detection",()=>{
+ const review={...context,recent:[
+  {...context.recent[0],createdAt:"2026-10-21T00:00:00Z",
+    selfAssessment:"DEVIATED" as const,content:"My recorded deviation",
+    nextAction:"Write why I changed the plan"},
+  {...context.recent[1],createdAt:"2026-09-12T00:00:00Z",
+    selfAssessment:"DEVIATED" as const,content:"A previous admitted deviation",
+    nextAction:"Compare this with my thesis"},
+ ]};
+ const result=buildCoachingEvidence("TSLA",months(),review,now);
+ const signal=result.evidence.find(e=>e.kind==="BEHAVIOR_SIGNAL");
+ assert.ok(signal);
+ assert.equal(signal?.ref,"S1");
+ assert.ok(signal?.detail.includes("R1, R2"));
+ assert.equal(signal?.source,"DERIVED_USER_SELF_REPORTS_ONLY");
+ assert.ok(!signal?.detail.includes("FOMO"));
+ assert.ok(!signal?.detail.includes("공포"));
+ const sameDay={...review,recent:review.recent.map(x=>({
+   ...x,createdAt:"2026-10-21T00:00:00Z",
+ }))};
+ assert.ok(!buildCoachingEvidence("TSLA",months(),sameDay,now)
+   .evidence.some(e=>e.kind==="BEHAVIOR_SIGNAL"));
+});
+
 test("missing, stale, fraudulent or incomplete month evidence never goes to the model",()=>{
  const cases=[
   months().slice(0,3),

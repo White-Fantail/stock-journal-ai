@@ -37,6 +37,7 @@ export default async function NotificationsPage(){
         <p>Tiger 수집 상태와 아직 계획을 작성하지 않은 보유 종목을 확인합니다. 가격 감시나 매매 알림은 제공하지 않습니다.</p>
       </div>
       <div className="home-actions">
+        <Link className="btn btn-outline" href="/private/reports/weekly">주간 점검 보고서</Link>
         <Link className="btn btn-outline" href="/private/reports/monthly">월간 복기 보고서</Link>
         <Link className="btn btn-outline" href="/private/portfolio">포트폴리오 확인</Link>
       </div>

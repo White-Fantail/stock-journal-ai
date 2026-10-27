@@ -149,7 +149,7 @@ class TigerFundEvidenceTests(unittest.TestCase):
             FundWindow(uuid4(),uuid4(),date(2026,10,1),date(2026,10,1))
         with self.assertRaises(FundEvidenceUnavailable):
             collect_fund_observations(FakeSource([[row(1)]]),WINDOW,
-                                      "TRADE",account="SYNTH12345",hmac_secret=KEY)
+                                      "UNKNOWN_FILTER",account="SYNTH12345",hmac_secret=KEY)
         with self.assertRaises(FundEvidenceUnavailable):
             collect_fund_observations(FakeSource([[row(1)]]),WINDOW,
                                       "FOREX",account="SYNTH12345",hmac_secret=b"weak")

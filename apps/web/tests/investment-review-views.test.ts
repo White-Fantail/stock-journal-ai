@@ -32,11 +32,29 @@ test("monthly report only uses per-session journal and never treats observed ord
   assert.ok(api.includes("/internal/v1/journal/monthly-process"));
   assert.ok(api.includes("MONTH_WINDOW_DB_AGGREGATED"));
   assert.ok(ui.includes("assessPerformanceReadiness("));
+  assert.ok(ui.includes("report.selfReviewCount"));
+  assert.ok(ui.includes("report.selfReviewBreakdown.FOLLOWED"));
   assert.ok(ui.includes("검증된 투자 성과 계산 준비 상태"));
   assert.ok(ui.includes("readiness.gates.map("));
   assert.ok(ui.includes("월간 장기 투자 수익률")||ui.includes("readiness.label"));
   for(const forbidden of ["tigerPersonalRead","marketObservations","PLACE_ORDER","sendNotification","fetch("])
     assert.ok(!ui.includes(forbidden)&&!model.includes(forbidden),forbidden);
+});
+
+test("private structured plan review is distinct from unverified trade observations",()=>{
+ const editor=read("../app/private/journal/review/new/page.tsx");
+ const api=read("../lib/saas-trades-api.ts");
+ const journal=read("../app/private/journal/journal-workspace.tsx");
+ assert.ok(editor.includes("currentWorkspace()"));
+ assert.ok(editor.includes("auth()"));
+ assert.ok(editor.includes('name="expectedPlanRevisionId"'));
+ assert.ok(editor.includes('name="selfAssessment"'));
+ assert.ok(editor.includes("submitPlanCheckin(session.user.id"));
+ assert.ok(api.includes("/internal/v1/journal/checkin/context"));
+ assert.ok(api.includes("/internal/v1/journal/checkin/create"));
+ assert.ok(journal.includes("/private/journal/review/new?ticker="));
+ assert.ok(!editor.includes("tigerPersonalRead("));
+ assert.ok(!editor.includes("placeOrder("));
 });
 
 test("new investor reports are reachable from mobile and check center",()=>{

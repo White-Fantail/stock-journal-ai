@@ -30,6 +30,8 @@ class ReleaseReadinessContractTests(unittest.TestCase):
    expected.update(re.findall(
     r"CREATE TABLE(?: IF NOT EXISTS)?\s+(saas_[a-z0-9_]+)",source,re.I))
   deletion=set(re.findall(r'"(saas_[a-z0-9_]+)"',code,re.I))
+  self.assertIn("DELETE FROM saas_users WHERE id=%s",code)
+  deletion.add("saas_users")
   # Require explicit justification for every exception, or the safety gate fails.
   self.assertEqual(expected-deletion,NON_TENANT|RETIRED|CASCADE)
   for table in ("saas_journal_plan_checkins","saas_tiger_personal_sync_health",

@@ -56,6 +56,21 @@ class AiQuotaTests(unittest.TestCase):
             self.assertTrue(all(x.args[1]["workspaceId"]==scope["workspaceId"] for x in tenant.call_args_list))
             self.assertEqual(LIMIT_MONTH,60)
 
+    def test_coaching_uses_identical_explicit_consent_and_shared_quota(self):
+        scope={"workspaceId":str(uuid4()),"userId":str(uuid4()),"role":"OWNER"}
+        db=Database()
+        with patch("services.saas_api.ai_quota._confirmed_scope",return_value=scope),\
+             patch("services.saas_api.ai_quota._runtime_safety"),\
+             patch("services.saas_api.ai_quota._tenant_scope"):
+            result=claim_ai(None,db,"123456",{"mode":"COACHING","consented":True})
+            self.assertEqual(result["remainingDay"],LIMIT_DAY-1)
+            self.assertEqual(db.counts["DAY"],1)
+            self.assertEqual(db.counts["MONTH"],1)
+        for payload in ({"mode":"COACHING","consented":False},
+                        {"mode":"COACHING","consented":True,"accountId":"forged"}):
+            with self.assertRaises(TradeInputError):
+                claim_ai(None,None,"123456",payload)
+
     def test_revoked_membership_blocks_before_database_write(self):
         with patch("services.saas_api.ai_quota._confirmed_scope",side_effect=TradeConflict("revoked")):
             with self.assertRaises(TradeConflict):

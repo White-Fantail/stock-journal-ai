@@ -259,15 +259,25 @@ def main():
         code,_=request("/internal/v1/resolve",{"subject":A})
         assert code==404
         with psycopg.connect(dsn) as db:
-            assert db.execute("""SELECT count(*) FROM saas_journal_plan_revisions
-                WHERE ticker='TSLA'""").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_journal_plan_checkins").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_journal_records").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_ai_request_quotas").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_tiger_personal_sync_health").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_broker_accounts").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_broker_connections").fetchone()[0]==0
-            assert db.execute("SELECT count(*) FROM saas_users").fetchone()[0]==1
+            # Disposable integration suite shares a schema with other synthetic
+            # workspaces. Assert this EXACT user's deletion, never global zero.
+            for table in (
+                "saas_journal_plan_revisions",
+                "saas_journal_plan_checkins",
+                "saas_journal_records",
+                "saas_ai_request_quotas",
+                "saas_tiger_personal_sync_health",
+                "saas_broker_accounts",
+                "saas_broker_connections",
+            ):
+                assert db.execute("SELECT count(*) FROM "+table+
+                   " WHERE workspace_id=%s",(wid,)).fetchone()[0]==0,table
+            assert db.execute("SELECT count(*) FROM saas_workspaces WHERE id=%s",
+                (wid,)).fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_users WHERE google_subject=%s",
+                (A,)).fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_users WHERE google_subject=%s",
+                (B,)).fetchone()[0]==1
         print("P1/P2 HTTP PASS: provision, replay, trade, journal, export, A/B denial, revocation, deletion")
     finally:
         p.terminate()

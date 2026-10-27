@@ -5,11 +5,12 @@ import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null};
 
-export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
-  available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";
+export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",initialSymbol}:{
+  available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
 }){
   const [mode,setMode]=useState<"STOCK_REVIEW"|"HABITS"|"COACHING">(initialMode);
   const [consented,setConsented]=useState(false);
+  const [selected,setSelected]=useState(initialSymbol&&symbols.includes(initialSymbol)?initialSymbol:symbols[0]??"");
   const [state,submit,pending]=useActionState(runAiAnalysis,initialAiState);
   const selectedEvidence=new Map(state.evidence.map(x=>[x.ref,x]));
   return <div style={{display:"grid",gap:24}}>
@@ -26,15 +27,17 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
           </select>
         </label>
         {mode!=="HABITS"&&<label>{mode==="COACHING"?"코칭할 종목":"분석 종목"}
-          <select name="symbol" required defaultValue={symbols[0]??""}>
+          <select name="symbol" required value={selected} onChange={e=>{setSelected(e.target.value);setConsented(false);}}>
             {symbols.length===0?<option value="">기록된 종목이 없습니다</option>:
               symbols.map(t=><option key={t} value={t}>{t}</option>)}
           </select>
         </label>}
+        {mode==="COACHING"&&<p className="user-footnote">종목별 최근 자기평가, 월간 작성 건수와 직접 확인한 마지막 행동 상태를 근거로 삼습니다.
+          <Link href="/private/review"> 지난 행동 상태를 먼저 기록</Link>하면 이번 코칭에서 확인할 수 있습니다.</p>}
         <div className="state-panel" style={{padding:16}}>
           <h3>외부 전송 범위</h3>
           {mode==="COACHING"?<p>선택한 종목과 관련해 <strong>최근 완료된 3개월 및 이번 달 진행 중인 투자일지 건수,
-            전체 자기평가 건수, 최근 자기평가의 판단 근거와 본인이 적은 다음 행동 일부</strong>를
+            전체 자기평가 건수, 최근 자기평가의 판단 근거와 본인이 적은 다음 행동 일부, 직접 보고한 최신 행동의 상태·간략한 근거</strong>를
             전송합니다. 완료된 달과 이번 달은 동일 길이로 비교하지 않습니다.
             계좌번호·증권사 주문·보유수량·가격·금액·수익률은 전송하지 않습니다.</p>:
           <p>선택한 종목(또는 전체)의 최근 <strong>일지 내용 일부, 투자계획 변경 사유, 직접 입력한 매매 사유</strong>와
@@ -63,7 +66,8 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
       <h2>분석 불가</h2><p>{state.message}</p>
     </section>}
     {state.status==="success"&&state.result&&<section className="state-panel" aria-live="polite">
-      <h2>분석 결과</h2>
+      <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
+      <p className="user-footnote">AI가 제시한 행동은 자동 저장하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>
@@ -94,6 +98,10 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
         <Link href="/private/journal"> 투자일지에서 종목을 선택해 새 자기평가</Link>를 작성하세요.
         AI 답변만으로 행동 완료 여부를 확정하지 않습니다. 반복적으로 원칙에서 벗어났다는 표시는 자기평가에서만 도출하며 두려움·충동·탐욕 여부를 자동 판정하지 않습니다.
       </p>}
+      <div className="home-actions" style={{marginTop:16}}>
+        <Link className="btn btn-primary" href={selected?"/private/journal?ticker="+encodeURIComponent(selected):"/private/journal"}>내 계획 직접 검토 →</Link>
+        <Link className="btn btn-outline" href="/private/review">지난 행동 확인 →</Link>
+      </div>
       <p style={{marginTop:18}}>이 분석은 투자 판단 복기를 돕는 참고 자료이며, 매수·매도 추천이나 수익 보장을 제공하지 않습니다.</p>
     </section>}
   </div>;

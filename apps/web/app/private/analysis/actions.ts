@@ -2,8 +2,8 @@
 
 import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
-import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis,fetchMonthlyProcessReport,fetchPlanCheckinContext} from "../../../lib/saas-trades-api";
-import {buildCoachingEvidence,monthlyCoachingScope} from "../../../lib/coach-evidence";
+import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis,fetchMonthlyProcessReport,fetchPlanCheckinContext,fetchReviewActions} from "../../../lib/saas-trades-api";
+import {buildCoachingEvidence,monthlyCoachingScope,withAuthoredActionFollowup} from "../../../lib/coach-evidence";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
 import {aiConfigured} from "../../../lib/ai-configuration";
 import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
@@ -45,6 +45,7 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     const source=await Promise.allSettled([
       ...periods.map(p=>fetchMonthlyProcessReport(subject,p.month)),
       fetchPlanCheckinContext(subject,symbol as string),
+      fetchReviewActions(subject),
     ]);
     if(source.some(v=>v.status!=="fulfilled"))
       return error("지난 3개월과 이번 달의 집계 또는 이전 자기평가를 모두 확인하지 못했습니다. 부분 기록으로 코칭하지 않습니다.");
@@ -54,7 +55,9 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
         report:(source[i] as PromiseFulfilledResult<Awaited<ReturnType<typeof fetchMonthlyProcessReport>>>).value,
       }));
       const context=(source[4] as PromiseFulfilledResult<Awaited<ReturnType<typeof fetchPlanCheckinContext>>>).value;
-      envelope=buildCoachingEvidence(symbol as string,reportSet,context);
+      const followups=(source[5] as PromiseFulfilledResult<Awaited<ReturnType<typeof fetchReviewActions>>>).value;
+      envelope=withAuthoredActionFollowup(
+        buildCoachingEvidence(symbol as string,reportSet,context),context,followups,symbol as string);
     }catch{
       return error("비교 가능한 투자 기록이나 자기평가가 부족하거나 자료의 완전성이 확인되지 않았습니다.");
     }

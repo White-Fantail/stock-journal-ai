@@ -6,7 +6,7 @@
  */
 import type {MonthlyProcessReport} from "./monthly-process";
 import {currentNzMonth,monthWindow,stepMonth} from "./monthly-process";
-import type {PlanCheckinContext} from "./saas-trades-api";
+import type {PlanCheckinContext,ReviewAction} from "./saas-trades-api";
 import {sanitizedExcerpt,type AnalysisEnvelope} from "./ai-analysis";
 
 export type CoachMonth=Readonly<{
@@ -136,4 +136,41 @@ ${sanitizedExcerpt(c.nextAction,240)}`.replace(/\s+/g," ").trim(),
     ]};
   if(JSON.stringify(envelope).length>13000)throw new Error("COACHING_EVIDENCE_LIMIT");
   return envelope;
+}
+
+
+/** Supplement an existing, validated coaching envelope with a single explicit
+ * user follow-up for the SAME ticker and SAME latest checkin. Never infer
+ * completion from the content or mere existence of a new review.
+ */
+export function withAuthoredActionFollowup(
+ envelope:AnalysisEnvelope,context:PlanCheckinContext,
+ actions:readonly ReviewAction[],ticker:string,
+):AnalysisEnvelope{
+ if(envelope.mode!=="COACHING"||envelope.symbol!==ticker||
+    context.ticker!==ticker||context.source!=="USER_SELF_ASSESSED_ONLY")
+  throw new Error("ACTION_COACHING_SCOPE_INVALID");
+ const latest=[...context.recent].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))[0];
+ const found=actions.find(a=>a.ticker===ticker&&a.checkinId===latest?.id);
+ if(actions.length>100||actions.some(a=>!/^[A-Z0-9.:-]{1,32}$/.test(a.ticker)))
+  throw new Error("ACTION_FOLLOWUP_SCOPE_INVALID");
+ if(!found||found.state===null){
+  return {...envelope,limits:[...envelope.limits,
+   "No explicit owner follow-up confirms completion of the latest recorded next action. Do not assume it is done."]};
+ }
+ const label=({DONE:"사용자가 실행했다고 확인",NOT_DONE:"아직 하지 못했다고 기록",
+   NOT_APPLICABLE:"현재는 해당하지 않는다고 기록",UNCERTAIN:"실행 여부를 판단 유보"} as const)[found.state];
+ if(!label||!found.resolvedAt||!Number.isFinite(Date.parse(found.resolvedAt)))
+  throw new Error("ACTION_FOLLOWUP_NOT_VERIFIED");
+ const evidence=[...envelope.evidence,{
+  ref:"F1",kind:"ACTION_FOLLOWUP" as const,ticker,
+  on:new Date(found.resolvedAt).toISOString().slice(0,10),
+  source:"USER_REPORTED_ACTION_STATUS_NOT_INDEPENDENTLY_VERIFIED",
+  detail:"가장 최근 자기평가 R1에서 적은 다음 행동에 대해 "+label+
+   "; 사용자가 적은 근거: "+sanitizedExcerpt(found.note??"별도 설명 없음",150),
+ }];
+ const result:AnalysisEnvelope={...envelope,evidence,limits:[...envelope.limits,
+  "F1 is an explicit user report only. It is not evidence that a task was independently executed, a trade took place or a portfolio policy was followed."]};
+ if(JSON.stringify(result).length>13000)throw new Error("ACTION_COACHING_EVIDENCE_LIMIT");
+ return result;
 }

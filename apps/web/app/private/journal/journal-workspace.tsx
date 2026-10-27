@@ -199,6 +199,10 @@ export function JournalWorkspace({
              </div>}
              {active?.watched&&<span className="pill">관심종목</span>}
           </div>
+          {active&&<p className="journal-coaching-link"><Link
+            href={"/private/analysis?mode=COACHING&ticker="+encodeURIComponent(active.ticker)}>
+              이 종목의 판단 습관을 AI와 돌아보기 →</Link>
+            <small> 선택한 기록 일부 전송은 다음 화면에서 별도로 동의합니다.</small></p>}
           {active&&guide&&<div className="journal-guided-workflow" aria-label="종목별 투자 관리 흐름">
             <article className="journal-guided-step">
               <small>1 · 현재 계획</small>

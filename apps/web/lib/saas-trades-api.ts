@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac, randomUUID } from "node:crypto";
 import { saasAuthConfigured } from "./saas-auth-policy";
+import type {MonthlyProcessReport} from "./monthly-process";
 
 export type ManualTradeEvent = Readonly<{
   id: string;
@@ -47,7 +48,7 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
-      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" |
+      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
@@ -61,6 +62,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :
     path === "/internal/v1/journal/broker-note/create" ? {subject, brokerNote:payload} :
     path === "/internal/v1/journal/observation-note/create" ? {subject, observationNote:payload} :
+    path === "/internal/v1/journal/monthly-process" ? {subject,month:payload} :
     path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
     path === "/internal/v1/journal/plan/create" ? {subject, plan:payload} :
     path === "/internal/v1/account/delete" ? {subject, confirmation:payload} :
@@ -115,6 +117,31 @@ export async function fetchJournal(subject: string): Promise<readonly JournalEnt
     throw new Error("Invalid journal response");
   return result.entries;
 }
+/** Aggregated by the scoped service DB over a complete NZ calendar month.
+ * No recent-feed truncation and no raw financial/AI payload in the response.
+ */
+export async function fetchMonthlyProcessReport(subject:string,month:string):Promise<MonthlyProcessReport>{
+ if(!/^20[2-9][0-9]-(?:0[1-9]|1[0-2])$/.test(month))throw new Error("Invalid report month");
+ const result=await postS2("/internal/v1/journal/monthly-process",subject,month) as
+   MonthlyProcessReport&{coverage?:string;complete?:boolean};
+ const count=(x:unknown)=>Number.isSafeInteger(x)&&Number(x)>=0;
+ const symbols=result?.symbols;
+ if(result?.month!==month || result?.source!=="USER_AUTHORED_PROCESS_ONLY" ||
+    result?.coverage!=="MONTH_WINDOW_DB_AGGREGATED" || result?.complete!==true ||
+    result?.timezone!=="Pacific/Auckland" ||
+    !Number.isFinite(Date.parse(result.start)) || !Number.isFinite(Date.parse(result.end)) ||
+    !Number.isFinite(Date.parse(result.checkedAsOf)) ||
+    !Array.isArray(symbols) || symbols.length>30 ||
+    !symbols.every(s=>s&&/^[A-Z0-9.:-]{1,32}$/.test(s.ticker)&&
+      [s.notes,s.reviews,s.plans,s.manualRecords].every(count)) ||
+    ![result.noteCount,result.reviewCount,result.planRevisionCount,
+      result.userTradeRecordCount,result.voidCount,result.uniqueSymbols,
+      result.plannedSymbols,result.completeStrategySymbols,
+      result.dueAsOfCutoff].every(count))
+    throw new Error("Incomplete or invalid monthly process report");
+ return result;
+}
+
 export async function submitJournal(subject: string, entry: JournalEntryInput): Promise<string> {
   const result = await postS2("/internal/v1/journal/create",subject,entry) as { id?: string };
   if (!result?.id || !/^[0-9a-f-]{36}$/i.test(result.id)) throw new Error("Invalid journal confirmation");

@@ -61,6 +61,23 @@ def main():
      WHERE workspace_id=%s AND entry_kind='REVIEW' AND ticker='TEST'""",
      (a["workspaceId"],)).fetchone()[0]
    assert notes==1,"Duplicate REVIEW should never be created on replay"
+  # Direct limited-role insert must not forge a plan of another ticker or
+  # attach a non-REVIEW journal event: database trigger is the last boundary.
+  with trade.transaction():
+   trade.execute("SELECT set_config('saas.workspace_id',%s,true)",(a["workspaceId"],))
+   trade.execute("SELECT set_config('saas.user_id',%s,true)",(a["userId"],))
+   note=trade.execute("""SELECT id FROM saas_journal_records
+       WHERE workspace_id=%s AND entry_kind='REVIEW' AND ticker='TEST' LIMIT 1""",
+       (a["workspaceId"],)).fetchone()[0]
+   try:
+    with trade.transaction():
+     trade.execute("""INSERT INTO saas_journal_plan_checkins
+       (workspace_id,author_user_id,idempotency_key,request_hash,ticker,
+        plan_revision_id,journal_id,self_assessment,next_action)
+       VALUES (%s,%s,%s,%s,'FORGED',%s,%s,'FOLLOWED','forged')""",
+       (a["workspaceId"],a["userId"],str(uuid4()),"f"*64,original["id"],note))
+   except psycopg.errors.CheckViolation:pass
+   else:raise AssertionError("Database accepted forged plan/review ticker linkage")
   for state in ("PARTIAL","DEVIATED","UNCERTAIN"):
    create_checkin(identity,trade,a_subject,request(original["id"],state))
   overview=monthly_process(identity,trade,a_subject,"2026-10")

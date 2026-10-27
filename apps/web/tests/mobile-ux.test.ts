@@ -9,7 +9,7 @@ test("private navigation keeps all destinations accessible on a narrow phone",()
   const layout=read("../app/private/layout.tsx");
   const css=read("../app/globals.css");
   for(const route of ["/private","/private/portfolio","/private/trades","/private/journal",
-    "/private/analysis","/private/alerts","/private/reports/monthly","/private/brokers","/private/settings"]){
+    "/private/analysis","/private/analysis?mode=COACHING","/private/alerts","/private/reports/monthly","/private/brokers","/private/settings"]){
     assert.ok(layout.includes('href="'+route+'"'),route);
   }
   assert.ok(layout.includes('aria-label="모바일 주 메뉴"'));

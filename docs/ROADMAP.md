@@ -219,6 +219,13 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [ ] Complete global portfolio risk across mixed currencies after independent FX-at-as-of proof, account identities, non-Tiger account import, full economic liabilities/derivatives and cash proof. Do not backfill with synthetic exchange rates or live quote polling.
 
 
+### P5 검증 상태 · 사용자 확인 (2026-10-27)
+
+- [x] **P5 검증 완료 — 사용자 확인(User-confirmed sign-off).** 사용자가 P5 검증 절차를 모두 직접 확인했다고 명시적으로 승인함. 이 상태는 사용자의 검증 확인 기록이며 자동화된 Tiger 원본 데이터 감사 또는 운영 서비스의 실수익률 공개 승인을 뜻하지 않음.
+- [x] 검증 절차 확인 대상으로 명시된 항목: 기초·기말 NAV, 외부 입출금 및 환전 시점 대조, 현금흐름 조정 수익률(TWR) 검토, Tiger 제공 성과와 독립 비교. **이 항목들의 원본 응답·계산 결과는 현재 저장소와 이 대화에 첨부되어 있지 않아 구현체가 개별 항목의 숫자·일치 여부를 독립 재현한 것으로 기록하지 않음.**
+- [ ] **실제 월·분기·연간 수익률의 자동 공개**는 별개의 릴리스 게이트임. 백엔드에는 검증된 기간별 NAV·현금흐름의 실자료 연결 및 독립 검증된 성과 게시 경로가 아직 없으며, `/private/performance`는 해당 데이터 없이 실제 수익률을 추정하거나 확정 표시하지 않는다.
+- **Milestone:** `P5_VALIDATION_USER_CONFIRMED` (완료) · `P5_LIVE_RETURN_PUBLICATION` (미구현/보류). 다른 사용자 계정이나 전 기간의 투자 성과가 확인되었다는 의미로 확장하지 말 것.
+
 ### Priority 5 — long-horizon performance evidence (2026-10-27, dev)
 - [x] Confirmed the Stage 4 multi-account-risk dev head passed synthetic CI before implementing Stage 5.
 - [x] Separate `/private/performance` with completed NZ month/quarter/year selectors, read-only publisher ledger state and explicit period proof checklist. Unverified period returns, contribution-adjusted returns and benchmark comparisons display `미검증` or `계산 보류`, never invented percentages.

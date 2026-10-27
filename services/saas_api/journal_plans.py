@@ -182,7 +182,7 @@ def create_plan(identity_conn,trade_conn,subject,raw):
            target_price,stop_price,price_currency,rationale,
            strategy_type,investment_horizon,invalidation_condition,
            max_allocation_pct,review_cadence,risk_decision_note)
-          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
           ON CONFLICT(workspace_id,idempotency_key) DO NOTHING RETURNING id""",
           (scope["workspaceId"],scope["userId"],entry["idempotencyKey"],digest,
            entry["ticker"],entry["targetPrice"],entry["stopPrice"],

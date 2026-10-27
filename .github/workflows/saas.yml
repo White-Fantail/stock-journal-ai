@@ -16,6 +16,9 @@ on:
       - 'tests/test_saas_journal.py'
       - 'tests/test_saas_journal_plans.py'
       - 'tests/test_saas_monthly_process.py'
+      - 'tests/test_saas_weekly_process.py'
+      - 'services/saas_api/weekly_process.py'
+      - 'apps/web/lib/weekly-periods.ts'
       - 'tests/test_saas_plan_checkins.py'
       - 'scripts/verify_saas_plan_checkins.py'
       - 'services/saas_api/plan_checkins.py'
@@ -161,6 +164,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_saas_sync_status.py' -v
       - name: Guard complete tenant deletion and JSON export before release
         run: python -m unittest discover -s tests -p 'test_saas_release_readiness.py' -v
+      - name: Validate NZ weekly boundaries and fail-closed read policy
+        run: python -m unittest discover -s tests -p 'test_saas_weekly_process.py' -v
       - name: Validate NZ month aggregate input and calendar boundaries
         run: python -m unittest discover -s tests -p 'test_saas_monthly_process.py' -v
       - name: Validate plan adherence self-review input contract

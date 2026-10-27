@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "../../auth";
 import { currentWorkspace } from "../../lib/require-workspace";

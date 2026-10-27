@@ -403,3 +403,98 @@ jobs:
           if SAAS_DATABASE_URL=postgresql://saas_ci:synthetic_only@remote.invalid:5432/journal_saas_test python db/saas/migrate.py --apply; then
             echo "Remote migration unexpectedly succeeded" >&2; exit 1
           fi
+
+  browser-journeys:
+    name: Synthetic browser user journeys (Chromium; no live OAuth)
+    needs: saas-postgres-isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: saas_ci
+          POSTGRES_PASSWORD: synthetic_only
+          POSTGRES_DB: journal_saas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U saas_ci -d journal_saas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      SAAS_DATABASE_URL: postgresql://saas_ci:synthetic_only@localhost:5432/journal_saas_test
+      SAAS_TEST_DB_ACK: YES_DISPOSABLE_SAAS_DB
+      POSITIONARY_BROWSER_CI: "1"
+      SAAS_INTERNAL_SECRET: synthetic_browser_only_hmac_secret_never_for_real_accounts_0123456789
+      SAAS_INTERNAL_API_URL: http://127.0.0.1:18182
+      AUTH_SECRET: synthetic_browser_auth_jwt_secret_never_for_real_accounts_0123456789
+      AUTH_GOOGLE_ID: synthetic-ci-no-google-callback
+      AUTH_GOOGLE_SECRET: synthetic-ci-no-google-secret
+      AUTH_URL: http://127.0.0.1:3100
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare fresh disposable browser-only PostgreSQL and real signed API
+        run: |
+          set -eu
+          pip install -r services/saas_api/requirements.txt
+          python scripts/prepare_saas_browser_ci.py
+          set -a
+          . /tmp/positionary_browser_db.env
+          set +a
+          echo "SAAS_DATABASE_URL=$SAAS_DATABASE_URL" >> "$GITHUB_ENV"
+          echo "SAAS_TRADE_DATABASE_URL=$SAAS_TRADE_DATABASE_URL" >> "$GITHUB_ENV"
+          PORT=18182 python -m services.saas_api.server > /tmp/positionary_browser_api.log 2>&1 &
+          for n in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:18182/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Synthetic SaaS server failed to start" >&2
+          tail -n 50 /tmp/positionary_browser_api.log
+          exit 1
+      - name: Install pinned Playwright in ephemeral CI only
+        working-directory: apps/web
+        run: |
+          npm ci --ignore-scripts --no-audit
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit @playwright/test@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Start local Next.js for rendered browser journey tests
+        run: |
+          set -eu
+          (cd apps/web && npm run dev -- --hostname 127.0.0.1 --port 3100) > /tmp/positionary_browser_next.log 2>&1 &
+          for n in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3100/login >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Local synthetic Next.js server failed to start" >&2
+          tail -n 60 /tmp/positionary_browser_next.log
+          exit 1
+      - name: Real Chromium rendered A/B, review loop, export, deletion and viewport tests
+        working-directory: apps/web
+        run: npx playwright test --config tests/browser/playwright.config.mjs
+      - name: Check deleted synthetic A, unaffected synthetic B and restricted app role
+        run: |
+          python - <<'PY'
+          import os,psycopg
+          with psycopg.connect(os.environ["SAAS_DATABASE_URL"]) as c:
+              a=c.execute("SELECT count(*) FROM saas_users WHERE google_subject=%s",
+                  ("9000000000000000041",)).fetchone()[0]
+              b=c.execute("SELECT count(*) FROM saas_users WHERE google_subject=%s",
+                  ("9000000000000000042",)).fetchone()[0]
+              assert a==0 and b==1,(a,b)
+          with psycopg.connect(os.environ["SAAS_TRADE_DATABASE_URL"]) as c:
+              r=c.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+              assert r==(False,False),r
+          print("Browser synthetic account deletion and tenant isolation PASS")
+          PY

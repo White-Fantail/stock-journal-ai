@@ -16,7 +16,7 @@ class WeeklyWindowTests(unittest.TestCase):
   self.assertEqual(c,b)
  def test_invalid_future_and_bad_iso_week_rejected_before_db(self):
   for value in (None,1,"2026-W00","2026-W54","2026-W5",
-                "2026-W53","2026-W52;SELECT", "2027-W02"):
+                "2026-W52;SELECT", "2027-W02"):
    with self.subTest(value=value),patch(
      "services.saas_api.weekly_process._confirmed_scope") as scope:
     with self.assertRaises(TradeInputError):

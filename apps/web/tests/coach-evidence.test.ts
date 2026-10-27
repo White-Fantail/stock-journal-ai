@@ -4,14 +4,17 @@ import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {buildCoachingEvidence,monthlyCoachingScope} from "../lib/coach-evidence";
 import {aiRequestBody,parseAiResult} from "../lib/ai-analysis";
-import type {MonthlyProcessReport} from "../lib/monthly-process";
+import {monthWindow,type MonthlyProcessReport} from "../lib/monthly-process";
 import type {PlanCheckinContext} from "../lib/saas-trades-api";
 
 const now=new Date("2026-10-27T06:00:00Z");
 const report=(month:string):MonthlyProcessReport=>{
  const self={FOLLOWED:1,PARTIAL:1,DEVIATED:0,UNCERTAIN:0};
- return {month,timezone:"Pacific/Auckland",start:month+"-01T00:00:00Z",
- end:month+"-28T00:00:00Z",checkedAsOf:month+"-20T00:00:00Z",
+ const bounds=monthWindow(month)!;
+ const cutoff=month==="2026-10"?new Date("2026-10-25T00:00:00Z"):
+   new Date(bounds.end-1);
+ return {month,timezone:"Pacific/Auckland",start:new Date(bounds.start).toISOString(),
+ end:new Date(bounds.end).toISOString(),checkedAsOf:cutoff.toISOString(),
  noteCount:12,reviewCount:4,planRevisionCount:3,userTradeRecordCount:1,
  voidCount:0,uniqueSymbols:1,plannedSymbols:1,completeStrategySymbols:1,
  dueAsOfCutoff:0,selfReviewCount:2,selfReviewBreakdown:self,

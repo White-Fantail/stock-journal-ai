@@ -48,7 +48,7 @@ export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 
 /** Only callable from trusted Next.js server code, never the browser. */
 async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
-      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" |
+      "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" |
       "/internal/v1/journal/plans" | "/internal/v1/journal/plan/create" |
       "/internal/v1/journal/checkin/context" | "/internal/v1/journal/checkin/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
@@ -64,6 +64,7 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
     path === "/internal/v1/journal/broker-note/create" ? {subject, brokerNote:payload} :
     path === "/internal/v1/journal/observation-note/create" ? {subject, observationNote:payload} :
     path === "/internal/v1/journal/monthly-process" ? {subject,month:payload} :
+    path === "/internal/v1/journal/weekly-process" ? {subject,week:payload} :
     path === "/internal/v1/journal/checkin/context" ? {subject,ticker:payload} :
     path === "/internal/v1/journal/checkin/create" ? {subject,checkin:payload} :
     path === "/internal/v1/ai/claim" ? {subject,...(payload as AiClaimInput)} :
@@ -123,6 +124,48 @@ export async function fetchJournal(subject: string): Promise<readonly JournalEnt
 /** Aggregated by the scoped service DB over a complete NZ calendar month.
  * No recent-feed truncation and no raw financial/AI payload in the response.
  */
+export type WeeklyProcessReport=Readonly<{
+  week:string;timezone:"Pacific/Auckland";start:string;end:string;
+  checkedAsOf:string;partial:boolean;source:"USER_AUTHORED_PROCESS_ONLY";
+  coverage:"WEEK_WINDOW_DB_AGGREGATED";complete:true;
+  noteCount:number;reviewCount:number;planRevisionCount:number;
+  selfReviewCount:number;activePlans:number;duePlans:number;
+  symbols:readonly {ticker:string;notes:number;reviews:number;plans:number;selfReviews:number}[];
+  tasks:readonly {ticker:string;cadence:string;nextDueAt:string;state:"DUE"|"UPCOMING";
+    lastAssessment:string|null;lastNextAction:string|null;lastSelfReviewAt:string|null}[];
+}>;
+export async function fetchWeeklyProcessReport(subject:string,week:string):Promise<WeeklyProcessReport>{
+ if(!/^20[2-9][0-9]-W(?:0[1-9]|[1-4][0-9]|5[0-3])$/.test(week))
+   throw new Error("Invalid week");
+ const x=await postS2("/internal/v1/journal/weekly-process",subject,week) as WeeklyProcessReport;
+ const count=(v:unknown)=>typeof v==="number"&&Number.isSafeInteger(v)&&v>=0;
+ if(x?.week!==week||x.timezone!=="Pacific/Auckland"||
+   x.source!=="USER_AUTHORED_PROCESS_ONLY"||x.coverage!=="WEEK_WINDOW_DB_AGGREGATED"||
+   x.complete!==true||typeof x.partial!=="boolean"||
+   !Number.isFinite(Date.parse(x.start))||!Number.isFinite(Date.parse(x.end))||
+   !Number.isFinite(Date.parse(x.checkedAsOf))||
+   Date.parse(x.start)>=Date.parse(x.end)||
+   Date.parse(x.checkedAsOf)<Date.parse(x.start)||
+   Date.parse(x.checkedAsOf)>Date.parse(x.end)||
+   ![x.noteCount,x.reviewCount,x.planRevisionCount,x.selfReviewCount,
+     x.activePlans,x.duePlans].every(count)||
+   x.reviewCount>x.noteCount||x.selfReviewCount>x.reviewCount||
+   !Array.isArray(x.tasks)||x.tasks.length>100||
+   !Array.isArray(x.symbols)||x.symbols.length>100||
+   !x.symbols.every(r=>/^[A-Z0-9.:-]{1,32}$/.test(r.ticker)&&
+      [r.notes,r.reviews,r.plans,r.selfReviews].every(count))||
+   !x.tasks.every(t=>/^[A-Z0-9.:-]{1,32}$/.test(t.ticker)&&
+      ["WEEKLY","MONTHLY","QUARTERLY","SEMIANNUAL","ANNUAL"].includes(t.cadence)&&
+      ["DUE","UPCOMING"].includes(t.state)&&
+      Number.isFinite(Date.parse(t.nextDueAt))&&
+      (t.lastAssessment===null||["FOLLOWED","PARTIAL","DEVIATED","UNCERTAIN"].includes(t.lastAssessment))&&
+      (t.lastNextAction===null||(typeof t.lastNextAction==="string"&&t.lastNextAction.length<=1500))&&
+      (t.lastSelfReviewAt===null||Number.isFinite(Date.parse(t.lastSelfReviewAt))))||
+   x.duePlans!==x.tasks.filter(t=>t.state==="DUE").length)
+   throw new Error("Incomplete or invalid weekly review report");
+ return x;
+}
+
 export async function fetchMonthlyProcessReport(subject:string,month:string):Promise<MonthlyProcessReport>{
  if(!/^20[2-9][0-9]-(?:0[1-9]|1[0-2])$/.test(month))throw new Error("Invalid report month");
  const result=await postS2("/internal/v1/journal/monthly-process",subject,month) as

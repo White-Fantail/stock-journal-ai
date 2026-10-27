@@ -74,7 +74,7 @@ export default async function MonthlyReviewReport({searchParams}:{
       <section className="user-panel">
         <div className="user-panel-head">
           <h2>투자계획과 정기 복기 현황</h2>
-          <Link href="/private/alerts">점검 센터 →</Link>
+          <Link href="/private/analysis?mode=COACHING">지난달 기록 AI 코칭 →</Link>
         </div>
         <div className="account-summary-values portfolio-account-values">
           <div><small>보고서 기준일까지 작성된 종목별 계획</small><strong>{report.plannedSymbols}개</strong></div>

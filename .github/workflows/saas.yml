@@ -406,7 +406,6 @@ jobs:
 
   browser-journeys:
     name: Synthetic browser user journeys (Chromium; no live OAuth)
-    needs: saas-postgres-isolation
     runs-on: ubuntu-latest
     timeout-minutes: 16
     services:
@@ -483,6 +482,16 @@ jobs:
       - name: Real Chromium rendered A/B, review loop, export, deletion and viewport tests
         working-directory: apps/web
         run: npx playwright test --config tests/browser/playwright.config.mjs
+      - name: Browser-only diagnostic service errors (synthetic CI, on failure)
+        if: failure()
+        run: |
+          echo "Synthetic local app diagnostics"
+          if test -f /tmp/positionary_browser_next.log; then
+            grep -E "Error|Failed|error|ERR_|POST /private" /tmp/positionary_browser_next.log | tail -n 45 || true
+          fi
+          if test -f /tmp/positionary_browser_api.log; then
+            grep -E "Error|Traceback|HTTP" /tmp/positionary_browser_api.log | tail -n 30 || true
+          fi
       - name: Check deleted synthetic A, unaffected synthetic B and restricted app role
         run: |
           python - <<'PY'

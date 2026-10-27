@@ -33,14 +33,23 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
  const a=await signedContext(browser,A),b=await signedContext(browser,B);
  try{
   const page=await a.newPage();
+  // Record request path+status only, never session cookies or authored inputs.
+  page.on("response",r=>{if(r.request().method()==="POST"){
+   const u=new URL(r.url());console.log("SYNTHETIC_POST",u.pathname,r.status());
+  }});
+  page.on("pageerror",e=>console.log("SYNTHETIC_PAGE_ERROR",e.name));
   await page.goto("/private/getting-started");
   await expect(page.getByRole("heading",{name:/투자 기록 시작하기/}).first()).toBeVisible();
-  await page.goto("/private/principles");
+  await page.goto("/private/principles",{waitUntil:"networkidle"});
   await expect(page.getByRole("heading",{name:"나의 투자 원칙",exact:true})).toBeVisible();
   await page.locator('select[name="objective"]').selectOption("LEARNING");
   await page.locator('textarea[name="note"]').fill("Synthetic B7 principles in workspace A only.");
   await page.getByRole("button",{name:"나의 원칙 저장"}).click();
-  await expect(page).toHaveURL(/\/private\/principles\?saved=1/);
+  await expect(page).toHaveURL(/\/private\/principles\?saved=1/).catch(async e=>{
+   const status=await page.locator('[role="alert"],[role="status"]').allTextContents();
+   const actions=await page.locator("form").evaluateAll(fs=>fs.map(f=>({method:f.method,action:new URL(f.action).pathname})));
+   throw Error("Principles submit did not finish: "+JSON.stringify({url:page.url(),status,actions})+"; "+String(e).slice(0,350));
+  });
   await page.goto("/private/journal/new?mode=plan&ticker=QATEST");
   await expect(page.locator('input[name="ticker"]')).toHaveValue("QATEST");
   await page.locator('textarea[name="rationale"]').fill("Synthetic B7 initial investment rationale");

@@ -54,7 +54,7 @@ def normalize_checkin(raw):
 
 _PLAN_SELECT="""SELECT id,ticker,target_price,stop_price,price_currency,
     rationale,created_at,strategy_type,investment_horizon,
-    invalidation_condition,max_allocation_pct,review_cadence
+    invalidation_condition,max_allocation_pct,review_cadence,risk_decision_note
     FROM saas_journal_plan_revisions
     WHERE workspace_id=%s AND ticker=%s
     ORDER BY created_at DESC,id DESC LIMIT 1"""

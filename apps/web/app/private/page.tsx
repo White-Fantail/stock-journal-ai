@@ -4,7 +4,7 @@ import {auth} from "../../auth";
 import type {Metadata} from "next";
 import {currentWorkspace} from "../../lib/require-workspace";
 import {formatDecimal} from "../../lib/format-decimal";
-import {fetchJournal,fetchJournalPlans,fetchInvestorPrinciples} from "../../lib/saas-trades-api";
+import {fetchJournal,fetchJournalPlans,fetchInvestorPrinciples,fetchReviewActions} from "../../lib/saas-trades-api";
 import {deriveNextReviewActions} from "../../lib/next-review-actions";
 import {tigerStatus,tigerPersonalRead,type TigerStatus} from "../../lib/tiger-api";
 
@@ -34,16 +34,17 @@ export default async function WorkspaceHome(){
   const results=await Promise.allSettled([
     tigerPersonalRead(),tigerStatus(),
     fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
-    fetchInvestorPrinciples(session.user.id),
+    fetchInvestorPrinciples(session.user.id),fetchReviewActions(session.user.id),
   ]);
   const personal=results[0].status==="fulfilled"?results[0].value:null;
   const tiger: TigerStatus|null=results[1].status==="fulfilled"?results[1].value:null;
   const notes=results[2].status==="fulfilled"?results[2].value:null;
   const plans=results[3].status==="fulfilled"?results[3].value:null;
   const principles=results[4].status==="fulfilled"?results[4].value:null;
+  const followups=results[5].status==="fulfilled"?results[5].value:null;
   const actions=deriveNextReviewActions({principles,
     principlesAvailable:results[4].status==="fulfilled",
-    notes,plans,personal});
+    notes,plans,personal,followups});
   const accounts=personal?.accounts??[];
   const allPositions=accounts.flatMap(a=>a.positions.map(p=>({alias:a.alias,...p,
     quote:a.marketObservations.find(q=>q.symbol===p.symbol && q.currency===p.currency)})));

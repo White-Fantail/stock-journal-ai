@@ -106,6 +106,8 @@ export function JournalWorkspace({
   },[symbols,entries,plans]);
   const active:Summary|undefined=summaries.find(s=>s.ticker===selected);
   const guide=active?decisionGuide(active.ticker,plans,entries):null;
+  const authoredReason=active?.plan?.rationale.trim()||active?.thesis?.content.trim()||null;
+  const authoredReasonAt=active?.plan?.rationale.trim()?active?.plan?.createdAt:active?.thesis?.createdAt;
   const shownSymbols=summaries.filter(s=>s.ticker.toUpperCase().includes(search.trim().toUpperCase()));
   const activeTrades=trades.filter(t=>t.ticker===selected&&t.kind==="EXECUTION");
   const voided=new Set(trades.filter(t=>t.kind==="VOID").map(t=>t.voidsEventId));
@@ -216,10 +218,10 @@ export function JournalWorkspace({
             <article className="journal-guided-step">
               <small>2 · 판단 기록</small>
               <strong>{guide.thesis==="EXISTS"?"투자 논리 기록됨":"투자 논리 기록 필요"}</strong>
-              <p>{active.thesis?.content?contentPreview(active.thesis.content,150):
+              <p>{authoredReason?contentPreview(authoredReason,150):
                 "왜 이 종목을 선택했는지, 어떤 가정을 믿고 있는지 기록하세요."}</p>
               <Link href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>
-                판단 기록 작성 →</Link>
+                {authoredReason?"추가 판단 메모 작성":"판단 기록 작성"} →</Link>
             </article>
             <article className="journal-guided-step">
               <small>3 · 정기 복기</small>
@@ -236,15 +238,15 @@ export function JournalWorkspace({
           </div>}
           {active&&<div className="journal-primary-reason">
             <h3>내가 기록한 투자 논리</h3>
-            <p>{active.thesis?.content??"별도 투자 논리 기록이 없습니다. 매매 없이도 투자 논리부터 기록할 수 있습니다."}</p>
-            {active.thesis&&<small>직접 작성 · {displayTime(active.thesis.createdAt)}</small>}
+            <p>{authoredReason??"투자 논리 기록이 없습니다. 매매 없이도 투자 논리를 먼저 기록할 수 있습니다."}</p>
+            {authoredReasonAt&&<small>직접 작성 · {displayTime(authoredReasonAt)} · {active.plan?.rationale.trim()?"현재 투자계획의 근거":"별도 판단 메모"}</small>}
           </div>}
           {active&&<details className="journal-investment-details">
             <summary>세부 투자 전략과 목표가·손절가 보기 (선택 사항)</summary>
           <div className="journal-current-grid">
-            <div><span>최근 투자 논리</span><strong>{active.thesis?
-              contentPreview(active.thesis.content,105):"기록 없음"}</strong>
-              {active.thesis&&<small>{displayTime(active.thesis.createdAt)} 기준</small>}
+            <div><span>최근 투자 논리</span><strong>{authoredReason?
+              contentPreview(authoredReason,105):"기록 없음"}</strong>
+              {authoredReasonAt&&<small>{displayTime(authoredReasonAt)} 기준</small>}
             </div>
             <div><span>목표가</span><strong>{active.plan?
               planPrice(active.plan.targetPrice,active.plan.priceCurrency):"미설정"}</strong>

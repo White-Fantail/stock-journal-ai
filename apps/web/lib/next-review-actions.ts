@@ -1,4 +1,4 @@
-import type {JournalPlan,JournalEntry,InvestorPrinciples} from "./saas-trades-api";
+import type {JournalPlan,JournalEntry,InvestorPrinciples,ReviewAction} from "./saas-trades-api";
 import type {TigerPersonalRead} from "./tiger-api";
 import {dueInvestmentReviews} from "./review-schedule";
 
@@ -6,7 +6,7 @@ export type NextReviewAction=Readonly<{id:string;title:string;detail:string;href
 export type NextReviewInput=Readonly<{
   principles:InvestorPrinciples|null;principlesAvailable:boolean;
   notes:readonly JournalEntry[]|null;plans:readonly JournalPlan[]|null;
-  personal:TigerPersonalRead|null;now?:Date;
+  personal:TigerPersonalRead|null;followups?:readonly ReviewAction[]|null;now?:Date;
 }>;
 /** User-authored cadence and observed holdings ONLY; no quotes, trades or price triggers. */
 export function deriveNextReviewActions(input:NextReviewInput):NextReviewAction[]{
@@ -19,6 +19,18 @@ export function deriveNextReviewActions(input:NextReviewInput):NextReviewAction[
     actions.push({id:"principles",priority:10,title:"나의 투자 원칙부터 정해 보세요",
       detail:"목표와 위험 한도, 점검 주기를 선택적으로 기록할 수 있습니다. 증권사 연결은 필요하지 않습니다.",
       href:"/private/getting-started"});
+  }
+  if(input.followups===null){
+    actions.push({id:"followups-unavailable",priority:4,title:"이전 점검 행동을 확인하지 못했습니다",
+      detail:"지난 점검의 실행 여부가 확인되지 않았습니다. 점검 화면에서 다시 확인해 주세요.",
+      href:"/private/review"});
+  }else if(input.followups?.length){
+    const pending=input.followups.filter(f=>f.state!=="DONE"&&f.state!=="NOT_APPLICABLE")
+      .sort((a,b)=>b.checkinAt.localeCompare(a.checkinAt))[0];
+    if(pending) actions.push({id:"followup:"+pending.checkinId,priority:15,
+      title:pending.ticker+" · 지난 점검의 다음 행동 확인",
+      detail:"내가 적은 행동의 실행 여부를 직접 확인하고 기록해 주세요.",
+      href:"/private/review/action/new?checkin="+encodeURIComponent(pending.checkinId)});
   }
   if(input.notes===null||input.plans===null||
      input.notes.length>=200||input.plans.length>=200){

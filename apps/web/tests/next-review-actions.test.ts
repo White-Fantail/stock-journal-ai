@@ -16,3 +16,14 @@ test("no actual quote threshold or buy/sell execution exists in the task queue",
   assert.ok(!source.includes("BUY_NOW"));
   assert.ok(!source.includes("priceAlert"));
 });
+
+test("unfinished self-reported next actions appear on home, completed ones do not",()=>{
+ const row={checkinId:"00000000-0000-4000-8000-000000000001",ticker:"QATEST",
+  nextAction:"Review business risks",selfAssessment:"PARTIAL",checkinAt:"2026-10-26T00:00:00Z",
+  state:null,note:null,resolvedAt:null};
+ const base={principles:null,principlesAvailable:true,notes:[],plans:[],personal:null};
+ const pending=deriveNextReviewActions({...base,followups:[row]});
+ assert.ok(pending.some(x=>x.href.includes("/private/review/action/new?checkin=")));
+ const done=deriveNextReviewActions({...base,followups:[{...row,state:"DONE"}]});
+ assert.ok(!done.some(x=>x.id.startsWith("followup:")));
+});

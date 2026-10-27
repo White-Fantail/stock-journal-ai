@@ -7,6 +7,7 @@ import { tigerPersonalRead } from "../../../lib/tiger-api";
 import { PersonalPortfolioBlock } from "../tiger/personal-preview";
 import {assessConcentration} from "../../../lib/portfolio-risk";
 import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
+import {PortfolioOverview} from "./portfolio-overview";
 import {fetchJournalPlans,type JournalPlan} from "../../../lib/saas-trades-api";
 import {auth} from "../../../auth";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
@@ -221,6 +222,7 @@ export default async function PortfolioPage() {
         <Link className="btn btn-outline" href="/private/brokers">계좌 관리</Link>
       </div>
     </div>
+    <PortfolioOverview personal={personal} plans={plans}/>
     <PortfolioConcentration data={personal} plans={plans}/>
     <PersonalPortfolioBlock data={personal}/>
   </main>;

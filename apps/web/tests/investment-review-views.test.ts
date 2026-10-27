@@ -16,6 +16,23 @@ test("private account-reference view never claims multi-account policy complianc
     assert.ok(!risk.includes(marker),marker);
 });
 
+test("consolidated Tiger account risk is observable but never presented as audited total",()=>{
+ const page=read("../app/private/portfolio/page.tsx");
+ const view=read("../app/private/portfolio/portfolio-overview.tsx");
+ const model=read("../lib/portfolio-overview-risk.ts");
+ assert.ok(page.includes("<PortfolioOverview personal={personal} plans={plans}/>"));
+ assert.ok(page.includes("tigerPersonalRead()"));
+ assert.ok(page.includes("fetchJournalPlans(session.user.id)"));
+ assert.ok(view.includes("completePortfolioVerified")||view.includes("검증된 거래 원장"));
+ assert.ok(model.includes('completePortfolioVerified:false'));
+ assert.ok(model.includes("MAX_SKEW"));
+ assert.ok(model.includes("accountCash"));
+ assert.ok(model.includes("position.currency!==currency"));
+ for(const term of ["tigerCall(","marketObservations","fetch(","PLACE_ORDER","PRICE_STOP"]){
+   assert.ok(!model.includes(term),term);
+ }
+});
+
 test("monthly report only uses per-session journal and never treats observed orders as executions",()=>{
   const ui=read("../app/private/reports/monthly/page.tsx");
   const model=read("../lib/monthly-process.ts");

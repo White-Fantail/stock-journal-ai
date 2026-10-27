@@ -13,6 +13,9 @@ export type MonthlyProcessReport=Readonly<{
   uniqueSymbols:number;symbols:readonly SymbolActivity[];
   plannedSymbols:number;completeStrategySymbols:number;
   dueAsOfCutoff:number;checkedAsOf:string;
+  selfReviewCount:number;
+  selfReviewBreakdown:Readonly<{FOLLOWED:number;PARTIAL:number;DEVIATED:number;UNCERTAIN:number}>;
+  adherenceBasis?:"USER_SELF_ASSESSED_NOT_BROKER_VERIFIED";
   source:"USER_AUTHORED_PROCESS_ONLY";
 }>;
 const MONTH=/^(20[2-9][0-9])-(0[1-9]|1[0-2])$/;

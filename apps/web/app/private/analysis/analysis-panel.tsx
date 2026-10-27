@@ -1,13 +1,14 @@
 "use client";
 
 import {useActionState,useState} from "react";
+import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null};
 
-export function AnalysisPanel({available,symbols}:{
-  available:boolean;symbols:readonly string[];
+export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW"}:{
+  available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";
 }){
-  const [mode,setMode]=useState<"STOCK_REVIEW"|"HABITS">("STOCK_REVIEW");
+  const [mode,setMode]=useState<"STOCK_REVIEW"|"HABITS"|"COACHING">(initialMode);
   const [state,submit,pending]=useActionState(runAiAnalysis,initialAiState);
   const selectedEvidence=new Map(state.evidence.map(x=>[x.ref,x]));
   return <div style={{display:"grid",gap:24}}>
@@ -20,9 +21,10 @@ export function AnalysisPanel({available,symbols}:{
           <select name="mode" value={mode} onChange={e=>setMode(e.target.value as typeof mode)}>
             <option value="STOCK_REVIEW">선택 종목의 매매·계획 복기</option>
             <option value="HABITS">전체 기록에서 반복 습관 살펴보기</option>
+            <option value="COACHING">최근 3개월과 이번 달의 계획·실천 복기</option>
           </select>
         </label>
-        {mode==="STOCK_REVIEW"&&<label>분석 종목
+        {mode!=="HABITS"&&<label>{mode==="COACHING"?"코칭할 종목":"분석 종목"}
           <select name="symbol" required defaultValue={symbols[0]??""}>
             {symbols.length===0?<option value="">기록된 종목이 없습니다</option>:
               symbols.map(t=><option key={t} value={t}>{t}</option>)}
@@ -30,9 +32,13 @@ export function AnalysisPanel({available,symbols}:{
         </label>}
         <div className="state-panel" style={{padding:16}}>
           <h3>외부 전송 범위</h3>
+          {mode==="COACHING"?<p>선택한 종목과 관련해 <strong>최근 완료된 3개월 및 이번 달 진행 중인 투자일지 건수,
+            전체 자기평가 건수, 최근 자기평가의 판단 근거와 본인이 적은 다음 행동 일부</strong>를
+            전송합니다. 완료된 달과 이번 달은 동일 길이로 비교하지 않습니다.
+            계좌번호·증권사 주문·보유수량·가격·금액·수익률은 전송하지 않습니다.</p>:
           <p>선택한 종목(또는 전체)의 최근 <strong>일지 내용 일부, 투자계획 변경 사유, 직접 입력한 매매 사유</strong>와
             Tiger 주문의 방향·상태·날짜만 추려서 OpenRouter의 모델 제공자에게 전달합니다.
-            계좌번호·인증 정보·원본 체결 식별자·보유 수량·가격·금액은 전송하지 않습니다.</p>
+            계좌번호·인증 정보·원본 체결 식별자·보유 수량·가격·금액은 전송하지 않습니다.</p>}
           <p>OpenRouter에서 데이터 수집 거부 및 Zero Data Retention(ZDR) 제공자로 제한합니다.
             모델 제공자 약관과 데이터 처리 조건도 적용됩니다. 결과는 자동 저장되지 않습니다.</p>
         </div>
@@ -43,11 +49,15 @@ export function AnalysisPanel({available,symbols}:{
         </label>
         {!available&&<p role="status">OpenRouter 분석 기능의 운영 API 키·모델·사용 설정이 아직 준비되지 않았습니다.</p>}
         <button type="submit" className="btn btn-primary" disabled={!available||pending||symbols.length===0}>
-          {pending?"투자 기록 검토 중…":"AI로 내 투자 판단 분석하기"}
+          {pending?"투자 기록 검토 중…":mode==="COACHING"?"지난 행동과 이번 달 기록 코칭받기":"AI로 내 투자 판단 분석하기"}
         </button>
         <small>워크스페이스당 1일 최대 4회, 월 최대 60회. 공급자 사용량에 따라 비용이 발생할 수 있습니다.</small>
       </form>
     </section>
+    {mode==="COACHING"&&<p className="user-footnote">AI 코칭은 사용자가 지난 점검에서
+      적어둔 다음 행동이 실제로 실행됐다고 자동 판정하지 않습니다.
+      <Link href="/private/reports/monthly">월간 기록 비교</Link>와
+      <Link href="/private/journal">투자계획·자기평가 작성</Link>을 병행할 수 있습니다.</p>}
     {state.status==="error"&&<section className="state-panel" role="alert">
       <h2>분석 불가</h2><p>{state.message}</p>
     </section>}
@@ -78,6 +88,11 @@ export function AnalysisPanel({available,symbols}:{
         <ul>{state.evidence.map(e=><li key={e.ref}><strong>{e.ref} {e.ticker} · {e.on}</strong>
           <p>{e.source} · {e.detail}</p></li>)}</ul>
       </details>
+      {state.evidence.some(e=>e.kind==="MONTHLY_PROCESS")&&<p className="user-footnote">
+        지난달에 적은 개선 과제를 이번 달에 실제로 수행했는지 확인하려면,
+        <Link href="/private/journal"> 투자일지에서 종목을 선택해 새 자기평가</Link>를 작성하세요.
+        AI 답변만으로 행동 완료 여부를 확정하지 않습니다.
+      </p>}
       <p style={{marginTop:18}}>이 분석은 투자 판단 복기를 돕는 참고 자료이며, 매수·매도 추천이나 수익 보장을 제공하지 않습니다.</p>
     </section>}
   </div>;

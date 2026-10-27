@@ -103,13 +103,17 @@ test("B3 investor-centered portfolio links to source-aware risks without suppres
 
 test("B4 plan editing retains all existing strategy fields as a new full immutable revision",()=>{
  const page=read("../app/private/journal/new/page.tsx");
+ const pricing=read("../app/private/journal/new/plan-risk-check.tsx");
  const client=read("../app/private/journal/journal-workspace.tsx");
  const api=read("../lib/saas-trades-api.ts");
  for(const field of ["rationale","invalidationCondition","reviewCadence","strategyType",
    "investmentHorizon","maxAllocationPct","targetPrice","stopPrice","priceCurrency"]){
-  assert.equal(page.split('name="'+field+'"').length-1,1,field);
+  const markup=["targetPrice","stopPrice","priceCurrency"].includes(field)?pricing:page;
+  assert.equal(markup.split('name="'+field+'"').length-1,1,field);
  }
- assert.ok(page.includes("defaultValue={existingPlan?.targetPrice??"));
+ assert.ok(page.includes("initialTarget={existingPlan?.targetPrice??"));
+ assert.ok(page.includes("initialStop={existingPlan?.stopPrice??"));
+ assert.ok(pricing.includes("onChange={e=>setStop(e.target.value)}"));
  assert.ok(page.includes("defaultValue={existingPlan?.strategyType??"));
  assert.ok(page.includes("defaultValue={existingPlan?.reviewCadence??"));
  assert.ok(page.includes("action={addPlan}"));

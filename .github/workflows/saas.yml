@@ -14,6 +14,8 @@ on:
       - 'tests/test_saas_identity.py'
       - 'tests/test_saas_journal.py'
       - 'tests/test_saas_journal_plans.py'
+      - 'tests/test_saas_monthly_process.py'
+      - 'scripts/verify_saas_monthly_process.py'
       - 'tests/test_broker_connectors.py'
       - 'tests/test_broker_backfill.py'
       - 'tests/test_broker_fifo_projection.py'
@@ -146,6 +148,10 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_tiger_personal_fund_probe.py' -v
       - name: Validate sync processing progress never certifies portfolio history
         run: python -m unittest discover -s tests -p 'test_saas_sync_status.py' -v
+      - name: Validate NZ month aggregate input and calendar boundaries
+        run: python -m unittest discover -s tests -p 'test_saas_monthly_process.py' -v
+      - name: Verify complete journal month SQL over feed caps and tenant A/B
+        run: python scripts/verify_saas_monthly_process.py
       - name: Validate hosted schema bootstrap policy (no live connection)
         run: python -m unittest discover -s tests -p 'test_saas_hosted_schema.py' -v
       - name: Exercise hosted bootstrap against separate disposable CI database

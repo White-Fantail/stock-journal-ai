@@ -92,8 +92,8 @@ test("private structured plan review is distinct from unverified trade observati
 test("new investor reports are reachable from mobile and check center",()=>{
   const layout=read("../app/private/layout.tsx");
   const alerts=read("../app/private/alerts/page.tsx");
-  const home=read("../app/private/page.tsx");
-  for(const file of [layout,alerts,home])assert.ok(file.includes('href="/private/reports/monthly"'));
+  const review=read("../app/private/review/page.tsx");
+  for(const file of [layout,alerts,review])assert.ok(file.includes('href="/private/reports/monthly"'));
   assert.ok(layout.includes('className="app-mobile-more-panel"'));
   assert.ok(alerts.includes("plans.value.length<200"));
   assert.ok(alerts.includes("notes.value.length<200"));

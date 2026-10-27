@@ -14,7 +14,7 @@ export default async function GettingStarted({searchParams}:{
    fetchInvestorPrinciples(session.user.id),fetchJournalPlans(session.user.id),
  ]);
  const principleOk=result[0].status==="fulfilled";
- const p=principleOk?result[0].value:null;
+ const p=result[0].status==="fulfilled"?result[0].value:null;
  const plans=result[1].status==="fulfilled"?result[1].value:null;
  const hasPlan=plans!==null&&plans.length>0;
  return <main className="journal-page">

@@ -244,3 +244,22 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Recorded the actual observed control-plane state, exact preflight and postdeploy browser/security steps, and known unknowns in `docs/RELEASE-READINESS-2026-10-27.md`.
 - [ ] Explicit authorization to FF-merge dev into main and deploy to Vercel/Railway. No production data or variable changes were made during this development step.
 - [ ] Live schema status after release (applied=24/pending=0), actual backup restore verification, owner/nonowner real Google browser testing, real Tiger read-only entitlement probing, actual device mobile smoke tests, and ZDR model live test. **A passing CI never satisfies these independent production gates.**
+
+### Original P2/P3/P4 gap remediation — 2026-10-27 (`dev` only)
+
+**P2 similar-risk exposures, no data-vendor correlation claims**
+- [x] `025_user_risk_factors.sql`: tenant-RLS immutable user-assigned risk-factor versions, 0–3 factors per ticker, explicit unclassification and explanation. Read/write endpoints have strict user scope, idempotency and schema/HTTP A/B tests. History included in complete JSON export and deleted with the private workspace.
+- [x] Compare user-assigned factors to **existing same-currency synchronized Tiger NAV** only. Factor membership can overlap and category totals must never be added; show the unclassified portion. No auto stock tagging, prices, quotes, market correlation or order creation.
+- [ ] Verified industry/correlation exposure requires an independently sourced dataset, schema and deliberate cost/privacy review; currently manual author labels only.
+
+**P3 weekly process review**
+- [x] Signed read-only NZ ISO-week full-DB summaries of notes, plan changes and explicit self-reviews, independent of capped 50/200-item lists. Display next due cadence and latest authored next action without assuming completion.
+- [x] Dedicated mobile-friendly `/private/reports/weekly` with links from dashboard and review centre; partial current weeks clearly distinguished from closed weeks. DB A/B isolation and NZ DST/week-year tests.
+- [ ] Scheduled summaries or push notifications remain out of scope. Week-on-week behavioral improvement must not be equated with positive market returns.
+
+**P4 repeat behavior evidence**
+- [x] The opt-in `COACHING` mode detects >=2 explicit PARTIAL, DEVIATED or UNCERTAIN self-assessments on **distinct dates** and cites the source R# records with derived S# references. It does not diagnose emotion, assume action completion or classify market-trading behavior without evidence.
+- [x] Extend review prompt with open questions about fear, urgency or impulse rather than asserting these mental states from trading outcomes.
+- [ ] A robust emotional-decision self-report taxonomy needs separate opt-in user-input fields and longitudinal validation. Actual Tiger execution-based rule adherence remains blocked by P0 raw financial proof.
+
+**Shared release constraints:** P0 live Tiger full-history/funding/fee/FX validation, audited NAV, and P5 market return/benchmark release remain incomplete; no claim of real returns. `main` / production untouched.

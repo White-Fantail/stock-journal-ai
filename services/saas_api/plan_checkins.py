@@ -103,8 +103,8 @@ def create_checkin(identity,trade,subject,raw):
                 raise TradeConflict("Self-assessment idempotency mismatch")
             return {"id":str(old[0]),"replayed":True,
                     "provenance":"USER_SELF_ASSESSED"}
-        # Lock the active plan row while inserting. Concurrent plan revisions
-        # can still be appended; a check-in is anchored to the expected revision.
+        # Re-read the current plan inside the write transaction; the exact
+        # version being assessed is retained even if later revisions are added.
         plan=trade.execute(_PLAN_SELECT,(wid,value["ticker"])).fetchone()
         if not plan:
             raise TradeNotFound("Investment plan not found")

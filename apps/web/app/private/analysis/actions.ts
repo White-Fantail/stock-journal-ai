@@ -2,11 +2,12 @@
 
 import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
-import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis} from "../../../lib/saas-trades-api";
+import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis,fetchMonthlyProcessReport,fetchPlanCheckinContext} from "../../../lib/saas-trades-api";
+import {buildCoachingEvidence,monthlyCoachingScope} from "../../../lib/coach-evidence";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
 import {aiConfigured} from "../../../lib/ai-configuration";
 import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
-  type AiResult,type AnalysisEvidence,type AnalysisMode} from "../../../lib/ai-analysis";
+  type AiResult,type AnalysisEvidence,type AnalysisMode,type AnalysisEnvelope} from "../../../lib/ai-analysis";
 
 export type AiState={
   status:"idle"|"error"|"success";message:string;result:AiResult|null;
@@ -26,9 +27,9 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     return error("외부 AI 분석을 위해 이번 요청의 데이터 전송에 동의해야 합니다.");
   const mode=form.get("mode");
   const symbol=form.get("symbol");
-  if(mode!=="STOCK_REVIEW" && mode!=="HABITS")
+  if(mode!=="STOCK_REVIEW" && mode!=="HABITS" && mode!=="COACHING")
     return error("분석 종류를 선택해 주세요.");
-  if(mode==="STOCK_REVIEW" && !safeAnalysisSymbol(symbol))
+  if((mode==="STOCK_REVIEW"||mode==="COACHING") && !safeAnalysisSymbol(symbol))
     return error("분석할 종목을 선택해 주세요.");
   if(!aiConfigured())return error("AI 분석 API가 아직 운영 설정되지 않았습니다.");
   const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
@@ -36,24 +37,44 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
   if(!workspace || !subject || !/^[0-9]{3,255}$/.test(subject))
     return error("로그인과 개인 워크스페이스 확인이 필요합니다.");
 
-  const [notes,plans,trades,personal]=await Promise.allSettled([
-    fetchJournal(subject),fetchJournalPlans(subject),fetchManualTrades(subject),
-    tigerPersonalRead(),
-  ]);
-  // Never submit empty or partially retrieved financial context to the model:
-  // it could mistake a backend failure for lack of investing discipline.
-  if(notes.status!=="fulfilled" || plans.status!=="fulfilled" ||
-     trades.status!=="fulfilled")
-    return error("투자일지를 온전히 불러오지 못해 분석을 중단했습니다.");
-  // Owner Tiger pilot is optional; unavailable observations must not remove
-  // the ability to reflect on user-authored notes and manual transactions.
-  const orders=personal.status==="fulfilled"&&personal.value
-    ? personal.value.accounts.flatMap(a=>a.orders):[];
-  const envelope=evidenceForAnalysis(mode as AnalysisMode,
-    mode==="STOCK_REVIEW" ? symbol as string : null,
-    notes.value,plans.value,trades.value.events,orders);
-  if(envelope.evidence.length===0)
-    return error("선택한 범위에 분석할 기록이 없습니다. 투자일지를 먼저 작성해 주세요.");
+  let envelope:AnalysisEnvelope;
+  if(mode==="COACHING"){
+    // Only author-scoped monthly aggregates + this ticker's authored checkins.
+    // No Tiger data, order snapshots or unbounded private note history is sent.
+    const periods=monthlyCoachingScope();
+    const source=await Promise.allSettled([
+      ...periods.map(p=>fetchMonthlyProcessReport(subject,p.month)),
+      fetchPlanCheckinContext(subject,symbol as string),
+    ]);
+    if(source.some(v=>v.status!=="fulfilled"))
+      return error("지난 3개월과 이번 달의 집계 또는 이전 자기평가를 모두 확인하지 못했습니다. 부분 기록으로 코칭하지 않습니다.");
+    try{
+      const reportSet=periods.map((p,i)=>({
+        month:p.month,partial:p.partial,
+        report:(source[i] as PromiseFulfilledResult<Awaited<ReturnType<typeof fetchMonthlyProcessReport>>>).value,
+      }));
+      const context=(source[4] as PromiseFulfilledResult<Awaited<ReturnType<typeof fetchPlanCheckinContext>>>).value;
+      envelope=buildCoachingEvidence(symbol as string,reportSet,context);
+    }catch{
+      return error("비교 가능한 투자 기록이나 자기평가가 부족하거나 자료의 완전성이 확인되지 않았습니다.");
+    }
+  }else{
+    const [notes,plans,trades,personal]=await Promise.allSettled([
+      fetchJournal(subject),fetchJournalPlans(subject),fetchManualTrades(subject),
+      tigerPersonalRead(),
+    ]);
+    // Never submit empty or partially retrieved financial context to the model.
+    if(notes.status!=="fulfilled" || plans.status!=="fulfilled" ||
+       trades.status!=="fulfilled")
+      return error("투자일지를 온전히 불러오지 못해 분석을 중단했습니다.");
+    const orders=personal.status==="fulfilled"&&personal.value
+      ? personal.value.accounts.flatMap(a=>a.orders):[];
+    envelope=evidenceForAnalysis(mode,
+      mode==="STOCK_REVIEW" ? symbol as string : null,
+      notes.value,plans.value,trades.value.events,orders);
+    if(envelope.evidence.length===0)
+      return error("선택한 범위에 분석할 기록이 없습니다. 투자일지를 먼저 작성해 주세요.");
+  }
 
   try{
     const claim=await claimAiAnalysis(subject,mode as AnalysisMode);

@@ -93,8 +93,7 @@ The Railway cron remains daily. Neither the future quote feed latency, a paid re
 
 A separate CLI-only `python -m temporary.tiger_personal.fund_probe_worker` uses
 the same isolated RSA runner configuration to call Tiger's documented
-`get_fund_details` for three fixed filters: `DEPOSIT_WITHDRAW`, `FOREX`,
-`CORPORATE_ACTION`. It requests the **exact account from runner configuration**
+`get_fund_details` for all eight documented non-ALL financial activity filters: `DEPOSIT_WITHDRAW`, `FOREX`, `CORPORATE_ACTION`, `FEE`, `FUNDS_TRANSFER`, `TRADE`, `ACTIVITY_AWARD`, and `OTHER`. The Tiger `TRADE` *cash posting* is not a verified fill. It requests the **exact account from runner configuration**
 on every call, not the ambient SDK default. It probes exactly the last seven
 complete UTC days, with end_date one day before the exclusive upper bound.
 The collector validates pagination, source IDs, dates, numeric safety and
@@ -116,3 +115,12 @@ secret-sharing path, trade functionality or automated quote polling exists.
 Only after independently verifying live entitlement, approved account binding,
 complete pagination, original exact monetary precision and encrypted tenant
 source provenance may a future separate worker be enabled for storage.
+
+
+For later, separately authorized historic reads, the pure
+`plan_fund_windows` helper slices a maximum ten-year interval into <=85-day
+half-open windows, overlapping one provider business day. An offline
+`assess_financial_coverage` check detects missing filter/window observations
+and cross-account mismatches but **never** certifies provider history or
+the precision of fees, deposits, transfers or corporate actions.
+No scheduler, network call, runtime data export or stage write is added.

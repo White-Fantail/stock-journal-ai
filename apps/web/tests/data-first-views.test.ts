@@ -53,13 +53,15 @@ test("home and portfolio use real scoped records instead of onboarding cards",()
 test("a selected stock displays actionable target and stop controls",()=>{
   const ui=read("../app/private/journal/journal-workspace.tsx");
   const create=read("../app/private/journal/new/page.tsx");
+  const pricing=read("../app/private/journal/new/plan-risk-check.tsx");
   assert.ok(ui.includes("투자 전략·계획 관리"));
   assert.ok(ui.includes("목표가 {active.plan?"));
   assert.ok(ui.includes("손절가 {active.plan?"));
   assert.ok(ui.includes("/private/journal/new?mode=plan&ticker="));
   assert.ok(create.includes("action={addPlan}"));
-  assert.ok(create.includes('name="targetPrice"'));
-  assert.ok(create.includes('name="stopPrice"'));
+  assert.ok(create.includes("<PlanRiskCheck"));
+  assert.ok(pricing.includes('name="targetPrice"'));
+  assert.ok(pricing.includes('name="stopPrice"'));
   assert.ok(create.includes('name="rationale"'));
   assert.ok(create.includes('name="strategyType"'));
   assert.ok(create.includes('name="invalidationCondition"'));

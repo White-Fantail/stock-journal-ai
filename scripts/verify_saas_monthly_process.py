@@ -38,6 +38,14 @@ def add_synthetic_rows(conn,user):
               VALUES (%s,%s,%s,%s,'TEST','synthetic',%s,'LONG_TERM',
                 'OVER_THREE_YEARS','synthetic thesis invalidation',25,'MONTHLY')""",
               (wid,uid,str(uuid4()),"b"*64,STAMP))
+        # Independent past month with >30 distinct symbols: all must be returned.
+        for index in range(35):
+            conn.execute("""INSERT INTO saas_journal_records
+              (workspace_id,author_user_id,idempotency_key,request_hash,
+               ticker,entry_kind,text_content,created_at)
+              VALUES (%s,%s,%s,%s,%s,'REVIEW','synthetic previous month',%s)""",
+              (wid,uid,str(uuid4()),"d"*64,"S"+str(index).zfill(2),
+               datetime(2026,9,20,tzinfo=timezone.utc)))
         for index in range(55):
             conn.execute("""INSERT INTO saas_trade_events
               (workspace_id,author_user_id,idempotency_key,request_hash,
@@ -73,8 +81,10 @@ def main():
         assert empty["noteCount"]==0 and empty["planRevisionCount"]==0
         assert empty["userTradeRecordCount"]==0 and empty["plannedSymbols"]==0
         previous=monthly_process(admin,trade,"1000000000881","2026-09",now=NOW)
-        assert previous["noteCount"]==0 and previous["planRevisionCount"]==0
-        assert previous["plannedSymbols"]==0
+        assert previous["noteCount"]==35 and previous["planRevisionCount"]==0
+        assert previous["reviewCount"]==35 and previous["plannedSymbols"]==0
+        assert previous["uniqueSymbols"]==35 and len(previous["symbols"])==35
+        assert previous["symbols"][0]["ticker"]=="S00"
         # Direct application role may not access cross-tenant rows by forging a WHERE.
         with trade.transaction():
             trade.execute("SELECT set_config('saas.workspace_id',%s,true)",

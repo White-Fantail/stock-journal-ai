@@ -17,6 +17,7 @@ from services.saas_api.trades import TradeInputError, TradeConflict, TradeNotFou
 from services.saas_api.journal import list_notes, create_note, export_journal
 from services.saas_api.plan_checkins import context as checkin_context, create_checkin
 from services.saas_api.monthly_process import monthly_process
+from services.saas_api.weekly_process import weekly_process
 from services.saas_api.journal_broker_links import create_broker_note
 from services.saas_api.journal_observation_links import create_observation_note
 from services.saas_api.journal_plans import list_plans,create_plan
@@ -66,7 +67,7 @@ from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, fin
 _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
-            "/internal/v1/journal/export", "/internal/v1/journal/monthly-process", "/internal/v1/journal/checkin/context", "/internal/v1/journal/checkin/create", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
+            "/internal/v1/journal/export", "/internal/v1/journal/monthly-process", "/internal/v1/journal/weekly-process", "/internal/v1/journal/checkin/context", "/internal/v1/journal/checkin/create", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
             "/internal/v1/journal/plan/create", "/internal/v1/ai/claim", "/internal/v1/account/delete", "/internal/v1/trades/detail",
             "/internal/v1/tiger/status", "/internal/v1/tiger/start",
             "/internal/v1/tiger/callback", "/internal/v1/tiger/bind",
@@ -260,6 +261,7 @@ class Handler(BaseHTTPRequestHandler):
                 if set(data) - ({"subject","mode","consented"} if path == "/internal/v1/ai/claim" else
                                 {"subject","tradeId"} if path == "/internal/v1/trades/detail" else
                                 {"subject","month"} if path == "/internal/v1/journal/monthly-process" else
+                                {"subject","week"} if path == "/internal/v1/journal/weekly-process" else
                                 {"subject","ticker"} if path == "/internal/v1/journal/checkin/context" else
                                 {"subject","checkin"} if path == "/internal/v1/journal/checkin/create" else
                                 {"subject","trade"} if path == "/internal/v1/trades/create" else
@@ -285,6 +287,8 @@ class Handler(BaseHTTPRequestHandler):
                             out=list_notes(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/journal/monthly-process":
                             out=monthly_process(identity_conn,trade_conn,data.get("subject"),data.get("month"))
+                        elif path == "/internal/v1/journal/weekly-process":
+                            out=weekly_process(identity_conn,trade_conn,data.get("subject"),data.get("week"))
                         elif path == "/internal/v1/journal/checkin/context":
                             out=checkin_context(identity_conn,trade_conn,data.get("subject"),data.get("ticker"))
                         elif path == "/internal/v1/journal/checkin/create":

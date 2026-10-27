@@ -207,3 +207,13 @@ A later optional Tiger order flow needs **separate customer trading authorizatio
 - [x] Monthly DB aggregation of structured user-assessed outcomes without recent-feed limits, displayed separately from general review counts. User-marked status is NOT audited plan compliance, broker-fill accuracy or profitability.
 - [x] CI tests for input contracts, tenant A/B isolation, plan version changes, immutable revisions and idempotency replay.
 - [ ] Next: verified longitudinal trade-versus-plan assessment after Tiger fill, cash and FX source completeness; never infer a sell instruction or fabricate plan-adherence rates from unverified trades.
+
+### Priority 4 — bounded multi-account Tiger portfolio-risk view (2026-10-27)
+
+- [x] Verify priority 3 SHA `9e0ca3f` has a successful complete CI before continuing.
+- [x] New pure `portfolio-overview-risk.ts` uses only existing owner-scoped Tiger asset/position snapshots. Exact 12-decimal fixed-point BigInt calculation of same-ticker cross-account exposure, NAV, cash, invested share, top-one and top-two concentration, and authored max allocation reference. No new quote calls, FX conversion, trade signals or DB writes.
+- [x] New mobile-readable overview above per-account concentration on the portfolio page. Any unavailable or incomplete source shows an explicit reason instead of pretending portfolio exposure is zero.
+- [x] Fail closed for missing account/cash/NAV, unknown currency, mixed currencies, duplicate account aliases, stale (>7d) or skewed (>1h) account snapshots, negative/short holdings, inconsistent NAV versus cash plus reported long positions, invalid money precision, plan history at the 200-item cap, or dropped Tiger parsed records.
+- [x] Deliberately label any successful result `SYNCHRONIZED_TIGER_ACCOUNT_NAV_ONLY` and `completePortfolioVerified:false`; it is a Tiger-only aggregate, not the user's bank/other-broker/unlisted holdings, a proven financial account statement, or an audited policy compliance finding.
+- [x] Automated tests for multiple same-symbol account holdings, cash share, exact threshold comparison without float rounding, currency gaps, account staleness and duplicate alias ambiguity.
+- [ ] Complete global portfolio risk across mixed currencies after independent FX-at-as-of proof, account identities, non-Tiger account import, full economic liabilities/derivatives and cash proof. Do not backfill with synthetic exchange rates or live quote polling.

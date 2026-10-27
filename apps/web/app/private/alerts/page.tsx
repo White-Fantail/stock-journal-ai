@@ -67,8 +67,8 @@ export default async function NotificationsPage(){
               <strong>{task.ticker} · {task.state==="DUE"?"정기 점검 시점 도래":"다음 정기 점검"}</strong>
               <small>{timeLabel(task.nextDueAt)} 이후 · 내 마지막 계획/복기 기준</small>
             </div>
-            <Link href={"/private/journal/new?kind=REVIEW&ticker="+encodeURIComponent(task.ticker)}>
-              투자 복기 작성 →
+            <Link href={"/private/journal/review/new?ticker="+encodeURIComponent(task.ticker)}>
+              원칙 자기평가 작성 →
             </Link>
           </div>)}
         </div>}

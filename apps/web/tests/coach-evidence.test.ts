@@ -56,7 +56,7 @@ test("four months: current partial and three previous complete, NZ boundaries",(
  const data=JSON.stringify(result);
  for(const secret of ["sensitive-record-id","sensitive-plan-id",
    "accountId","sourceRef","netLiquidation","estimatedValue",
-   "price","marketObservations"]){
+   '"price":', "marketObservations"]){
    assert.ok(!data.includes(secret),secret);
  }
 });

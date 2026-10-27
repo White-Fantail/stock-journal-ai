@@ -10,11 +10,13 @@ Help individual investors record **why** they invested, check whether their assu
 
 1. Sign in using Google. Only the verified numeric Google subject resolves the private workspace.
 2. Optionally set investment principles: personal objective, horizon, display currency, review cadence, risk limits and note. This is not a mandatory onboarding gate.
-3. Enter an investment plan on its **own page**: ticker, rationale, optional strategy/horizon, invalidation criteria, target and stop annotations, maximum allocation and review cadence. Plans are append-only revisions.
+3. Enter an investment plan on its **own page**: ticker, rationale, optional strategy/horizon, invalidation criteria, target and stop annotations, maximum allocation and review cadence. Plans are append-only revisions. The same plan form contains an optional **pre-buy risk check** using the edited stop, user-supplied risk-base funds, cash available, intended entry price and explicit existing-holdings choice. This arithmetic estimate is not persisted, and a missing/partial Tiger snapshot is not treated as zero holdings.
 4. Use the dashboard to see dated account observations, due reviews and past follow-up tasks. Unavailable sources are labeled, not zeroed.
 5. Open a ticker from the journal to see **current plan → decision history → self-assessment**. Record subsequent review and manually confirm the status of an authored next action.
 6. Review portfolio concentration, overlapping self-classified risk factors, weekly/monthly process metrics and the limits of available performance evidence.
 7. Optionally request AI stock review, habit analysis or coaching after **fresh, explicit consent**; the result cites bounded input evidence and is not persisted automatically.
+
+The former standalone risk calculator route redirects to the investment-plan authoring flow; all portfolio and menu links lead to that flow. Tiger holdings used for sizing remain unverified observations, even when their currency, basis and observation time are present. A user may enter existing shares and average cost manually or explicitly confirm zero; multi-currency holdings are not silently netted. Neither calculation nor stop annotations place an order.
 
 Primary navigation: **Home, Portfolio, Investment journal, Review**, with other tools in **More**. Private navigation uses ordinary full-document anchors to avoid stalled client-side route transitions. Browse/list pages do not embed create/edit forms; use dedicated routes.
 

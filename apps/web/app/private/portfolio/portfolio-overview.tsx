@@ -19,7 +19,7 @@ export function PortfolioOverview({personal,plans,factors}:{
    <div className="user-panel-head">
      <div><h2>보유 종목 집중도와 공통 위험</h2>
        <p className="user-footnote">같은 조건에서 조회된 Tiger 계좌만 합산한 관측 참고치</p></div>
-     <Link href="/private/risk">위험 계산기 →</Link>
+     <Link href="/private/journal/new?mode=plan">매수 전 위험 점검 →</Link>
    </div>
    {risk.state==="UNAVAILABLE"?<>
      <div className="state-panel" role="status">

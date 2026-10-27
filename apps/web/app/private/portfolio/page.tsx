@@ -153,7 +153,7 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
   return <section className="user-panel" aria-label="보유 종목 집중도">
     <div className="user-panel-head">
       <h2>보유 종목 집중도</h2>
-      <Link href="/private/risk">투자 위험 계산기 →</Link>
+      <Link href="/private/journal/new?mode=plan">투자 매수 전 위험 점검 →</Link>
     </div>
     <p className="user-footnote">기존 Tiger 계좌 스냅샷의 보유 종목 평가액만으로 계산한 참고 비중입니다.
       현금·다른 계좌·다른 통화를 합산하지 않습니다. 수익률이나 매매 신호가 아닙니다.</p>
@@ -220,7 +220,7 @@ export default async function PortfolioPage() {
       <div><h1>포트폴리오</h1><p>내 보유 현황에서 투자 집중도와 계획을 먼저 살펴보세요.</p></div>
       <div className="home-actions">
         <Link className="btn btn-primary" href="/private/journal">종목별 투자 계획 →</Link>
-        <Link className="btn btn-outline" href="/private/risk">위험 계산기</Link>
+        <Link className="btn btn-outline" href="/private/journal/new?mode=plan">매수 전 위험 점검</Link>
       </div>
     </div>
     <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>

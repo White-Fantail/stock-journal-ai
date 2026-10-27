@@ -571,3 +571,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .review-action-item small{color:var(--muted);font-size:.78rem}
 .review-action-item .btn{flex:0 0 auto;min-height:44px}
 @media(max-width:640px){.review-action-item{flex-direction:column;align-items:stretch}.review-action-item .btn{align-self:flex-start}}
+
+
+/* Risk check lives with the authored investment plan; responsive on phones. */
+.plan-risk-check{display:grid;gap:13px;border:1px solid var(--line);border-radius:14px;padding:18px;background:#fbfdfb;min-width:0}
+.plan-risk-check h3{margin:0;color:#24594a;font-size:1.08rem}
+.plan-risk-check h3 small{display:inline;margin-left:8px}
+.plan-risk-check>label{display:grid;gap:7px}
+.plan-risk-check .journal-form-hint{overflow-wrap:anywhere}
+.plan-risk-check .account-summary-values{margin:0;min-width:0}
+.plan-risk-holding{display:block;margin:6px 0 0;overflow-wrap:anywhere}
+@media(max-width:520px){
+ .plan-risk-check{padding:14px}
+ .plan-risk-check .account-summary-values{grid-template-columns:minmax(0,1fr)}
+}

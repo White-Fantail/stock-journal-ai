@@ -130,7 +130,7 @@ test("private primary and More menus keep navigating through full documents",asy
   await page.goto("/private/principles");
   for(const [href,inMore] of [
    ["/private/trades",true],["/private/portfolio",false],
-   ["/private/risk",true],["/private/review",false],
+   ["/private/analysis",true],["/private/review",false],
    ["/private/settings",true],["/private",false],
   ]){
    const menu=page.locator(".app-nav");

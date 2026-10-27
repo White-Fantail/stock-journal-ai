@@ -145,6 +145,30 @@ def main():
         code,_=request("/internal/v1/journal/plan/create",
             {"subject":A,"plan":{**strategy,"maxAllocationPct":"150"}})
         assert code==400,code
+        # Real HTTP self-review write, replay and export across auth A/B.
+        checkin={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
+                 "expectedPlanRevisionId":strategic["id"],
+                 "selfAssessment":"PARTIAL",
+                 "content":"Synthetic documented adherence decision",
+                 "nextAction":"Review the original strategy memo"}
+        code,own_context=request("/internal/v1/journal/checkin/context",
+                                 {"subject":A,"ticker":"TSLA"})
+        assert code==200 and own_context["currentPlan"]["id"]==strategic["id"],(code,own_context)
+        code,private_context=request("/internal/v1/journal/checkin/context",
+                                     {"subject":B,"ticker":"TSLA"})
+        assert code==200 and private_context["currentPlan"] is None,(code,private_context)
+        code,checkin_created=request("/internal/v1/journal/checkin/create",
+                                     {"subject":A,"checkin":checkin})
+        assert code==200 and checkin_created["replayed"] is False,(code,checkin_created)
+        code,checkin_replay=request("/internal/v1/journal/checkin/create",
+                                    {"subject":A,"checkin":checkin})
+        assert code==200 and checkin_replay["replayed"] is True,(code,checkin_replay)
+        assert checkin_replay["id"]==checkin_created["id"]
+        code,_=request("/internal/v1/journal/checkin/create",{"subject":B,"checkin":checkin})
+        assert code==404,code
+        code,_=request("/internal/v1/journal/checkin/context",
+                       {"subject":A,"ticker":"TSLA","workspaceId":"forged"})
+        assert code==400,code
         # Monthly reporting is a signed owner-only DB aggregate, not a capped
         # "latest trade" view or a brokerage performance computation.
         code,month=request("/internal/v1/journal/monthly-process",
@@ -179,11 +203,16 @@ def main():
         code,blist=request("/internal/v1/journal/list",{"subject":B})
         assert code==200 and blist["entries"]==[]
         code,out=request("/internal/v1/journal/export",{"subject":A})
-        assert code==200 and out["complete"] and len(out["journal"])==1 and len(out["trades"])==1
+        assert code==200 and out["complete"] and len(out["journal"])==2 and len(out["trades"])==1
         assert len(out["plans"])==3 and all(p["isBrokerOrder"] is False for p in out["plans"])
         assert any(p["strategyType"]=="LONG_TERM" for p in out["plans"])
+        assert len(out["planSelfReviews"])==1,(out.get("planSelfReviews"))
+        assert out["planSelfReviews"][0]["id"]==checkin_created["id"]
+        assert out["planSelfReviews"][0]["planRevisionId"]==strategic["id"]
+        assert out["planSelfReviews"][0]["selfAssessment"]=="PARTIAL"
+        assert out["planSelfReviews"][0]["nextAction"]=="Review the original strategy memo"
         code,out=request("/internal/v1/journal/export",{"subject":B})
-        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[]
+        assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -211,6 +240,10 @@ def main():
         with psycopg.connect(dsn) as db:
             assert db.execute("""SELECT count(*) FROM saas_journal_plan_revisions
                 WHERE ticker='TSLA'""").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_journal_plan_checkins").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_journal_records").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_ai_request_quotas").fetchone()[0]==0
+            assert db.execute("SELECT count(*) FROM saas_users").fetchone()[0]==1
         print("P1/P2 HTTP PASS: provision, replay, trade, journal, export, A/B denial, revocation, deletion")
     finally:
         p.terminate()

@@ -33,6 +33,7 @@ REQUIRED_TABLES = (
     "saas_ai_request_quotas",
     "saas_tiger_personal_sync_health",
     "saas_journal_plan_checkins",
+    "saas_risk_factor_revisions",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -65,6 +66,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "022_personal_sync_health.sql", # owner private cron success/failure observations
     "023_investment_strategy_plan.sql", # additive nullable strategy metadata on immutable journal revisions
     "024_plan_checkins.sql", # append-only user plan-review self assessments
+    "025_user_risk_factors.sql", # tenant-authored revision history for thematic exposure
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

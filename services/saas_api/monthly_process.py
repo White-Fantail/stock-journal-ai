@@ -134,7 +134,7 @@ def monthly_process(identity, trade, subject, month, *, now=None):
       "planRevisionCount":sum(int(row[1]) for row in plans),
       "userTradeRecordCount":sum(int(row[1]) for row in executions),
       "voidCount":voids,
-      "uniqueSymbols":len(symbols),"symbols":items[:30],
+      "uniqueSymbols":len(symbols),"symbols":items,
       "plannedSymbols":len(latest),"completeStrategySymbols":complete,
       "dueAsOfCutoff":due,
       "source":"USER_AUTHORED_PROCESS_ONLY",

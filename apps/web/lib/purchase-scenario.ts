@@ -66,8 +66,8 @@ export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScena
    capReference:cap===null?null:format(cap),
    maxAdditionalUnderCap:maxAddition,
    drawdowns:{
-     ten:format(after*10n/nav),
-     twenty:format(after*20n/nav),thirty:format(after*30n/nav),
+     ten:format(after*10n*SCALE/nav),
+     twenty:format(after*20n*SCALE/nav),thirty:format(after*30n*SCALE/nav),
    },
    stopImpact,stopWarning,
    existingPositionValue:format(heldValue),afterPositionValue:format(after)};

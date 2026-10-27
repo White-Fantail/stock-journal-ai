@@ -9,7 +9,7 @@ const isoKey=(date:Date)=>{
  const thursday=new Date(date.getTime());
  thursday.setUTCDate(thursday.getUTCDate()+4-(thursday.getUTCDay()||7));
  const y=thursday.getUTCFullYear();
- const jan=new Date(Date.UTC(y,0,1));
+ const jan=new Date(Date.UTC(y,0,1,12));
  const week=Math.ceil(((thursday.getTime()-jan.getTime())/86400000+1)/7);
  return y+"-W"+String(week).padStart(2,"0");
 };

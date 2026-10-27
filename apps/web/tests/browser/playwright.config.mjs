@@ -12,6 +12,7 @@ export default defineConfig({
   use:{
     baseURL:"http://127.0.0.1:3100",
     browserName:"chromium",
+    channel:"chrome",
     trace:"off",video:"off",screenshot:"off",
   },
 });

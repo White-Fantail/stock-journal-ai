@@ -466,7 +466,7 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit
           npm install --no-save --package-lock=false --ignore-scripts --no-audit @playwright/test@1.58.2
-          npx playwright install --with-deps chromium
+          google-chrome --version
       - name: Start local Next.js for rendered browser journey tests
         run: |
           set -eu

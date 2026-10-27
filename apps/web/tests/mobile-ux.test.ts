@@ -9,7 +9,7 @@ test("private navigation keeps all destinations accessible on a narrow phone",()
   const layout=read("../app/private/layout.tsx");
   const css=read("../app/globals.css");
   for(const route of ["/private","/private/portfolio","/private/trades","/private/journal",
-    "/private/analysis","/private/analysis?mode=COACHING","/private/alerts","/private/reports/monthly","/private/brokers","/private/settings"]){
+    "/private/analysis","/private/analysis?mode=COACHING","/private/alerts","/private/reports/monthly","/private/performance","/private/brokers","/private/settings"]){
     assert.ok(layout.includes('href="'+route+'"'),route);
   }
   assert.ok(layout.includes('aria-label="모바일 주 메뉴"'));
@@ -40,6 +40,25 @@ test("verified and manual trades retain accessible mobile detail and action link
   assert.ok(manual.includes('className="responsive-table desktop-data-table"'));
   assert.ok(manual.includes('href={"/private/trades/"+e.id}'));
 });
+test("long-horizon mobile workflows and tablet navigation remain reachable",()=>{
+  const css=read("../app/globals.css");
+  const layout=read("../app/private/layout.tsx");
+  const review=read("../app/private/journal/review/new/page.tsx");
+  const perf=read("../app/private/performance/page.tsx");
+  const coach=read("../app/private/analysis/analysis-panel.tsx");
+  assert.ok(css.includes("@media(max-width:1100px){"));
+  assert.ok(css.includes("max-height:min(72dvh,510px)"));
+  assert.ok(css.includes(".app-mobile-nav :is(a,summary):focus-visible"));
+  assert.ok(css.includes("font-size:16px"));
+  assert.ok(layout.includes('href="/private/performance"'));
+  assert.ok(layout.includes('href="/private/analysis?mode=COACHING"'));
+  assert.ok(review.includes('name="selfAssessment"'));
+  assert.ok(review.includes('name="expectedPlanRevisionId"'));
+  assert.ok(perf.includes('className="performance-period-links"'));
+  assert.ok(coach.includes('mode==="COACHING"'));
+  assert.ok(coach.includes("setConsented(false)"));
+});
+
 test("forms, stock selection and detail screens collapse without desktop widths",()=>{
   const css=read("../app/globals.css");
   for(const name of [".journal-form-two",".journal-form-three",".journal-current-actions",

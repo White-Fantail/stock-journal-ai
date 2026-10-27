@@ -51,6 +51,11 @@ test("four months: current partial and three previous complete, NZ boundaries",(
  assert.ok(result.evidence[0].detail.includes("당월 진행 중"));
  assert.ok(result.evidence[1].detail.includes("완료된 월"));
  assert.ok(result.evidence[0].detail.includes("전체 워크스페이스"));
+ const offsetMonths=months().map((item,i)=>i===1?{...item,report:{
+   ...item.report,start:item.report.start.replace("Z","+00:00"),
+   end:item.report.end.replace("Z","+00:00"),
+ }}:item);
+ assert.equal(buildCoachingEvidence("TSLA",offsetMonths,context,now).evidence.length,6);
  assert.ok(result.evidence[4].detail.includes("본인이 정한 다음 점검 행동"));
  assert.ok(result.limits.some(s=>s.includes("partial")));
  const data=JSON.stringify(result);

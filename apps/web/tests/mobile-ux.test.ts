@@ -26,7 +26,7 @@ test("actual broker orders and holdings are cards on phones, tables on desktop",
   assert.ok(jsx.includes('aria-label="개별 체결 관측 모바일 목록"'));
   assert.ok(jsx.includes('aria-label="주문 수수료 검증 목록"'));
   assert.ok(jsx.includes('className="responsive-table desktop-data-table"'));
-  assert.ok(jsx.includes("o.feeCurrency??\"통화 미확인\""));
+  assert.ok(jsx.includes("feeLabel(o.feeView.currency,o.feeView.basis===\"STATEMENT_MATCH\")"));;
   assert.ok(jsx.includes('record-pagination-top'));
   assert.ok(css.includes(".app-shell .desktop-data-table{display:none}"));
   assert.ok(css.includes(".app-shell .mobile-data-cards{display:grid"));

@@ -131,7 +131,7 @@ export async function fetchMonthlyProcessReport(subject:string,month:string):Pro
     result?.timezone!=="Pacific/Auckland" ||
     !Number.isFinite(Date.parse(result.start)) || !Number.isFinite(Date.parse(result.end)) ||
     !Number.isFinite(Date.parse(result.checkedAsOf)) ||
-    !Array.isArray(symbols) || symbols.length>30 ||
+    !Array.isArray(symbols) || symbols.length>100 ||
     !symbols.every(s=>s&&/^[A-Z0-9.:-]{1,32}$/.test(s.ticker)&&
       [s.notes,s.reviews,s.plans,s.manualRecords].every(count)) ||
     ![result.noteCount,result.reviewCount,result.planRevisionCount,

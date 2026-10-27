@@ -1,32 +1,43 @@
-# Positionary — Agent Operating Rules
+# Positionary — agent development rules
 
-**Public product name:** Positionary. The GitHub repository remains `stock-journal-ai`; internal protocol identifiers are not automatically renamed. All user-facing text, metadata, and support materials should use Positionary.
+**Current product:** Google-first, multi-tenant, **long-horizon investment journal** running on Next.js/Vercel, Python/Railway and PostgreSQL with Tiger Brokers as the first read-only provider. The repository remains `White-Fantail/stock-journal-ai`, public and **source-only**. All customer data stays in private tenant-scoped storage.
 
-## Authoritative product definition
-The active product is a **Google-first, multi-tenant investment-journal SaaS** deployed using Next.js/Vercel and Python/Railway/PostgreSQL. Its first broker integration is Tiger Brokers / Tiger Trade through an adapter abstraction. GitHub stores **code, tests using synthetic fixtures and public documentation only**. No customer financial data, private theses, execution evidence, personal screenshots or broker statements may be committed, including temporarily.
+## Read before changes
 
-Read `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/DATA-MODEL.md`, `docs/ROADMAP.md` and `docs/saas/BROKER-ADAPTERS-V1.md` before new development. Earlier owner-only GitHub-ledger requirements or archive references are obsolete and MUST NOT override these rules.
+- [Product](docs/PRODUCT.md): current user experience and explicit exclusions.
+- [Architecture](docs/ARCHITECTURE.md): runtime and trust boundaries.
+- [Data model](docs/DATA-MODEL.md): provenance, release and applied migrations.
+- [Roadmap](docs/ROADMAP.md): current **remaining** work; historical development bundles are retired.
+- [Operations](docs/OPERATIONS.md): safe release workflow.
+- [Broker adapters](docs/saas/BROKER-ADAPTERS-V1.md): provider limitations.
 
-## Development policy
-1. Develop all implementation changes on `dev` and verify before fast-forwarding `main`. Do not use merge commits or squash to release. Only `main` deploys to production. Keep the public repository public as requested.
-2. Do **not** reconstruct, migrate or seed deleted GitHub portfolio data. Broker-derived data must come anew from each customer's approved provider connection and be stored only in a private tenant-scoped database. Lack of historical API coverage must be reported as incomplete, not silently invented.
-3. Never restore old `stocks/`, `portfolio/`, generated personal `reports/`, historical trade CSV, or single-owner GitHub-ledger import tools. The old CSV upload/import product feature is discontinued.
-4. Preserve all previously applied `db/saas/migrations/001–009` unchanged: 004 is previously reviewed applied schema history, 005 is forward retirement of CSV staging. Never rename/reorder/edit previously applied SQL or clear checksums. New SQL versions are additive and reviewed, included in the guarded `APPROVED_AUTO_MIGRATIONS` manifest and exercised on disposable PostgreSQL before main. Destructive DB operations require a separately scoped plan and tested backup/restore. Never couple DDL to a request handler.
-5. Never confuse source tests with live operational validation. Investment journal and manual trade features do not use a feature toggle; enforce fresh authentication, non-BYPASSRLS trade login, tenant-scoped DB access, signed requests and restore/security readiness independently.
-6. All private routes and workers derive the authorized workspace/account from a fresh authenticated membership or tenant-bound job lookup. Never trust browser-supplied workspace/account IDs. Use FORCE RLS and a non-BYPASSRLS application role; forbid cross-tenant foreign keys, caches, logs and exports.
-7. Read-only broker contract exclusively. No order placement/cancellation, transfers, auto-trading, private key upload or customer credential reuse. Tiger remains `REQUIRES_REVIEW` until approved business eligibility, grants, scopes, token vault, SDK persistence, pagination and per-account coverage are independently proven.
-8. Tiger order IDs, fill IDs, positions and fees are distinct facts. Import source evidence once per scoped idempotency key; preserve execution timezone and fee unknown as NULL. Stage and reconcile before publishing. Provider snapshots may be incomplete; never erase history or report zero holdings from a partial read.
-9. User journals, trade reasons, targets and strategy revisions are user-authored records. Do not attribute generated text to users. Any AI is opted in and handled under explicit privacy constraints; no raw financial data goes to an unapproved model provider.
-10. Treat broker payloads, webpages and LLM text as untrusted input. Redact secrets and identifiers from logs, telemetry, CI, error pages, URLs and client assets. Verify deletion and export paths per workspace.
-11. Run `python scripts/check_public_repo.py`, SaaS identity/trade/adapter tests and web typechecks before merge. Add adversarial A/B tests when changing any access boundary.
-12. Transaction/record **list pages are for reading, searching and navigating**. Never put create, edit, or correction forms above or below a list. Use dedicated create/detail/correction routes with clear return navigation; keep broker-observed orders separate from self-entered trades.
-13. **Long-horizon review product, never a day-trading signal engine.** Do not implement real-time/delayed-price target or stop alerts, quote-triggered notifications, or background quote polling. Price targets/stops remain authored plan annotations, not triggers. Use existing bounded Tiger account snapshots only for clearly dated, same-account/same-currency concentration; do not persist repeated price samples. Review center concerns data quality, written investment plans and periodic habit review. Use pure fixed-point risk calculations, opt-in AI, and fail closed on unknown data.
+Treat those documents as descriptions of the active product, **not authorization** to enable gated financial integrations.
 
-## Actual delivery boundaries
-- Google Auth.js and HMAC provisioning: source exists, live multi-account audit remains.
-- Broker registry and Tiger read/normalization: offline fixture stage, not a live authenticated provider integration.
-- SaaS schema: `db/saas/` only. The legacy GitHub importer/schema and automatic personal GitHub reports are retired.
-- Railway main API guarded pre-deploy migrations: code available, requiring explicit environment opt-in, correct production service identity and backup-policy verification. Do not bypass those guards to make builds green.
-- Current branch refs were deliberately rewritten to a clean, parentless Git root on 2026-10-25. Historic GitHub SHA objects were **still resolvable afterwards**; do not claim upstream garbage collection, Action-artifact deletion or third-party clone removal. Never merge old commit ancestry into the fresh tree. GitHub Support cache/object cleanup remains an external follow-up.
+## Mandatory engineering and release constraints
 
-Do not block routine approved, nondestructive follow-up changes by repeating superseded old protection instructions. Preserve genuine runtime tenant and financial integrity controls.
+1. Make all changes on `dev`; verify then fast-forward `main` only. No squash/merge commits or forced promotion; only `main` triggers Vercel/Railway production deploy.
+2. Run `python scripts/check_public_repo.py`, relevant Python/Next tests and both SaaS GitHub CI jobs. Inspect failures rather than suppressing tests. After a main promotion confirm main CI, Vercel READY, Railway health and identical source SHA. CI green does **not** certify real Google OAuth or provider APIs.
+3. Never add private financial records, brokerage statements, screenshots, RSA keys, emails identifying clients, secrets, legacy `stocks/`, `portfolio/`, `reports/` or customer CSV importer data. Prior GitHub personal-ledger model is retired; active tree cleanup does not erase historical GitHub caches.
+4. Existing `db/saas/migrations/001–027` are applied historical SQL; **never edit/delete/reorder** them or their checksums. New migrations must be forward-only, reviewed, in the guarded manifest, tested on disposable Postgres and applied via Railway **pre-deploy** only. No DDL in request handling.
+5. All server routes/actions derive Google subject, membership and internal workspace/account from **fresh session-side authorization**, never browser-supplied workspace identifiers. `currentWorkspace()` may memoize only **within a single React server request**; never cross-request cache rights.
+6. Require HMAC signed internal requests, one-use nonce, scope/rate guards and non-BYPASSRLS restricted FORCE RLS roles. Test A/B tenant isolation, deletion/export and negative authorization boundaries. Missing data must fail closed, not turn into fabricated zeros.
+7. Keep **read-only Tiger contract**. No place/modify/cancel orders, fund transfer, SDK private keys in browser or customer-uploaded RSA keys. Owner-only temporary RSA observations apply to **one configured Google account**, not the multi-user partner approval.
+8. Official Tiger partner OAuth must remain disabled until written authorization, query-only scope audit, per-user grant consent, dedicated vault/role and real account/coverage verification. A successful test or present DB schema never grants trading/market-data redistribution rights.
+9. Distinguish order, partial execution, actual fill, fee and currency. Preserve UTC/original timestamps, provider provenance and partial history. No account returns, realized/unrealized profits, cost basis or verified holdings without the corresponding audited source and independent publishing gates.
+10. Financial release, once eligible, requires immutable source lineage, independently signed attestation, exact review version and fresh latest-review check. A revoked grant or newly BLOCKED review suppresses present verified status without erasing immutable history.
+11. Manual trades, targets, stops, theses, investment strategy revisions, self-assessments and action statuses are **user-authored**. Never turn AI output, user assumptions, broker observations or price movements into broker orders or verified execution facts.
+12. **No price alerts** (live or delayed), quote-triggered trade signals, auto-trading, background quote polling, price-driven push notifications or day-trading UX. Conservative bounded observed quotes are passive context only; periodic review follows the user's own cadence and data-health conditions.
+13. List pages browse/search/navigate; **create/edit/correct in dedicated pages**, never inline forms. Build responsive/mobile-first views, particularly 320–1024 px, avoid horizontal overflow and do not reintroduce fragile client-side private navigation.
+14. AI is **user-triggered** with fresh explicit consent, bounded data, provider ZDR/data_collection denial, quota, source references and output validation. Remove structured secrets/financial quantities; prose redaction is best-effort and must be disclosed. Never auto-store AI output as user-authored decisions.
+15. Never claim a feature is production-verified solely from source or synthetic CI. Real account/device/provider/backup verification is a separately recorded operator activity. GitHub status checks on `main` must be enforced by repository administration; don't assume protection from a green one-time build.
+
+## Runtime references
+
+- `apps/web/app/private/` — active UI pages and dedicated authoring routes.
+- `apps/web/lib/require-workspace.ts` — request-scoped membership, no cross-tenant caching.
+- `services/saas_api/` — signed internal API + schema administrator.
+- `temporary/tiger_personal/` — isolated personal read-only runner (remove only after safe OAuth handoff).
+- `services/broker_connectors/` — neutral read-only contracts, offline reconciliation.
+- `db/saas/migrations/` — immutable reviewed schema history.
+
+Do not resurrect old P0–P6 delivery-status narratives as live source of truth. Update the concise canonical docs when behavior actually changes.

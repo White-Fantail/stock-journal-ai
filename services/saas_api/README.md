@@ -1,57 +1,48 @@
-# Railway SaaS internal API
+# Positionary — Railway internal SaaS API
 
-The Python service provides HMAC-protected internal identity provision/resolve and authenticated, tenant-scoped financial event endpoints plus per-user authored journal, export and explicit account deletion; Google session/OIDC is owned by Next.js/Auth.js. An approval-gated Tiger enterprise OAuth2 flow and encrypted credential vault are implemented in source; **no live Tiger authorization has been verified or enabled**. No customer CSV import or trading/order execution endpoint exists here.
+Python service `services/saas_api/server.py` exposes `/healthz` and HMAC-signed **internal** endpoints for Google-subject resolution, tenant-authored financial journals/trades, review and risk data, broker consent/readiness metadata, limited owner-only Tiger observations, quota, bounded export and account deletion. There is **no public user trading API**.
 
-- `server.py`: internal endpoints, `/healthz`, signed requests.
-- `identity.py`: Google `sub`-based workspace provisioning/membership resolution.
-- `tiger_oauth.py`: provider-approved-only OAuth2 user consent, state replay prevention, AES-256-GCM grant/account vault, authorized asset/position GET snapshots, local disconnect and best-effort RFC7009 revoke. Requires `SAAS_BROKER_DATABASE_URL` with non-BYPASSRLS role; never a customer SDK private key.
-- `trades.py`: manually confirmed immutable `EXECUTION/VOID` events through the dedicated scoped runtime DB account.
-- `sync_dispatcher.py`: disabled-by-default metadata-only scheduler core (bounded ticks); requires independently provisioned dispatch DB login. No daemon, HTTP route or approved historical reader yet.
-- `schema_admin.py`: audited, main Railway pre-deploy migration gate. Never perform DDL during HTTP requests or app startup.
-- `backfill_worker.py`: offline adapter-injected, member-authorized historical job/window processor. Each 90-second claim is fenced, retries are bounded, broker grants remain read-only, and source fills are HMAC-identified and encrypted before stage insertion. **Not wired to HTTP, cron, queues or live Tiger APIs.**
+## Active module map
 
-Production pre-deploy command:
+| Module | Function |
+| --- | --- |
+| `identity.py` / `account.py` | Google subject provisioning, workspace membership, account deletion |
+| `request_security.py` / `server.py` | Signed internal requests, nonce/replay/rate limits, defensive dispatch |
+| `trades.py` / `trade_detail.py` | Append-only manual user-asserted trade/correction details |
+| `journal.py` / `journal_plans.py` | User-authored journal and append-only plan revisions |
+| `plan_checkins.py` / `action_followups.py` | Review and independently self-reported next-action status |
+| `investor_principles.py` / `risk_factors.py` | Personal principles and overlapping risk-classification revisions |
+| `weekly_process.py` / `monthly_process.py` | Habit/process reports, not verified monetary performance |
+| `ai_quota.py` | Per-user/period AI quota only; **not** raw prompt/response persistence |
+| `tiger_oauth.py` | Partner OAuth/vault; gated on explicit provider business approval |
+| `backfill_worker.py`, `paged_backfill.py`, `sync_dispatcher.py` | Trusted, bounded source-staging/dispatch foundation; not public data authorization |
+| `reconciliation_store.py`, `ledger_publication.py`, `ledger_read.py` | Separately attested source lineage/publication, fail-closed private historical data |
+| `schema_admin.py` | Guarded main-only, pre-deploy PostgreSQL migration runner |
+
+## Runtime policy
+
+- Vercel Auth.js holds user sessions. Every signed request is subject-bound; the API resolves fresh membership. Never trust supplied workspace or client account selectors.
+- `SAAS_DATABASE_URL` provides identity and DB administration; manual trading/journal uses `SAAS_TRADE_DATABASE_URL` with `saas_trade_app` and FORCE RLS; broker source and selected private reads use `SAAS_BROKER_DATABASE_URL` with `saas_broker_app`. Additional publication and dispatch logins have separately restricted privileges.
+- The API protects HMAC, timestamps and one-time nonces. Do not log request bodies, provider tokens, original broker account numbers, private source payloads, user decisions or signing keys.
+- **All 27** migrations are immutable reviewed history. The retired CSV migration sequence 004/005 must remain as SQL, not as an import feature.
+- Signed internal endpoints for owner-only Tiger snapshots/observations require an exact configured Google subject. All other customers only see separately approved OAuth, or the approval-pending state.
+- No historical fill/fee/FX/corporate-action gap may be auto-filled. Broker publication needs official read-only approval, independent attestation, release keys and the latest valid review. The code alone does not provide those.
+- No trading/place/cancel/transfer endpoints, price-triggered alerts, polling of market quotes, or unconsented model inference.
+
+## Deployment and checks
+
+Guarded Railway **pre-deploy**, not runtime:
+
 ```sh
 python -m services.saas_api.schema_admin --deploy
 ```
-Read-only inspection:
+
+Read-only status in the correct production environment:
+
 ```sh
 python -m services.saas_api.schema_admin --status
 ```
-For guarded Tiger setup see [Tiger P3 runbook](../../docs/saas/TIGER-P3-OAUTH.md). Only snapshot coverage exists so far; no real OAuth/grant has been tested.
 
-Full preconditions: [Hosted schema runbook](../../docs/saas/HOSTED-SCHEMA-BOOTSTRAP.md). Separate tenant privilege tests, backup/restore, redaction and rate limits are mandatory before public access. Existing applied SQL 001–009 stays immutable. Versions 010 (job/window/evidence staging) and 011 (lease fencing) are additive, manifest-reviewed SQL. The source worker requires `SAAS_SOURCE_HMAC_KEY` (exactly 64 lowercase hexadecimal characters, generated privately) plus the existing `TIGER_VAULT_KEY_B64` and `SAAS_BROKER_DATABASE_URL` for encrypted staging. Never commit the keys, log raw source events, reuse the signing secret or rotate the HMAC key without a planned identity-migration strategy. Do **not** enable a live worker solely because these variables exist. Version 007 provisions `saas_trade_app`, a passwordless login until Railway private `SAAS_TRADE_RUNTIME_PASSWORD` is provided at guarded `--deploy`. The runtime trade DSN must use this non-BYPASSRLS role. Version 009 creates a separate `saas_broker_app` login with password supplied privately through `SAAS_BROKER_RUNTIME_PASSWORD` at guarded deploy. Versions 004/005 are retained as immutable migration history, **not** a CSV upload product.
+Local disposable PostgreSQL migrations require a dedicated test DB and explicit `SAAS_TEST_DB_ACK=YES_DISPOSABLE_SAAS_DB`. CI runs pinned Python, negative tenant/RLS/HMAC tests, and Chromium journeys against a local signed API; real provider and Google OAuth require separate operational verification.
 
-Local disposable testing only: `python db/saas/migrate.py --apply` with an isolated test DB and `SAAS_TEST_DB_ACK=YES_DISPOSABLE_SAAS_DB`. Do not point the local test runner at Railway production.
-
-### P3 scheduler deployment gate
-Migration 013 creates an opaque dispatch queue and passwordless `saas_dispatch_app` DB login. Its restricted role can read job/workspace UUIDs and due timestamps but cannot read Tiger credentials, account secret ciphertext, staged financial evidence or trade logs. `enqueue` writes tenant-bound queue entries atomically. The Python `sync_dispatcher.tick` function only accepts a trusted injected page reader, checks a fresh active owner and current broker consent and uses a two-minute fenced queue claim. No scheduled process/HTTP route is configured; **do not enable live dispatch until Tiger officially verifies read-only historical access, pagination, fees and account ownership**. The Tiger docs currently describe `/api/v1/orders/transactions` with `limit`, but do not establish the cursor and complete-time-range guarantees required for this importer.
-
-### Sync health (read-only)
-`sync_status.py` exposes no Tiger network access. The signed `/internal/v1/tiger/sync-status` endpoint requires only the freshly resolved Google subject, checks broker DB role and RLS membership, and returns a bounded list of recent sync-job processing states. It never returns encrypted source evidence, cursor values, Tiger account numbers or token material. `coverage=UNVERIFIED` and `historyVerified=false` are unconditionally present; numeric progress refers to *processed windows*, not historical completeness. A missing broker DB role causes the user interface to show an unavailable state, not synthetic 0% progress. The offline Tiger inquiry probe documents query limits but performs no requests.
-
-### P4 portfolio readiness (not a computed live portfolio)
-The isolated pure `services/broker_connectors/reconciliation.py` verifies complete/contiguous declared windows, exact snapshot as-of alignment, orders/cash/corporate-action readiness, execution/fee identity integrity and FIFO position equality using Decimal. Missing or conflicting facts block publication. `/private/portfolio` presents only freshly authorized account and sync status metadata, and shows cost basis, valuation and P/L as unknown. Neither code path imports staged Tiger facts into authoritative holdings or activates the broker reader. No new schema migration is needed for this source-only stage.
-
-### P4 persistent review history (offline, no financial publishing)
-`014_reconciliation_audit.sql` adds immutable, FORCE-RLS per-account reconciliation versions and issue codes, plus HMAC-source-keyed certified-execution and Decimal FIFO position **staging**. `reconciliation_store.py` requires a fresh authorized owner plus currently connected read-only Tiger grant, `SAAS_P4_RECORDING_ENABLED=1` and a secret `SAAS_SOURCE_HMAC_KEY`; only a separate verified issuer's `SAAS_P4_ATTESTATION_KEY` signature together with formally approved read-only provider flags can stage a reconciled account. The application does not issue signatures. Without that independently verifiable certificate, a mathematically valid account receives `INDEPENDENT_ATTESTATION_REQUIRED` and stores only a blocked review. Never send user-provided data to this internal method; it is not exposed by HTTP. The signed `/internal/v1/tiger/review-status` route is **read-only**, returning latest version/issue metadata for the private portfolio readiness page. No staged financial amounts are returned to users or considered approved holdings. Stored money has exact NUMERIC(36,12) limits; unrepresentable amounts fail rather than round.
-
-### P4 provenance and structured issues (migration 015)
-Account review issues are classified by controlled code into COVERAGE, EXECUTION, FEES, CORPORATE_ACTION, CASH, SNAPSHOT, AUTHORIZATION or INTEGRITY with BLOCKER and ACCOUNT/WINDOW/EXECUTION/SNAPSHOT scope. `saas_reconciliation_source_links` binds the original encrypted P3 evidence through a tenant/account/source-ID/evidence-SHA composite FK. Before any internally attested P4 staging, each fill must match exactly one immutable raw source evidence row; missing or changed/duplicated source hashes block the stage. HMAC attestation signatures now include the original stage IDs and evidence hashes as well as the projected input. The review-status API returns only issue category metadata and link counts. No production issuer or broker importer is enabled, and no customer-facing holdings/P&L is published. Applied migrations 001–014 must remain unchanged.
-
-### User-authored target/stop plans (migration 016)
-`journal_plans.py` accepts and serializes exact user-authored investment intent, distinct from a brokerage order. The signed `/internal/v1/journal/plans` and `/internal/v1/journal/plan/create` routes share the dedicated `saas_trade_app` role and fresh membership checks. Revisions are append-only; absent prices mean unset, not zero, and all revisions plus note/trade records are included in the bounded complete journal export and account deletion. The responsive `/private/journal` UI is implemented in `dev`; no live Tiger data, current quote or AI output is claimed. The journal is not behind a runtime feature flag; real Google account A/B isolation, production role verification and recoverable backup/restore remain release readiness checks before wider onboarding.
-
-
-### P4 append-only broker-ledger publication foundation (migration 017; OFF by default)
-
-An internal-only `ledger_publication.release_verified_review` operation can seal a tenant's *latest* independently STAGED review into immutable `saas_broker_ledger_publications` and source links. It rejects missing/multiple encrypted raw source versions, stale reviews, another tenant's account, and unsigned/unapproved requests; it is replay-idempotent and copies **no** user-authored trade events. It requires all of `SAAS_P4_PUBLICATION_ENABLED=1`, verified official third-party Tiger read-only approval flags, and a separately issued HMAC over the exact staged review. `SAAS_P4_PUBLICATION_KEY` must be a distinct private 64-character lowercase hex key; do not reuse the staging or reconciliation key. The API **does not sign**, route or auto-execute a release.
-
-The foundation is inert until independent evidence issuance, actual Tiger history/fee/cash/FX/corporate-action mappings and real operational/RLS acceptance exist. A publication record is not a permission to display holdings: future private read models must refuse every release superseded by a latest BLOCKED/incomplete review. No user-visible broker data, AI or order placement is enabled.
-
-
-### P4 verified broker facts read model (off by default)
-
-`ledger_read.private_ledger` serves the signed, nonce-protected internal `/internal/v1/tiger/ledger-read` route using the existing *separate* `saas_broker_app` read permission, fresh owner membership and transaction-scoped FORCE RLS. No browser supplies account IDs or review versions. The read method fails closed on revoked consent, newer BLOCKED reviews, conflicting encrypted source versions, stale/missing release proof or mismatched HMAC/lineage. It returns at most 100 latest verified fills and 100 positions from at most 25 approved accounts, with `truncated` to avoid falsely implying complete history. All financial amounts are native-currency plain Decimal strings.
-
-No live broker history is displayed until independent Tiger approval and P4 signing, and explicit `SAAS_P4_LEDGER_READ_ENABLED=1` activation. User-authored journal notes remain independent and are not silently attached to an individual fill.
+See [Architecture](../../docs/ARCHITECTURE.md), [Data model](../../docs/DATA-MODEL.md), [Database runbook](../../docs/saas/HOSTED-SCHEMA-BOOTSTRAP.md) and [Tiger OAuth prerequisites](../../docs/saas/TIGER-P3-OAUTH.md).

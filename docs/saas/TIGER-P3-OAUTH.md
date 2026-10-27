@@ -1,32 +1,27 @@
-# Tiger P3 — hosted OAuth2 operator configuration (2026-10-26)
+# Tiger Brokers — public partner OAuth readiness
 
-## Product and API distinction
-Tiger **retail** OpenAPI OAuth2 (Python SDK >=3.8.0) is designed around an SDK-managed local authorization session/token cache. This project does **not** use that shared local session or request customers' signature keys. The implementation targets the separately documented **enterprise/agency partner OAuth2 authorization-code flow**, which requires Tiger's third-party SaaS app registration and permission grant. A retail Tiger ID/configuration file does not constitute partner app credentials.
+**Status:** application-side hosted partner OAuth path is implemented **but not approved for general customers**. This guide is for a future, explicitly approved, **read-only** production rollout; it is not instructions to turn it on merely because the source exists.
 
-## Operator-owned approval before enabling
-1. Obtain written Tiger authorization for NZ retail third-party SaaS hosting; register exact HTTPS redirect URL \`https://<host>/api/private/tiger/callback\`, client_id/client_secret, audience and named query-only scopes.
-2. Independently verify that the *entire grant* cannot place/cancel/modify orders, transfer funds or acquire such privileges without a distinct authorization flow. Do not set approval flags if these are not proved. Broad \`api.trade\`/order scopes are explicitly refused.
-3. On Railway, deploy migration 008 (encrypted grants, attempts, snapshots) and 009 (broker limited LOGIN with NULL password) using the main-only pre-deploy. Configure independent \`SAAS_BROKER_RUNTIME_PASSWORD\` 64 lower-case hex so pre-deploy sets password. Set \`SAAS_BROKER_DATABASE_URL\` to dedicated \`saas_broker_app\` Postgres LOGIN, separate from identity and journal DB users. This role must not own tables or have BYPASSRLS.
-4. Supply 32 bytes of CSPRNG key as Base64 \`TIGER_VAULT_KEY_B64\` to Railway only, plus \`TIGER_CLIENT_ID\`, \`TIGER_CLIENT_SECRET\`, \`TIGER_REDIRECT_URI\`, \`TIGER_APPROVED_READ_SCOPES\`, \`TIGER_AUDIENCE=openapi\`, \`TIGER_PARTNER_OAUTH_APPROVED=1\`, \`TIGER_READ_ONLY_GRANT_VERIFIED=1\`. **Do not rotate the AES key without re-encrypting existing records**. No Tiger secret goes into Vercel, GitHub or NEXT_PUBLIC variables.
-5. Verify A/B browser user isolation on real Google sessions, callback replay, expired consent, logout, account bind denial and provider rate limits before opening to customers. Scope the rollout to approved accounts/regions only.
+## Separate credential models
 
-## Browser and Railway workflow
-- User selects Tiger in \`/private/brokers\` and posts \`/api/private/tiger/start\`. Next.js signs internal HMAC request using Google subject, Railway creates a 10-minute single-use auth state, and redirects to Tiger's **official** authorize endpoint.
-- Tiger calls back to same host after user consent. Auth.js session must still exist. Railway checks verified Google membership + one-use hashed state + exact requested scopes before exchanging auth code.
-- Token+refresh token live AES-256-GCM encrypted in Railway DB, scoped with tenant+connection authenticated associated data. No SDK token files and no client-side tokens.
-- User enters an account ID from Tiger Developer Center, and server tests actual asset **GET** under that user's token before storing only a keyed fingerprint, masked alias and encrypted identifier. \`GET\` asset and position snapshots are encrypted with evidence SHA-256; historical fills/fees are **not** claimed from snapshots.
-- Disconnect attempts an RFC7009 /oauth2/v1/revoke call for a refresh token (or access token). Local tokens and encrypted account IDs are removed even if this fails; the response flags remoteRevocationRequired when Tiger rejects or times out. Users should revoke directly in Developer Center if remote success is unconfirmed. Refresh/expiry must be validated against the enrolled provider before production rollout.
-- All JSON endpoints are signed, nonce-protected and rate-limited; any broker API error fails closed. No order POST/PUT/DELETE route in the read-only provider module.
+- **Temporary personal RSA bridge**: one operator Google subject, one isolated Railway Tiger OpenAPI credential runner, per-account encrypted observations. Not available to any other user. See [personal bridge](../../temporary/tiger_personal/README.md).
+- **Partner OAuth**: third-party application authorization-code consent per Google workspace. Requires Tiger authorization for service geography and desired read-only operations; a retail RSA OpenAPI key is not a partner client credential.
 
-## Remaining explicit P3 validation
-No real Tiger partner app, read-only scope names, callback test, remote revoke confirmation, production broker RLS identity or end-to-end test account has been supplied/verified. Sync now stores real point-in-time assets and positions **only if Tiger account access is separately authorized**. Historical transactions/backfill/pagination + idempotent fill staging and bounded worker scheduling remain necessary for P3 full exit.
+## Preconditions — all must be confirmed
 
-Official docs: https://enterprise-docs.itigerup.com/reference/user-authorization ; https://enterprise-docs.itigerup.com/reference/post-v1-token ; https://docs-en.itigerup.com/docs/authentication
+1. Tiger provides written permission for **NZ third-party SaaS hosted OAuth**, exact redirect URI (`https://positionary.vercel.app/api/private/tiger/callback` unless separately approved), permitted account locations and data redisplay/market-data rights.
+2. Review the **entire** application grant for named query-only scopes and prove that order placement, modification, cancellation, transfers and trading scopes cannot be reached. Reject ambiguous broad `api.trade` grants.
+3. Confirm production database schema 008/009 and dedicated `saas_broker_app` with restricted `SAAS_BROKER_DATABASE_URL`, private `SAAS_BROKER_RUNTIME_PASSWORD`, no table ownership/BYPASSRLS, tenant A/B denial.
+4. Secure Railway-only `TIGER_VAULT_KEY_B64` (32 cryptographically random bytes in Base64), `TIGER_CLIENT_ID`, `TIGER_CLIENT_SECRET`, `TIGER_REDIRECT_URI`, `TIGER_APPROVED_READ_SCOPES`, `TIGER_AUDIENCE`, and flags `TIGER_PARTNER_OAUTH_APPROVED` and `TIGER_READ_ONLY_GRANT_VERIFIED` **only after approval**. Do not put these into Vercel, GitHub, `NEXT_PUBLIC_` or logs.
+5. Run **real** two-account Google sign-in/consent tests: scope tampering, callback state expiry/replay, account-binding denial, revoked consent, token expiration, retry/rate, cross-tenant leaks and logout.
+6. Verify actual provider account identity, historical coverage, order-to-fill/fee semantics and time zones. Financial publication remains a **different** audited gate even after an OAuth grant works.
 
+Never rotate `TIGER_VAULT_KEY_B64` blindly: older vault ciphertext needs a controlled re-encryption strategy. Independently managed `SAAS_SOURCE_HMAC_KEY` identifies source evidence for future backfill and cannot change without a dedupe migration strategy.
 
-## P3 offline worker readiness (2026-10-26)
-The pure tenant-bound backfill engine and staging migration 010/lease-fencing migration 011 are implemented and tested with synthetic data. They are **not** an approved live Tiger integration. No API job endpoint, production queue/worker service, automatic polling, or broker import publication is active. The current adapter lacks independently verified provider pagination/history guarantees and leaves coverage PARTIAL.
+## Runtime contract
 
-A future separately reviewed worker deployment needs a dedicated restricted `saas_broker_app` DB login, `SAAS_BROKER_DATABASE_URL`, private 32-byte AES-GCM vault key in `TIGER_VAULT_KEY_B64`, and a separate private `SAAS_SOURCE_HMAC_KEY` containing 64 lowercase hexadecimal characters (32 random bytes). Never reuse another key. Stable source HMAC IDs depend on this key; planned rotation must preserve dedupe identity or migrate identifiers. Worker code checks current connection/grant, strict non-trading scopes and user-bound ownership before work. Production dispatcher must resolve opaque job IDs without exposing a cross-workspace queue or bypassing FORCE RLS.
+User selects Tiger in `/private/brokers`, begins server-authorized consent from `/private/tiger`, returns via validated callback, binds only their authorized provider accounts and can disconnect. Disabled/not approved state must remain explicit to other users; never show the personal bridge as their connection.
 
-Before enabling live execution, independently verify hosted read-only consent, supported Tiger historical endpoints/cursors/fees/currency/timezone, account-specific coverage and capability. Stage, reconcile and publish only proven records; do not promote snapshots or failed/partial windows into positions or performance.
+Future history worker and per-account dispatch are source/staging implementations only. They require an independently verified read-only provider capability, durable cursor/coverage, dedicated roles and reviewed startup job configuration. Do not enable on an unverified provider grant.
+
+Official enablement requires operator evidence and an explicit release decision documented in [Roadmap](../ROADMAP.md), not just CI green.

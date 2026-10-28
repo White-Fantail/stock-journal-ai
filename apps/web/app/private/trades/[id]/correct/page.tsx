@@ -4,7 +4,7 @@ import {notFound,redirect} from "next/navigation";
 import {auth} from "../../../../../auth";
 import {currentWorkspace} from "../../../../../lib/require-workspace";
 import {fetchTradeDetail,submitManualTrade} from "../../../../../lib/saas-trades-api";
-import {formatDecimal} from "../../../../../lib/format-decimal";
+import {formatQuantity} from "../../../../../lib/format-decimal";
 
 export const dynamic="force-dynamic";
 
@@ -50,7 +50,7 @@ export default async function CorrectTradePage({params}:{
   return <main style={{maxWidth:720,margin:"2rem auto",padding:"0 1rem"}}>
     <p><Link href={"/private/trades/"+trade.id}>← 거래 상세</Link></p>
     <h1>직접 입력 거래 정정</h1>
-    <p>{trade.ticker} · {trade.side==="BUY"?"매수":"매도"} · {formatDecimal(trade.quantity)}주</p>
+    <p>{trade.ticker} · {trade.side==="BUY"?"매수":"매도"} · {formatQuantity(trade.quantity)}주</p>
     <p>원본을 직접 변경하지 않고 취소(VOID) 기록을 추가합니다. 이후 올바른 거래는 별도로 새로 입력해야 합니다.</p>
     <section className="state-panel">
       <form action={correctManualExecution} style={{display:"grid",gap:12,maxWidth:480}}>

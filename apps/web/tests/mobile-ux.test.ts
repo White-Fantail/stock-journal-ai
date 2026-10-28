@@ -26,8 +26,11 @@ test("actual broker orders and holdings are cards on phones, tables on desktop",
   const css=read("../app/globals.css");
   assert.ok(jsx.includes('aria-label="Tiger 주문 모바일 목록"'));
   assert.ok(jsx.includes('aria-label="보유 종목 모바일 목록"'));
-  assert.ok(jsx.includes('aria-label="개별 체결 관측 모바일 목록"'));
-  assert.ok(jsx.includes('aria-label="주문 수수료 검증 목록"'));
+  assert.ok(jsx.includes('aria-label="미연결 개별 체결 모바일 목록"'));
+  assert.ok(jsx.includes("groupTigerOrderObservations(rows"));
+  assert.ok(jsx.includes("<PartialFillDetails fills={o.fills}"));
+  assert.ok(jsx.includes("부분체결 {fills.length}건 보기"));
+  assert.ok(jsx.includes("수집·수수료 검증 진단 보기"));
   assert.ok(jsx.includes('className="responsive-table desktop-data-table"'));
   assert.ok(jsx.includes("feeLabel(o.feeView.currency,o.feeView.basis===\"STATEMENT_MATCH\")"));;
   assert.ok(jsx.includes('record-pagination-top'));

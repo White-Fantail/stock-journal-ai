@@ -1,4 +1,4 @@
-import { enabled, origin, readTicket, matchesPkce, consumeOneUse, accessGrant } from "../../../../lib/positionary-mcp-auth";
+import { enabled, origin, readTicket, matchesPkce, consumeOneUse, accessGrant } from "../../../../../lib/positionary-mcp-auth";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "no-store", "Pragma": "no-cache" };

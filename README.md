@@ -11,6 +11,7 @@
 - **Transactions:** manually confirmed transactions, Tiger order/partial-fill **observations**, and independently verified broker fills are **different sources**; missing fees/coverage are never inferred.
 - **Review:** weekly/monthly process reports, risk calculator, review center and long-horizon performance-readiness checks. Unverified total returns and P/L are withheld.
 - **Optional AI:** user-initiated, explicit consent, bounded/redacted excerpts to OpenRouter ZDR-only providers, evidence-linked reflection; no automatic trades or implicit background prompts.
+- **Remote MCP (feature-gated):** OAuth 2 with the same Google subject and tenant-scoped investment read/append tools. See [MCP integration](docs/MCP.md). User-authored writes do not place broker orders.
 - **Tiger integration:** a restricted **single-owner temporary read-only RSA bridge** can provide private observations to its designated Google account. The separate multi-user Tiger partner OAuth workflow exists in source but requires independent provider approval and read-only scope verification before public enablement.
 
 The service intentionally has **no real-time or delayed-price target/stop alerts, quote polling loop, trade execution, price-triggered buy/sell signals, CSV importer, or GitHub-hosted personal portfolio**. Recorded targets are notes, not broker orders.
@@ -26,6 +27,7 @@ The service intentionally has **no real-time or delayed-price target/stop alerts
 | [Operations](docs/OPERATIONS.md) | Tests, deployments, privacy and incident procedures |
 | [Broker adapters](docs/saas/BROKER-ADAPTERS-V1.md) | Tiger-first read-only integration |
 | [Database deployment](docs/saas/HOSTED-SCHEMA-BOOTSTRAP.md) | Restricted roles and guarded migrations |
+| [Remote MCP](docs/MCP.md) | Same-account ChatGPT/MCP OAuth, tool capabilities, security and rollout |
 | [Tiger partner OAuth](docs/saas/TIGER-P3-OAUTH.md) | Prerequisites for broad customer authorization |
 | [Temporary personal Tiger bridge](temporary/tiger_personal/README.md) | Current owner-only integration |
 
@@ -33,7 +35,7 @@ Implementation rules: [AGENTS.md](AGENTS.md). Component guides: [SaaS API](servi
 
 ## Repository and release
 
-`apps/web/` is the Next.js 16 web application on Vercel; `services/saas_api/` is the Python service on Railway; `db/saas/migrations/` contains 27 immutable incremental migrations; `services/broker_connectors/` contains shared provider contracts and reconciliation code; `temporary/tiger_personal/` contains the isolated owner-only runner.
+`apps/web/` is the Next.js 16 web application on Vercel; `services/saas_api/` is the Python service on Railway; `db/saas/migrations/` contains 29 immutable incremental migrations; `services/broker_connectors/` contains shared provider contracts and reconciliation code; `temporary/tiger_personal/` contains the isolated owner-only runner.
 
 Make changes on `dev`; verify before **fast-forward only** to `main`. Vercel and Railway production follow `main`. The SaaS CI runs TypeScript/Next build, Python and disposable PostgreSQL tenant security, plus synthetic Playwright Chromium journeys. **Green CI does not prove real Google OAuth, Tiger provider entitlements or real-device behavior.** Enforce required checks in GitHub branch rules; this remains an operational task until confirmed.
 

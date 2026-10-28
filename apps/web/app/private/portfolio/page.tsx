@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import {formatDecimal} from "../../../lib/format-decimal";
+import {formatQuantity,formatMoney,formatPercent} from "../../../lib/format-decimal";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import { tigerPersonalRead } from "../../../lib/tiger-api";
 import { PersonalPortfolioBlock } from "../tiger/personal-preview";

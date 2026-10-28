@@ -139,6 +139,9 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(daily.locator('input[inputmode="decimal"]')).toHaveValue("31");
   await expect(page.locator('textarea[name="note"]')).toHaveValue("Synthetic manual indicator decision");
+  await expect(daily.locator('input[type="checkbox"]')).toBeChecked();
+  await expect(intraday.locator('input[type="checkbox"]')).toBeChecked();
+  await expect(page.locator('input[name="revisionId"]')).toHaveCount(2);
   await page.locator('input[name="observedAt"]').fill("2026-10-20T14:30:00+13:00");
   await page.getByRole("button",{name:"당시 지표 기록 저장"}).click();
   await expect(page).toHaveURL(/indicators\?saved=record&ticker=QATEST/);

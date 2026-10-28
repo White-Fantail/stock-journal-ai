@@ -1,4 +1,4 @@
-import { enabled, origin, ticket, validRedirectUri } from "../../../../lib/positionary-mcp-auth";
+import { enabled, origin, ticket, validRedirectUri } from "../../../../../lib/positionary-mcp-auth";
 
 export const dynamic = "force-dynamic";
 const noStore = { "Cache-Control": "no-store", "Content-Type": "application/json" };

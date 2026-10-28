@@ -185,6 +185,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_saas_hosted_schema.py' -v
       - name: Manual indicator input and criterion tests
         run: python -m unittest discover -s tests -p 'test_saas_indicators.py' -v
+      - name: MCP OAuth refresh replay and grant expiry tests
+        run: python -m unittest discover -s tests -p 'test_saas_mcp_security.py' -v
       - name: Exercise hosted bootstrap against separate disposable CI database
         run: |
           python - <<'PY'

@@ -12,7 +12,7 @@ export function RecordForm({rules,idempotencyKey,ticker,tradeEventId,journalId,i
   const [values,setValues]=useState<Record<string,string>>({ticker,observedAt,note:""});
   const change=(key:string,value:string)=>setValues(v=>({...v,[key]:value}));
   const eligible=rules.filter(r=>r.active&&r.side===side);
-  return <form action={action} className="journal-compose-form">
+  return <form action={action} onReset={event=>event.preventDefault()} className="journal-compose-form">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey}/>
     <input type="hidden" name="tradeEventId" value={tradeEventId}/>
     <input type="hidden" name="journalId" value={journalId}/>
@@ -28,10 +28,11 @@ export function RecordForm({rules,idempotencyKey,ticker,tradeEventId,journalId,i
     <p>기록할 지표를 선택하세요 (최대 20개). 입력하지 않은 값은 미기록으로 보존합니다.</p>
     {eligible.length===0?<p>이 매매 구분에 사용할 지표가 없습니다. <a href="/private/indicators/edit">지표 등록 →</a></p>:
       eligible.map(rule=><fieldset key={rule.id} className="indicator-card">
-        <legend><label><input type="checkbox" name="revisionId" value={rule.id} checked={selected.includes(rule.id)}
+        <legend><label><input type="checkbox" checked={selected.includes(rule.id)}
           disabled={!selected.includes(rule.id)&&selected.length>=20}
           onChange={e=>setSelected(ids=>e.target.checked?[...ids,rule.id]:ids.filter(id=>id!==rule.id))}/>
           {rule.name} {rule.parameters} · {rule.timeframe} · {STAGE_LABELS[rule.stage]}</label></legend>
+        {selected.includes(rule.id)&&<input type="hidden" name="revisionId" value={rule.id}/>}
         <p>나의 기준: {indicatorCriterion(rule)}</p>
         {selected.includes(rule.id)&&<div className="journal-form-two">
           <label>당시 값 (선택)<input name={`value:${rule.id}`} value={values[`value:${rule.id}`]??""} onChange={e=>change(`value:${rule.id}`,e.target.value)} inputMode="decimal" maxLength={22} placeholder="예: 28.5"/></label>

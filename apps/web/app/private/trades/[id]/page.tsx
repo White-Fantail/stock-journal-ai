@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { auth } from "../../../../auth";
 import { currentWorkspace } from "../../../../lib/require-workspace";
 import { fetchTradeDetail } from "../../../../lib/saas-trades-api";
-import { formatDecimal } from "../../../../lib/format-decimal";
+import { formatQuantity,formatMoney } from "../../../../lib/format-decimal";
 
 export const dynamic = "force-dynamic";
 

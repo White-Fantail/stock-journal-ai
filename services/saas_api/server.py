@@ -377,14 +377,19 @@ class Handler(BaseHTTPRequestHandler):
         except RequestRejected:
             return self.reply(429,{"error":"REPLAY_OR_RATE_LIMIT"})
         except TradeInputError:
+            if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeInputError", flush=True)
             return self.reply(400,{"error":"INVALID_TRADE"})
         except TradeConflict:
+            if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeConflict", flush=True)
             return self.reply(409,{"error":"TRADE_CONFLICT"})
         except TradeNotFound:
+            if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeNotFound", flush=True)
             return self.reply(404,{"error":"MEMBERSHIP_OR_TRADE_NOT_FOUND"})
         except (ValueError, json.JSONDecodeError):
             return self.reply(400,{"error":"INVALID_REQUEST"})
-        except Exception:
+        except Exception as error:
+            if os.environ.get("POSITIONARY_BROWSER_CI") == "1":
+                print("CI Error:", type(error).__name__, getattr(error, "sqlstate", None), flush=True)
             # Never leak connection errors or confidential identity data.
             return self.reply(503,{"error":"SERVICE_UNAVAILABLE"})
 

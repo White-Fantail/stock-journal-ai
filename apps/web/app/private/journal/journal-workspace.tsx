@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDecimal } from "../../../lib/format-decimal";
+import { formatMoney,formatPercent,formatQuantity } from "../../../lib/format-decimal";
 import { groupTigerOrderObservations } from "../../../lib/tiger-order-groups";
 import Link from "next/link";
 import {decisionGuide} from "../../../lib/journal-decision-guide";

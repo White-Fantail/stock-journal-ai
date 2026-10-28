@@ -1,6 +1,6 @@
-import { auth, signIn } from "../../auth";
-import { resolveGoogleSubject } from "../../lib/saas-api";
-import { enabled, origin, ticket, readTicket, validateAuthorization } from "../../lib/positionary-mcp-auth";
+import { auth, signIn } from "../../../auth";
+import { resolveGoogleSubject } from "../../../lib/saas-api";
+import { enabled, origin, ticket, readTicket, validateAuthorization } from "../../../lib/positionary-mcp-auth";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";

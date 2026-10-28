@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, after } from "node:test";
 import { createHash } from "node:crypto";
 import {
   enabled, ticket, readTicket, validScopes, validRedirectUri,
@@ -70,7 +70,9 @@ test("Only S256, registered callback, strong state and least-privilege scopes ar
   assert.equal(validRedirectUri("https://user:pass@evil.example/cb"),false);
 });
 
-process.env.POSITIONARY_MCP_ENABLED=previous.POSITIONARY_MCP_ENABLED;
-process.env.AUTH_SECRET=previous.AUTH_SECRET;
-process.env.SAAS_INTERNAL_SECRET=previous.SAAS_INTERNAL_SECRET;
-process.env.AUTH_URL=previous.AUTH_URL;
+after(() => {
+  for (const [key, value] of Object.entries(previous)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+});

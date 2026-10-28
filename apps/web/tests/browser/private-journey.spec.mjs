@@ -63,7 +63,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.getByLabel(/기존 QATEST 평가액/).fill("0");
   await page.getByLabel(/기존 QATEST 보유 수량/).fill("0");
   await page.getByLabel(/가정할 매수가/).fill("400");
-  await page.getByLabel(/추가로 매수한다고 가정할 수량/).fill("2");
+  await page.getByLabel(/추가 매수를 가정할 수량/).fill("2");
   await expect(page.locator(".plan-scenario-result")).toContainText("8.00%");
   await expect(page.locator('input[name="riskDecisionNote"]')).toHaveValue("");
   await page.locator(".plan-risk-decision input[type=checkbox]").check();

@@ -33,7 +33,8 @@ function order(x:unknown):x is TigerPersonalOrder {
     (x.at===null || epoch(x.at));
 }
 function fill(x:unknown):x is TigerPersonalFill {
-  return object(x) && hash(x.sourceRef) && symbol(x.symbol) &&
+  return object(x) && hash(x.sourceRef) &&
+    (x.orderSourceRef===undefined || hash(x.orderSourceRef)) && symbol(x.symbol) &&
     moneyCurrency(x.currency) && side(x.side) && decimal(x.quantity) && decimal(x.price) &&
     (x.timeRaw===null || (typeof x.timeRaw==="string" &&
       /^(?:[0-9]{13}|[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})$/.test(x.timeRaw)));

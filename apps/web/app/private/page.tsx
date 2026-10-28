@@ -114,8 +114,8 @@ export default async function WorkspaceHome(){
         {accounts.map(a=><article key={a.alias} className="account-summary-item">
           <div className="account-summary-head"><strong>{a.alias}</strong><small>{observedAt(a.asOf)} (NZ)</small></div>
           <div className="account-summary-values">
-            <div><small>순자산</small><strong>{formatDecimal(a.assets?.netLiquidation)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
-            <div><small>현금</small><strong>{formatDecimal(a.assets?.cashBalance)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
+            <div><small>순자산</small><strong>{formatMoney(a.assets?.netLiquidation)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
+            <div><small>현금</small><strong>{formatMoney(a.assets?.cashBalance)} <span className="account-currency">{a.assets?.currency??"통화 미확인"}</span></strong></div>
             <div><small>보유 종목</small><strong>{a.positions.length}</strong></div>
           </div>
         </article>)}
@@ -133,12 +133,12 @@ export default async function WorkspaceHome(){
           <div className="user-list">{allPositions.slice(0,6).map((p,i)=>
             <Link className="user-list-row" href={"/private/journal?ticker="+encodeURIComponent(p.symbol)} key={p.alias+":"+p.symbol+":"+p.currency+":"+i}>
               <div><strong>{p.symbol}</strong><small>{p.alias} · {p.currency}</small></div>
-              <div className="user-list-value"><strong>{formatDecimal(p.quantity)}주</strong>
+              <div className="user-list-value"><strong>{formatQuantity(p.quantity)}주</strong>
                 <small>{p.quote?.estimatedValue!==null && p.quote
-                  ? "시세 기준 참고 평가액 "+formatDecimal(p.quote.estimatedValue)+" USD"
-                  : "Tiger 조회 평가액 "+formatDecimal(p.marketValue)+" "+p.currency}</small>
+                  ? "시세 기준 참고 평가액 "+formatMoney(p.quote.estimatedValue)+" USD"
+                  : "Tiger 조회 평가액 "+formatMoney(p.marketValue)+" "+p.currency}</small>
                 {p.quote && <small>{p.quote.mode==="US_DELAYED_15M"?"15분 지연":"시세 권한"}
-                  {p.quote.stale?" · 과거 마지막 가격":""} · {formatDecimal(p.quote.price)} USD</small>}</div>
+                  {p.quote.stale?" · 과거 마지막 가격":""} · {formatMoney(p.quote.price)} USD</small>}</div>
             </Link>)}</div>}
       </section>
       <section className="user-panel">
@@ -158,7 +158,7 @@ export default async function WorkspaceHome(){
       {orders.length===0?<p className="user-empty">현재 수집된 주문이 없습니다.</p>:
       <div className="user-list">{orders.map((o,i)=><div className="user-list-row" key={o.sourceRef+":"+i}>
         <div><strong>{o.symbol} · {o.side==="BUY"?"매수":"매도"}</strong><small>{orderAt(o.at)} · {o.status}</small></div>
-        <div className="user-list-value"><strong>{o.filled===null?"수량 재수집 필요":formatDecimal(o.filled)+"주"}</strong><small>{formatDecimal(o.price)} {o.currency}</small></div>
+        <div className="user-list-value"><strong>{o.filled===null?"수량 재수집 필요":formatQuantity(o.filled)+"주"}</strong><small>{formatMoney(o.price)} {o.currency}</small></div>
       </div>)}</div>}
       <p className="user-footnote">주문 단위 기록이며 개별 체결이나 전체 거래이력을 확정한 자료는 아닙니다.</p>
     </section>}

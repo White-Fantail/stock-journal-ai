@@ -157,6 +157,7 @@ def load_probes(broker,wid,aid):
                 continue
             seen.add(f["id"])
             fills.append({"sourceRef":hashlib.sha256((str(aid)+":tx:"+f["id"]).encode()).hexdigest(),
+                          "orderSourceRef":hashlib.sha256((str(aid)+":"+p["orderId"]).encode()).hexdigest(),
                           "symbol":f["symbol"],"currency":f["currency"],
                           "side":f["side"],"quantity":f["quantity"],
                           "price":f["price"],"timeRaw":f["timeRaw"]})

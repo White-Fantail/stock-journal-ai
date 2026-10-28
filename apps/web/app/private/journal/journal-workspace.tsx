@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatDecimal } from "../../../lib/format-decimal";
+import { groupTigerOrderObservations } from "../../../lib/tiger-order-groups";
 import Link from "next/link";
 import {decisionGuide} from "../../../lib/journal-decision-guide";
 import type { TigerLedgerRead, TigerPersonalPosition, TigerPersonalOrder, TigerPersonalFill } from "../../../lib/tiger-api";
@@ -114,6 +115,7 @@ export function JournalWorkspace({
   const connectedTrades=activeTrades.filter(t=>!voided.has(t.id));
   const observedOrders=personalOrders.filter(o=>o.symbol===selected);
   const observedFills=personalFills.filter(f=>f.symbol===selected);
+  const observedGroups=groupTigerOrderObservations(observedOrders,observedFills);
   const brokerTrades=brokerRead?.readEnabled
     ? brokerRead.executions.filter(t=>t.symbol===selected) : [];
   const brokerAccountNames=new Map(brokerRead?.accounts.map(a=>[a.accountId,a.alias])??[]);
@@ -365,31 +367,52 @@ export function JournalWorkspace({
                 <a href={`/private/trades/${t.id}`}>상세 보기 ↗</a>
               </div>)}
             <p className="journal-limit">최근 최대 50건의 직접 입력 거래 중 일부입니다. 전체 과거 매매 내역 또는 증권사 검증 데이터가 아닙니다.</p>
-          </div> : view==="observed" ? <div className="journal-trades" aria-label="미검증 Tiger 관측 거래">
-            {observedOrders.length+observedFills.length===0?
+          </div> : view==="observed" ? <div className="journal-trades" aria-label="미검증 Tiger 관측 주문">
+            {observedGroups.orders.length+observedGroups.unlinked.length===0?
               <p className="journal-empty">조회된 Tiger 관측 주문·체결이 없습니다. 이전 거래가 없었다는 의미가 아닙니다.</p> :
               <>
-                {observedFills.map(f=><article className="journal-trade-row" key={"fill:"+f.sourceRef}>
-                  <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
-                    <small>Tiger 개별 체결 관측 · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
-                    {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
-                        e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
-                  </div>
-                  <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-                    "&page=0&ticker="+encodeURIComponent(f.symbol)}>매매 복기 작성 →</Link>
-                </article>)}
-                {observedOrders.map(o=><article className="journal-trade-row" key={"order:"+o.sourceRef}>
-                  <div><strong>{o.side==="BUY"?"매수":"매도"} · {formatDecimal(o.filled,"?")}주 · {formatDecimal(o.price,"?")} {o.currency}</strong>
-                    <small>Tiger 주문 관측 · {o.status} · 개별 체결과는 별도</small>
+                {observedGroups.orders.map(({order:o,fills,reconciliation})=><article className="journal-trade-row" key={"order:"+o.sourceRef}>
+                  <div>
+                    <strong>{o.side==="BUY"?"매수":"매도"} · 체결 {formatDecimal(o.filled,"?")}주 · {formatDecimal(o.price,"?")} {o.currency}</strong>
+                    <small>Tiger 주문 관측 · {o.status} · {fills.length>0?fills.length+"회 부분체결 관측":"개별 체결 미조회"}</small>
                     {entries.filter(e=>e.observationRef?.sourceRef===o.sourceRef &&
                         e.observationRef?.kind==="ORDER").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                    {reconciliation==="PARTIAL_OR_DIFFERENT"&&<small role="status">주문 체결수량과 현재 조회한 개별 체결 합계가 다릅니다. 일부 조회일 수 있습니다.</small>}
+                    {reconciliation==="QUANTITY_UNKNOWN"&&<small>주문 체결수량 확인 필요 · 개별 체결을 주문 합계로 확정하지 않습니다.</small>}
+                    {fills.length>0&&<details className="data-disclosure">
+                      <summary>부분체결 상세 {fills.length}건 보기</summary>
+                      <div className="journal-trades" aria-label="주문에 연결된 개별 체결">
+                        {fills.map(f=><div className="journal-trade-row" key={f.sourceRef}>
+                          <div><strong>{formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
+                            <small>원본 체결 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
+                            {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
+                                e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                          </div>
+                          <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
+                            "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link>
+                        </div>)}
+                      </div>
+                      <small>{reconciliation==="OBSERVED_SUM_MATCH"?
+                        "현재 관측된 체결 수량의 합이 주문 체결수량과 일치합니다. 전체 이력 검증은 아닙니다.":
+                        "부분체결 관측 자료 · 전체 체결 내역의 완전성은 확인되지 않았습니다."}</small>
+                    </details>}
                   </div>
                   <Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
                     "&page=0&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link>
                 </article>)}
+                {observedGroups.unlinked.map(f=><article className="journal-trade-row" key={"unlinked:"+f.sourceRef}>
+                  <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
+                    <small>개별 체결 관측 · 연결된 주문을 현재 조회 목록에서 확인할 수 없음 · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
+                    {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
+                        e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                  </div>
+                  <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
+                    "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link>
+                </article>)}
               </>}
-            <p className="journal-limit">여기의 주문은 체결을 증명하지 않으며, 개별 체결도 전체 계좌 이력이 검증된 데이터가 아닙니다.
-              내가 작성한 메모는 증권사 원본과 별도로 저장됩니다. <Link href="/private/trades">전체 주문 기록 →</Link></p>
+            <p className="journal-limit">주문 ID로 연결된 부분체결은 한 주문 아래에 표시합니다. 연결되지 않은 관측은 임의로 합치지 않습니다.
+              개별 체결과 주문은 전체 계좌 이력이 검증된 데이터가 아닙니다. 사용자 메모는 별도로 보존됩니다.
+              <Link href="/private/trades"> 전체 주문 기록 →</Link></p>
           </div> : <div className="journal-trades" aria-label="검증된 Tiger 체결">
             {!brokerRead ? <p className="journal-empty" role="status">
               Tiger 검증 원장 조회에 연결하지 못했습니다. 내 기록은 그대로 보존됩니다.

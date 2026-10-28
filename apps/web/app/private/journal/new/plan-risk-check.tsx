@@ -2,6 +2,7 @@
 import {useState} from "react";
 import {calculatePurchaseScenario,referencePrice,type PurchaseScenario} from "../../../../lib/purchase-scenario";
 import type {InvestmentStrategyType} from "../../../../lib/saas-trades-api";
+import {formatMoney,formatPercent} from "../../../../lib/format-decimal";
 
 export type PlanPortfolioReference=Readonly<{
  currency:string;asOf:string;accountCount:number;
@@ -117,7 +118,7 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
      {reference?<div className="portfolio-scope-banner">
        <strong>Tiger 계좌 관측 참고치 · 확정 원장 아님</strong>
        <span>{dateLabel} (NZ) · {reference.accountCount}개 계좌 · {reference.currency}</span>
-       <p>관측 종목 비중 {reference.heldPercent}% · 보유 평가액 {reference.heldValue} {reference.currency} · 계좌 현금 {reference.cash} {reference.currency}</p>
+       <p>관측 종목 비중 {formatPercent(reference.heldPercent)}% · 보유 평가액 {formatMoney(reference.heldValue)} {reference.currency} · 계좌 현금 {formatMoney(reference.cash)} {reference.currency}</p>
        <p>관측 계좌에 한정되며, 외부 계좌·다른 통화 자산은 포함되지 않습니다.</p>
      </div>:<p className="journal-form-hint" role="status">자동 합산 불가: {unavailableReason??"완전한 계좌 스냅샷이 없습니다."} 값을 모른다면 계산을 생략하고 투자계획만 저장해도 됩니다.</p>}
      <label>계산에 사용할 계좌 자료
@@ -171,14 +172,14 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
        scenario.state==="INVALID"?<p role="alert">{scenario.reason}</p>:
        <div className="plan-scenario-result" role="status">
          <div className="account-summary-values portfolio-account-values">
-           <div><small>예상 매수에 필요한 금액</small><strong>{scenario.purchaseAmount} {priceCurrency}</strong></div>
-           <div><small>해당 종목 비중 변화</small><strong>{scenario.beforePercent}% → {scenario.afterPercent}%</strong></div>
-           <div><small>매수 후 남는 현금 (가정)</small><strong>{scenario.cashLeft} {priceCurrency}</strong></div>
-           <div><small>보유 평가액 합계 (가정)</small><strong>{scenario.afterPositionValue} {priceCurrency}</strong></div>
+           <div><small>예상 매수에 필요한 금액</small><strong>{formatMoney(scenario.purchaseAmount)} {priceCurrency}</strong></div>
+           <div><small>해당 종목 비중 변화</small><strong>{formatPercent(scenario.beforePercent)}% → {formatPercent(scenario.afterPercent)}%</strong></div>
+           <div><small>매수 후 남는 현금 (가정)</small><strong>{formatMoney(scenario.cashLeft)} {priceCurrency}</strong></div>
+           <div><small>보유 평가액 합계 (가정)</small><strong>{formatMoney(scenario.afterPositionValue)} {priceCurrency}</strong></div>
          </div>
          {!scenario.withinCash&&<p className="plan-risk-warning" role="alert">계산상 매수 금액이 입력한 가용 현금보다 큽니다. 차입이나 추가 입금은 가정하지 않았습니다.</p>}
          {scenario.capExceeded!==null?<p className={scenario.capExceeded?"plan-risk-warning":"journal-form-hint"}>
-           {capSource} 기준 {scenario.capReference}% 대비 {scenario.capExceeded?
+           {capSource} 기준 {formatPercent(scenario.capReference)}% 대비 {scenario.capExceeded?
              "추가 매수 후 예상 비중이 기준을 초과합니다.":"추가 매수 후 예상 비중이 기준 이내입니다."}
            {" "}비중 기준만 고려한 정수주 계산 상한은 {scenario.maxAdditionalUnderCap}주입니다.
          </p>:<p className="journal-form-hint">단일 종목 최대 비중을 설정하면 본인의 계획과 비교할 수 있습니다.</p>}
@@ -191,13 +192,13 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
          </p>
          <h4>이 종목만 하락한다면 전체 계좌 기준 영향은?</h4>
          <div className="plan-drawdown-grid">
-           <div><small>종목 -10%</small><strong>-{scenario.drawdowns.ten}%</strong><small>매수 전 -{scenario.beforeDrawdowns.ten}%</small></div>
-           <div><small>종목 -20%</small><strong>-{scenario.drawdowns.twenty}%</strong><small>매수 전 -{scenario.beforeDrawdowns.twenty}%</small></div>
-           <div><small>종목 -30%</small><strong>-{scenario.drawdowns.thirty}%</strong><small>매수 전 -{scenario.beforeDrawdowns.thirty}%</small></div>
+           <div><small>종목 -10%</small><strong>-{formatPercent(scenario.drawdowns.ten)}%</strong><small>매수 전 -{formatPercent(scenario.beforeDrawdowns.ten)}%</small></div>
+           <div><small>종목 -20%</small><strong>-{formatPercent(scenario.drawdowns.twenty)}%</strong><small>매수 전 -{formatPercent(scenario.beforeDrawdowns.twenty)}%</small></div>
+           <div><small>종목 -30%</small><strong>-{formatPercent(scenario.drawdowns.thirty)}%</strong><small>매수 전 -{formatPercent(scenario.beforeDrawdowns.thirty)}%</small></div>
          </div>
          {strategy==="TECHNICAL"&&<p className="journal-form-hint">
            {scenario.stopImpact!==null?
-             `손절 기준가 ${stop} ${priceCurrency}까지 내려가면 관측 평가액 및 가정 매수가 대비 약 ${scenario.stopImpact} ${priceCurrency} 감소하는 시나리오입니다.`:
+             `손절 기준가 ${formatMoney(stop)} ${priceCurrency}까지 내려가면 관측 평가액 및 가정 매수가 대비 약 ${formatMoney(scenario.stopImpact)} ${priceCurrency} 감소하는 시나리오입니다.`:
              scenario.stopWarning??"손절 기준가를 작성하면 해당 기준까지의 평가액 감소를 추가로 살펴볼 수 있습니다."}
          </p>}
          <p className="journal-limit">하락 계산은 다른 종목·현금·환율이 일정하고 위 수량을 계획대로 매수했다는 정적 가정입니다.

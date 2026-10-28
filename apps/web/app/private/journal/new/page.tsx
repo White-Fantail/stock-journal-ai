@@ -235,7 +235,7 @@ export default async function JournalNewPage({searchParams}:{
         <input type="hidden" name="page" value={observedPage}/>
         <p className="journal-form-hint"><strong>{safeTicker}</strong> · Tiger {sourceKind==="FILL"?"개별 체결 관측":"주문 관측"} ·
           {observed.side==="BUY"?" 매수":" 매도"} ·
-          {observedFill?formatDecimal(observedFill.quantity):formatDecimal(observedOrder?.filled)}주
+          {observedFill?formatQuantity(observedFill.quantity):formatQuantity(observedOrder?.filled)}주
         </p>
         <p className="journal-form-hint">원본 계좌·종목·체결 식별자는 서버에서 재확인합니다. 이 메모는 사용자 작성 기록이며 증권사 검증 원장은 변경되지 않습니다.</p>
         <label>매매 이유와 투자 계획·복기
@@ -251,7 +251,7 @@ export default async function JournalNewPage({searchParams}:{
         <label>복기를 연결할 검증 체결
           <select name="fillSelection" required>{brokerFills.map(e=>
             <option key={e.accountId+":"+e.sourceRef} value={e.accountId+":"+e.sourceRef}>
-              {e.side==="BUY"?"매수":"매도"} · {formatDecimal(e.quantity)}주 · {formatDecimal(e.price)} {e.currency} · {e.executedAt}
+              {e.side==="BUY"?"매수":"매도"} · {formatQuantity(e.quantity)}주 · {formatMoney(e.price)} {e.currency} · {e.executedAt}
             </option>)}</select>
         </label>
         <p className="journal-form-hint">독립 검증된 체결만 선택할 수 있습니다. 직접 입력 거래와 구분됩니다.</p>

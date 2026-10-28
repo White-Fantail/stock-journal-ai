@@ -376,8 +376,8 @@ class Handler(BaseHTTPRequestHandler):
                               {"error":code})
         except RequestRejected:
             return self.reply(429,{"error":"REPLAY_OR_RATE_LIMIT"})
-        except TradeInputError:
-            if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeInputError", flush=True)
+        except TradeInputError as error:
+            if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeInputError", str(error), flush=True)
             return self.reply(400,{"error":"INVALID_TRADE"})
         except TradeConflict:
             if os.environ.get("POSITIONARY_BROWSER_CI") == "1": print("CI Error: TradeConflict", flush=True)

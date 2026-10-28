@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
-import {formatDecimal} from "../../../lib/format-decimal";
+import {formatMoney,formatQuantity,formatPercent} from "../../../lib/format-decimal";
 import {groupTigerOrderObservations, type GroupedTigerOrder} from "../../../lib/tiger-order-groups";
 import {parseStatementFeeEvidence,resolvedFeeCurrency,statementMatchesOrder} from "../../../lib/tiger-fee-statement";
 
@@ -11,7 +11,7 @@ const when=(raw:string|null)=> {
     ?new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"short",timeStyle:"short"}).format(t)
     :"시각 미확인";
 };
-const viewNumber=(value:string|null)=>formatDecimal(value);
+const viewNumber=(value:string|null)=>formatMoney(value);
 
 function PartialFillDetails({fills,reconciliation}:{fills:GroupedTigerOrder["fills"];reconciliation:GroupedTigerOrder["reconciliation"]}){
   if(fills.length===0) return <small className="user-muted">개별 체결 미조회</small>;
@@ -19,7 +19,7 @@ function PartialFillDetails({fills,reconciliation}:{fills:GroupedTigerOrder["fil
     <summary>부분체결 {fills.length}건 보기</summary>
     <ul className="tiger-order-fills">
       {fills.map(f=><li key={f.sourceRef}>
-        <strong>{viewNumber(f.quantity)}주 · {viewNumber(f.price)} {f.currency}</strong>
+        <strong>{formatQuantity(f.quantity)}주 · {viewNumber(f.price)} {f.currency}</strong>
         <small>원본 시각 {f.timeRaw??"미확인"} · 시간대 미검증</small>
       </li>)}
     </ul>
@@ -58,7 +58,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
             <div className="mobile-data-card-head">
               <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></strong>
                 <small>{p.currency} · Tiger 보유 관측</small></div>
-              <strong>{viewNumber(p.quantity)}주</strong>
+              <strong>{formatQuantity(p.quantity)}주</strong>
             </div>
             <dl className="mobile-data-card-fields">
               <div><dt>평균 매입단가</dt><dd>{viewNumber(p.averageCost)} {p.currency}</dd></div>
@@ -67,7 +67,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
               <div><dt>추정 미실현 손익</dt><dd>{q?.estimatedUnrealized?viewNumber(q.estimatedUnrealized)+" USD":"계산 보류"}</dd></div>
             </dl>
             <details className="data-disclosure"><summary>수익률 및 Tiger 원본 평가 보기</summary>
-              <p>추정 수익률: {q?.estimatedReturnPct?viewNumber(q.estimatedReturnPct)+"%":"계산 보류"}</p>
+              <p>추정 수익률: {q?.estimatedReturnPct?formatPercent(q.estimatedReturnPct)+"%":"계산 보류"}</p>
               <p>Tiger 원본 평가액: {viewNumber(p.marketValue)} {p.currency} · 원본 미실현손익: {viewNumber(p.unrealizedPnl)} {p.currency}</p>
               <p>시세 출처: {q?(q.mode==="REALTIME_PERMISSIONED"?"실시간 권한":"15분 지연"):"미확인"} · {q?when(q.quoteAt):"관측 없음"} (NZ)</p>
             </details>
@@ -81,7 +81,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
             const q=account.marketObservations.find(x=>x.symbol===p.symbol && x.currency===p.currency);
             return <tr key={p.symbol+":"+p.currency}>
               <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link><small className="user-muted portfolio-symbol-currency">{p.currency}</small></th>
-              <td>{viewNumber(p.quantity)}</td>
+              <td>{formatQuantity(p.quantity)}</td>
               <td>{viewNumber(p.averageCost)} {p.currency}</td>
               <td>{q ? <><strong>{viewNumber(q.price)} USD</strong>
                 <small className="user-muted">{q.mode==="REALTIME_PERMISSIONED"?"실시간 권한 시세":"미국주식 15분 지연 시세"}
@@ -89,7 +89,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
               <td>{q?.estimatedValue===null || !q?"계산 보류":viewNumber(q.estimatedValue)+" USD"}</td>
               <td className={q?.estimatedUnrealized?.startsWith("-")?"value-negative":"value-standard"}>
                 {q?.estimatedUnrealized===null || !q?"계산 보류":viewNumber(q.estimatedUnrealized)+" USD"}</td>
-              <td>{q?.estimatedReturnPct===null || !q?"계산 보류":viewNumber(q.estimatedReturnPct)+"%"}</td>
+              <td>{q?.estimatedReturnPct===null || !q?"계산 보류":formatPercent(q.estimatedReturnPct)+"%"}</td>
               <td>{viewNumber(p.marketValue)} {p.currency}
                 <small className="user-muted">원본 미실현손익 {viewNumber(p.unrealizedPnl)} {p.currency}</small></td>
             </tr>;
@@ -162,7 +162,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             </div>
             <dl className="mobile-data-card-fields">
               <div><dt>평균 체결가</dt><dd>{viewNumber(o.price)} {o.currency}</dd></div>
-              <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":viewNumber(o.filled)+"주"}</dd></div>
+              <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":formatQuantity(o.filled)+"주"}</dd></div>
               <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</dd></div>
               <div><dt>계좌</dt><dd>{o.alias}</dd></div>
             </dl>
@@ -178,7 +178,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
             <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
-            <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
+            <td>{o.filled===null?"수량 재수집 필요":formatQuantity(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
             <td>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</td>
             <td><PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/></td>
@@ -194,7 +194,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
         <p className="user-footnote">다른 주문 페이지에 있거나 조회가 불완전할 수 있습니다. 종목·가격·시각으로 임의로 묶지 않습니다.</p>
         <div className="mobile-data-cards" aria-label="미연결 개별 체결 모바일 목록">
           {groups.unlinked.map(f=><article className="mobile-data-card" key={f.sourceRef}>
-            <strong>{f.symbol} · {f.side==="BUY"?"매수":"매도"} · {viewNumber(f.quantity)}주</strong>
+            <strong>{f.symbol} · {f.side==="BUY"?"매수":"매도"} · {formatQuantity(f.quantity)}주</strong>
             <small>{viewNumber(f.price)} {f.currency} · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
             <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
               "&page=0&ticker="+encodeURIComponent(f.symbol)}>기존 체결 메모 보기·작성 →</Link></div>
@@ -204,7 +204,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
           <thead><tr><th>종목</th><th>방향</th><th>수량</th><th>가격</th><th>원본 시각 (시간대 미검증)</th><th>기록</th></tr></thead>
           <tbody>{groups.unlinked.map(f=><tr key={f.sourceRef}>
             <td>{f.symbol}</td><td>{f.side==="BUY"?"매수":"매도"}</td>
-            <td>{viewNumber(f.quantity)}</td><td>{viewNumber(f.price)} {f.currency}</td>
+            <td>{formatQuantity(f.quantity)}</td><td>{viewNumber(f.price)} {f.currency}</td>
             <td>{f.timeRaw??"미확인"}</td>
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
               "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link></td>

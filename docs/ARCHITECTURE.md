@@ -14,6 +14,9 @@ Browser (Google Auth.js JWT; no Tiger secret)
               -> restricted saas_broker_app: Tiger grant/evidence/ledger reads
               -> reserved separate dispatch/publication roles for gated flows
           -> PostgreSQL: private tenant tables, FORCE RLS
+OAuth MCP client (PKCE S256; same signed-in Google subject)
+  -> Vercel /api/mcp (15-minute scoped bearer; fresh Railway membership per request)
+  -> existing signed internal portfolio/journal endpoints (same tenant FORCE RLS)
 Separate Railway owner-only Tiger runner (RSA key never on Vercel)
   -> read-only Tiger observations -> signed bridge API -> encrypted snapshots
 Future: approved Tiger partner OAuth -> tenant worker -> staging
@@ -52,3 +55,7 @@ Future: approved Tiger partner OAuth -> tenant worker -> staging
 ## Deployment
 
 `dev` is the implementation branch. Only `main` deploys (Vercel `apps/web/vercel.json` and Railway service configurations). SaaS schema changes are applied by guarded Railway **pre-deploy**; never during a web request. CI validates code and synthetic A/B tenant isolation, not real Google/provider operations. Refer to [Operations](OPERATIONS.md) and [Schema runbook](saas/HOSTED-SCHEMA-BOOTSTRAP.md).
+
+## Feature-gated remote MCP
+
+The remote MCP layer lives in apps/web/app/api/mcp, uses the existing Google login via a separate consent screen and scoped OAuth bearer grants, and never trusts an MCP-provided workspace or broker account locator. Railway consumes signed code/refresh-token nonces until expiry in the existing nonce table. Tiger personal snapshots are still restricted to the configured owner subject. Only user-authored investment history is writable; no broker trade methods exist in the tool catalog. Production enablement and per-client revocation UX remain separately gated. See [MCP](MCP.md).

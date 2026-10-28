@@ -33,11 +33,11 @@ export function PortfolioOverview({personal,plans,factors}:{
        사용했습니다. 모든 계좌 스냅샷은 1시간 이내 시점이며, 순자산과 현금·보유 평가액이
        각 계좌에서 반올림 허용 범위 내에 일치합니다.</p>
      <div className="account-summary-values portfolio-account-values">
-       <div><small>관측 계좌 순자산 합계</small><strong>{formatDecimal(risk.nav)} {risk.currency}</strong></div>
-       <div><small>현금</small><strong>{formatDecimal(risk.cash)} {risk.currency} · {risk.cashPct}%</strong></div>
-       <div><small>보유 종목 평가액</small><strong>{formatDecimal(risk.invested)} {risk.currency} · {risk.investedPct}%</strong></div>
-       <div><small>가장 큰 종목 비중</small><strong>{risk.largestTickerPct}%</strong></div>
-       <div><small>상위 두 종목 비중</small><strong>{risk.topTwoTickerPct}%</strong></div>
+       <div><small>관측 계좌 순자산 합계</small><strong>{formatMoney(risk.nav)} {risk.currency}</strong></div>
+       <div><small>현금</small><strong>{formatMoney(risk.cash)} {risk.currency} · {formatPercent(risk.cashPct)}%</strong></div>
+       <div><small>보유 종목 평가액</small><strong>{formatMoney(risk.invested)} {risk.currency} · {formatPercent(risk.investedPct)}%</strong></div>
+       <div><small>가장 큰 종목 비중</small><strong>{formatPercent(risk.largestTickerPct)}%</strong></div>
+       <div><small>상위 두 종목 비중</small><strong>{formatPercent(risk.topTwoTickerPct)}%</strong></div>
      </div>
      <div className="user-panel-head"><h3>공통 위험 요인 · 사용자 직접 분류</h3>
        <Link href="/private/portfolio/risk-groups/edit">분류 관리 →</Link></div>
@@ -49,11 +49,11 @@ export function PortfolioOverview({personal,plans,factors}:{
          {exposure.groups.map(g=><div className="user-list-row" key={g.factor}>
            <div><strong>{g.label}</strong>
              <small>{g.tickers.join(", ")} · {g.tickerCount}종목</small></div>
-           <strong>{g.observedNavPct}%</strong>
+           <strong>{formatPercent(g.observedNavPct)}%</strong>
          </div>)}
        </div>:<p>아직 사용자 분류가 등록된 보유 종목이 없습니다.</p>}
        <p>미분류 보유 종목: {exposure.unclassifiedTickers.length}개 ·
-         관측 순자산 대비 {exposure.unclassifiedNavPct}%</p>
+         관측 순자산 대비 {formatPercent(exposure.unclassifiedNavPct)}%</p>
        {exposure.unclassifiedTickers.length>0&&<div className="portfolio-unclassified-list">
          {exposure.unclassifiedTickers.map(ticker=><Link
            key={ticker} href={"/private/portfolio/risk-groups/edit?ticker="+encodeURIComponent(ticker)}>
@@ -70,11 +70,11 @@ export function PortfolioOverview({personal,plans,factors}:{
            {item.ticker}</Link></strong>
            <small><Link href={"/private/portfolio/risk-groups/edit?ticker="+encodeURIComponent(item.ticker)}>
              위험 요인 분류·수정 →</Link></small>
-           <small>관측 평가액 {formatDecimal(item.marketValue)} {risk.currency}
+           <small>관측 평가액 {formatMoney(item.marketValue)} {risk.currency}
              {" · "}{item.accounts}개 Tiger 계좌</small></div>
          <div className="user-list-value">
-           <strong>{item.observedTigerPct}%</strong>
-           <small>내가 작성한 최대 비중: {item.personalMaxAllocationPct===null?"미설정":item.personalMaxAllocationPct+"%"}</small>
+           <strong>{formatPercent(item.observedTigerPct)}%</strong>
+           <small>내가 작성한 최대 비중: {item.personalMaxAllocationPct===null?"미설정":formatPercent(item.personalMaxAllocationPct)+"%"}</small>
            <small><Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(item.ticker)}>
              {item.personalMaxAllocationPct===null?"종목별 투자계획 보완":"투자계획 점검"} →</Link></small>
            {item.aboveObservedTigerReference!==null&&<small>

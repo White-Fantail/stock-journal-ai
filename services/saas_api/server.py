@@ -26,7 +26,7 @@ from services.saas_api.journal_broker_links import create_broker_note
 from services.saas_api.journal_observation_links import create_observation_note
 from services.saas_api.journal_plans import list_plans,create_plan
 from services.saas_api.ai_quota import claim_ai
-from services.saas_api.request_security import valid_nonce, consume_signed_request, RequestRejected
+from services.saas_api.request_security import valid_nonce, consume_signed_request, consume_mcp_grant_nonce, RequestRejected
 from services.saas_api.account import delete_account
 from services.saas_api.trade_detail import trade_detail
 from services.saas_api.sync_status import sync_status
@@ -68,7 +68,7 @@ from services.saas_api.tiger_oauth import (TigerError, begin as tiger_begin, fin
     list_connections as tiger_list, bind_account as tiger_bind, read_account as tiger_read,
     disconnect as tiger_disconnect)
 
-_ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
+_ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve", "/internal/v1/mcp/consume",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
             "/internal/v1/journal/export", "/internal/v1/journal/monthly-process", "/internal/v1/journal/weekly-process", "/internal/v1/risk-factors/list", "/internal/v1/risk-factors/create",
@@ -176,6 +176,15 @@ class Handler(BaseHTTPRequestHandler):
             if not dsn:
                 return self.reply(503,{"error":"NOT_CONFIGURED"})
             import psycopg  # optional runtime dependency; zero packages for security unit tests
+            if path == "/internal/v1/mcp/consume":
+                if set(data) != {"subject", "tokenNonce", "expiresAt"}:
+                    return self.reply(400,{"error":"UNEXPECTED_FIELDS"})
+                with psycopg.connect(dsn,connect_timeout=5) as identity_conn:
+                    consume_signed_request(identity_conn,path,data.get("subject"),self.headers["X-Saas-Nonce"])
+                    if not resolve(identity_conn,data.get("subject")):
+                        return self.reply(403,{"error":"MEMBERSHIP_REVOKED"})
+                    consume_mcp_grant_nonce(identity_conn,data.get("tokenNonce"),data.get("expiresAt"))
+                return self.reply(200,{"consumed":True})
             if path.startswith("/internal/v1/tiger/"):
                 # Broker operations require a separate limited RLS login.
                 # Neither client-provided workspace IDs nor provider URLs are accepted.

@@ -203,7 +203,7 @@ export type TigerPersonalOrder = Readonly<{
   feeCurrency:string|null;at:string|null
 }>;
 export type TigerPersonalFill = Readonly<{
-  sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
+  sourceRef:string;orderSourceRef?:string;symbol:string;currency:string;side:"BUY"|"SELL";
   quantity:string;price:string;timeRaw:string|null
 }>;
 export type TigerPersonalFee = Readonly<{

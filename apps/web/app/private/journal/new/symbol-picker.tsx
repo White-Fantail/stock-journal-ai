@@ -1,7 +1,7 @@
 "use client";
 
 import {useState} from "react";
-import {formatDecimal} from "../../../../lib/format-decimal";
+import {formatQuantity} from "../../../../lib/format-decimal";
 
 type TradeOption={
   id:string;
@@ -41,7 +41,7 @@ export function JournalSymbolPicker({
       <select name="tradeEventId" key={ticker} defaultValue="">
         <option value="">연결하지 않음</option>
         {matching.map(t=><option key={t.id} value={t.id}>
-          {t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity,"?")}주 · {t.executedAt}
+          {t.side==="BUY"?"매수":"매도"} {formatQuantity(t.quantity,"?")}주 · {t.executedAt}
         </option>)}
       </select>
     </label>}

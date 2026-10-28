@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {formatDecimal} from "../../../lib/format-decimal";
+import {formatMoney,formatPercent} from "../../../lib/format-decimal";
 import {assessPortfolioOverviewRisk} from "../../../lib/portfolio-overview-risk";
 import {assessRiskFactors} from "../../../lib/risk-factor-exposure";
 import {type RiskFactorRevision} from "../../../lib/saas-trades-api";

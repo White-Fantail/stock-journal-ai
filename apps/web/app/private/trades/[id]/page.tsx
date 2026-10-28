@@ -22,9 +22,9 @@ export default async function TradeDetail({params}:{
     <dl>
       <dt>출처</dt><dd>사용자가 직접 확인한 기록 · 증권사 확인과 별개</dd>
       <dt>구분</dt><dd>{trade.side === "BUY" ? "매수" : trade.side === "SELL" ? "매도" : "—"}</dd>
-      <dt>체결 수량</dt><dd>{formatDecimal(trade.quantity,"—")}</dd>
-      <dt>체결가</dt><dd>{formatDecimal(trade.price,"—")} {trade.currency ?? ""}</dd>
-      <dt>수수료</dt><dd>{formatDecimal(trade.fee,"미확인")}</dd>
+      <dt>체결 수량</dt><dd>{formatQuantity(trade.quantity,"—")}</dd>
+      <dt>체결가</dt><dd>{formatMoney(trade.price,"—")} {trade.currency ?? ""}</dd>
+      <dt>수수료</dt><dd>{formatMoney(trade.fee,"미확인")}</dd>
       <dt>체결 시각</dt><dd>{trade.executedAt ?? "—"}</dd>
       <dt>작성 시각</dt><dd>{trade.createdAt}</dd>
       <dt>변경 이력</dt><dd>{trade.voidsEventId ? <Link href={"/private/trades/" + trade.voidsEventId}>취소 대상 원본 보기</Link> : "원본 기록"}</dd>

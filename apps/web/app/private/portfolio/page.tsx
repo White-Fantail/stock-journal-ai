@@ -74,9 +74,9 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
             <small>{p.currency} · 검증 v{proof.version}</small>
           </div>
           <dl className="mobile-data-card-fields">
-            <div><dt>검증 수량</dt><dd>{formatDecimal(p.quantity)}주</dd></div>
-            <div><dt>남은 FIFO 원가</dt><dd>{formatDecimal(p.costBasis)} {p.currency}</dd></div>
-            <div><dt>누적 실현손익</dt><dd>{formatDecimal(p.realizedPnl)} {p.currency}</dd></div>
+            <div><dt>검증 수량</dt><dd>{formatQuantity(p.quantity)}주</dd></div>
+            <div><dt>남은 FIFO 원가</dt><dd>{formatMoney(p.costBasis)} {p.currency}</dd></div>
+            <div><dt>누적 실현손익</dt><dd>{formatMoney(p.realizedPnl)} {p.currency}</dd></div>
           </dl>
         </article>)}
       </div>
@@ -86,9 +86,9 @@ function VerifiedAccountSnapshot({account,proof,positions,truncated}:{
           <th scope="col">남은 취득원가</th><th scope="col">누적 실현손익</th></tr></thead>
         <tbody>{positions.map(p=><tr key={p.symbol+":"+p.currency}>
           <th scope="row"><Link href={"/private/journal?ticker="+encodeURIComponent(p.symbol)}>{p.symbol}</Link></th>
-          <td>{formatDecimal(p.quantity)}주</td>
-          <td>{formatDecimal(p.costBasis)} {p.currency}</td>
-          <td>{formatDecimal(p.realizedPnl)} {p.currency}</td>
+          <td>{formatQuantity(p.quantity)}주</td>
+          <td>{formatMoney(p.costBasis)} {p.currency}</td>
+          <td>{formatMoney(p.realizedPnl)} {p.currency}</td>
         </tr>)}</tbody>
       </table>
     </div></> : <p className="sync-subtle">현재 표시 가능한 검증 포지션이 없습니다. 계좌 자산이 0이라는 의미는 아닙니다.</p>}
@@ -166,14 +166,14 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
             <small>{timeLabel(account.asOf)} 기준</small></div>
           {result.status==="UNAVAILABLE"?<p className="user-footnote">{result.reason}</p>:<>
             <div className="account-summary-values portfolio-account-values">
-              <div><small>최대 단일 종목 비중</small><strong>{result.largestPercent}%</strong></div>
-              <div><small>상위 두 종목 비중</small><strong>{result.topTwoPercent}%</strong></div>
+              <div><small>최대 단일 종목 비중</small><strong>{formatPercent(result.largestPercent)}%</strong></div>
+              <div><small>상위 두 종목 비중</small><strong>{formatPercent(result.topTwoPercent)}%</strong></div>
               <div><small>기준 통화</small><strong>{result.currency}</strong></div>
             </div>
             <div className="user-list">
               {result.positions.map(position=><Link className="user-list-row" key={position.symbol}
                 href={"/private/journal?ticker="+encodeURIComponent(position.symbol)}>
-                <strong>{position.symbol}</strong><strong>{position.percent}%</strong>
+                <strong>{position.symbol}</strong><strong>{formatPercent(position.percent)}%</strong>
               </Link>)}
             </div>
             <p className="user-footnote">위 비중의 분모는 확인된 보유 주식의 평가액 합계입니다. 현금이나 순자산 대비 비중은 아닙니다.
@@ -190,9 +190,9 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
               <div className="user-list">
                 {policy.positions.map(p=><div className="user-list-row" key={p.ticker}>
                   <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(p.ticker)}>{p.ticker}</Link></strong>
-                    <small>계좌 순자산 대비 {p.observedAccountPct}%</small></div>
+                    <small>계좌 순자산 대비 {formatPercent(p.observedAccountPct)}%</small></div>
                   <div className="user-list-value">
-                    <strong>{p.personalPortfolioLimitPct===null?"최대 비중 미설정":"계획 "+p.personalPortfolioLimitPct+"%"}</strong>
+                    <strong>{p.personalPortfolioLimitPct===null?"최대 비중 미설정":"계획 "+formatPercent(p.personalPortfolioLimitPct)+"%"}</strong>
                     <small>{p.exceedsAccountReference===null?"계획 비교 보류":
                       p.exceedsAccountReference?"계좌 기준 참고 비중이 계획 수치보다 높음":"계좌 기준 참고 비중이 계획 수치 이하"}</small>
                   </div>

@@ -4,16 +4,16 @@ import {groupTigerOrderObservations} from "../lib/tiger-order-groups";
 import type {TigerPersonalFill,TigerPersonalOrder} from "../lib/tiger-api";
 
 function order(sourceRef:string,filled:string|null):TigerPersonalOrder{
-  return {sourceRef,symbol:"RKLB",currency:"USD",side:"BUY",status:"FILLED",
-    filled,price:"51.9",fee:null,feeCurrency:null,at:"1792700000000"};
+  return {sourceRef,symbol:"DEMO",currency:"USD",side:"BUY",status:"FILLED",
+    filled,price:"7.25",fee:null,feeCurrency:null,at:"1792700000000"};
 }
 function fill(sourceRef:string,quantity:string,orderSourceRef?:string):TigerPersonalFill{
-  return {sourceRef,orderSourceRef,symbol:"RKLB",currency:"USD",side:"BUY",
-    quantity,price:"51.9",timeRaw:"2026-10-23 14:53:01"};
+  return {sourceRef,orderSourceRef,symbol:"DEMO",currency:"USD",side:"BUY",
+    quantity,price:"7.25",timeRaw:"2026-10-23 14:53:01"};
 }
-test("one order groups 14+21 partial fills; does not create duplicate trade rows",()=>{
-  const result=groupTigerOrderObservations([order("order-1","35")],
-    [fill("fill-1","14","order-1"),fill("fill-2","21","order-1")]);
+test("one order groups multiple partial fills; does not create duplicate trade rows",()=>{
+  const result=groupTigerOrderObservations([order("order-1","20")],
+    [fill("fill-1","7","order-1"),fill("fill-2","13","order-1")]);
   assert.equal(result.orders.length,1);
   assert.equal(result.orders[0].fills.length,2);
   assert.equal(result.orders[0].reconciliation,"OBSERVED_SUM_MATCH");
@@ -25,8 +25,8 @@ test("exact decimal summation never rounds floating quantities",()=>{
   assert.equal(result.orders[0].reconciliation,"OBSERVED_SUM_MATCH");
 });
 test("same symbol price and time never merge different orders",()=>{
-  const result=groupTigerOrderObservations([order("a","14"),order("b","21")],
-    [fill("f1","14","a"),fill("f2","21","b")]);
+  const result=groupTigerOrderObservations([order("a","7"),order("b","13")],
+    [fill("f1","7","a"),fill("f2","13","b")]);
   assert.deepEqual(result.orders.map(x=>x.fills.length),[1,1]);
   assert.deepEqual(result.orders.map(x=>x.reconciliation),["OBSERVED_SUM_MATCH","OBSERVED_SUM_MATCH"]);
 });

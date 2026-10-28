@@ -33,6 +33,8 @@ Primary navigation: **Home, Portfolio, Investment journal, Review**, with other 
 
 The Tiger order history and investment journal display **one row per provider order**. Individual transaction observations are nested under their specific order only when a scoped parent-order reference matches; a different order with the same symbol, price and time is never merged. Each order carries its own user-authored decision note. Older fill-level notes remain visible in its detail; fills with no currently visible parent remain separately visible as unlinked, never discarded. Displayed sums are exact-decimal observation checks only, **not** audited execution completeness or broker-verified ledger publication. The original provider order and fill evidence remains immutable.
 
+**Numeric display policy:** Monetary amounts and stock prices use two decimal places, share quantities use up to three, and percentages use up to two. The formatting uses exact decimal-string rounding and thousands separators; sub-cent or sub-millishare nonzero values are displayed as `<0.01` or `<0.001` (signed when negative), not as zero. This applies only to read-only UI figures. Original provider observations, typed form input, arithmetic intermediates, persisted strategy revisions and user-authored notes retain their original precision.
+
 Historical totals, net returns, cross-currency totals, costs, fees and current valuation must **not** be guessed from incomplete provider history. The long-horizon performance page is an evidence-readiness view; it does not publish an unverified return percentage. Daily Tiger delayed-price observations, when permitted, are non-triggering contextual estimates—not live portfolio accounting.
 
 ## Privacy and AI

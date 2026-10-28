@@ -604,3 +604,10 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
  .plan-drawdown-grid>div{padding:10px 7px}
  .plan-drawdown-grid strong{font-size:1rem}
 }
+
+/* Quick scenario changes never submit the immutable investment plan. */
+.plan-quantity-presets{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.plan-quantity-presets span{font-size:.8rem;color:var(--muted);margin-right:4px}
+.app-shell .plan-quantity-presets button{font:inherit;font-size:.85rem;min-height:40px;min-width:48px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:white;color:#365d53;cursor:pointer}
+.app-shell .plan-quantity-presets button.plan-quantity-active{background:#e3f3ec;border-color:#168e6b;color:#155e4a;font-weight:750}
+.plan-drawdown-grid small{display:block}

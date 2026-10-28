@@ -28,8 +28,9 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
  const [manualValue,setManualValue]=useState("");
  const [manualShares,setManualShares]=useState("");
  const [price,setPrice]=useState(reference?referencePrice(reference.heldValue,reference.heldShares)??"":"");
- const [buyShares,setBuyShares]=useState("");
+ const [buyShares,setBuyShares]=useState("0");
  const [includeReview,setIncludeReview]=useState(false);
+ const [expandedManual,setExpandedManual]=useState(false);
  const [decision,setDecision]=useState("");
  const priceCurrency=currency.toUpperCase();
  const sourceReady=mode==="tiger"&&reference?.currency===priceCurrency;
@@ -57,7 +58,7 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
    `종목 비중 ${calculated.beforePercent}% → ${calculated.afterPercent}%`,
    `비중 기준 ${effectiveCap??"미설정"}% (${capSource}); ${calculated.capExceeded===null?"비교 없음":calculated.capExceeded?"기준 초과":"기준 이내"}`,
    `-20% 하락 시 전체 계좌 관측 순자산 대비 약 -${calculated.drawdowns.twenty}% (정적 가정)`,
-   `현금 범위 ${calculated.withinCash?"이내":"초과"}`,
+   `현금 범위 ${calculated.withinCash?"이내":"초과"}; 현금 범위 내 정수주 ${calculated.maxAdditionalUnderCash}주`,
    strategy==="TECHNICAL"?(calculated.stopImpact!==null?
      `손절가 ${stop} 시 평가액 감소 추정 ${calculated.stopImpact}`:
      `손절가 계산 보류: ${calculated.stopWarning??"기준가 없음"}`):"가격 손절 위험은 계산하지 않음",
@@ -116,10 +117,10 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
      {reference?<div className="portfolio-scope-banner">
        <strong>Tiger 계좌 관측 참고치 · 확정 원장 아님</strong>
        <span>{dateLabel} (NZ) · {reference.accountCount}개 계좌 · {reference.currency}</span>
-       <p>현재 종목 비중 {reference.heldPercent}% · 보유 평가액 {reference.heldValue} {reference.currency} · 계좌 현금 {reference.cash} {reference.currency}</p>
+       <p>관측 종목 비중 {reference.heldPercent}% · 보유 평가액 {reference.heldValue} {reference.currency} · 계좌 현금 {reference.cash} {reference.currency}</p>
        <p>관측 계좌에 한정되며, 외부 계좌·다른 통화 자산은 포함되지 않습니다.</p>
      </div>:<p className="journal-form-hint" role="status">자동 합산 불가: {unavailableReason??"완전한 계좌 스냅샷이 없습니다."} 값을 모른다면 계산을 생략하고 투자계획만 저장해도 됩니다.</p>}
-     <label>계산할 자금·보유 자료
+     <label>계산에 사용할 계좌 자료
        <select value={mode} onChange={e=>{
          const next=e.target.value as SourceMode;setMode(next);
          if(next==="tiger"&&reference)setPrice(referencePrice(reference.heldValue,reference.heldShares)??"");
@@ -151,33 +152,48 @@ export function PlanRiskCheck({ticker,initialStop,initialTarget,initialCurrency,
        <label>가정할 매수가 ({priceCurrency})
          <input type="text" inputMode="decimal" value={price}
            onChange={e=>setPrice(e.target.value)} placeholder="예: 420"/></label>
-       <label>추가로 매수한다고 가정할 수량 (주)
+       <label>추가 매수를 가정할 수량 (주) · 0주도 가능
          <input type="text" inputMode="decimal" value={buyShares}
            onChange={e=>setBuyShares(e.target.value)} placeholder="예: 3"/>
        </label>
      </div>
+     <div className="plan-quantity-presets" aria-label="추가 매수량 빠른 선택">
+       <span>빠른 비교</span>
+       {[0,1,3,5,10].map(q=><button key={q} type="button"
+         className={buyShares===String(q)?"plan-quantity-active":""}
+         aria-pressed={buyShares===String(q)}
+         onClick={()=>setBuyShares(String(q))}>{q}주</button>)}
+     </div>
      {sourceReady&&reference&&<p className="user-footnote">
        {price?"초기 매수가는 기존 종목의 관측 평가액÷보유 수량으로 추정한 참고가격을 사용했습니다. 필요하면 변경하세요.":"이 종목의 기존 보유 수량이 확인되지 않아 예상 매수가를 직접 입력해야 합니다."}
        {" "}현재 실시간 주가가 아닙니다.</p>}
-     {!scenario?<p className="journal-form-hint" role="status">기준 자료와 가정할 가격·수량을 입력하면 결과가 나타납니다. 추가 매수를 하지 않을 계획이라면 비워 두어도 됩니다.</p>:
+     {!scenario?<p className="journal-form-hint" role="status">기준 자료와 가정할 가격·수량을 입력하면 결과가 나타납니다. 추가 매수를 하지 않는 경우 0주 상태로 현재 위험만 비교할 수 있습니다.</p>:
        scenario.state==="INVALID"?<p role="alert">{scenario.reason}</p>:
        <div className="plan-scenario-result" role="status">
          <div className="account-summary-values portfolio-account-values">
            <div><small>예상 매수에 필요한 금액</small><strong>{scenario.purchaseAmount} {priceCurrency}</strong></div>
            <div><small>해당 종목 비중 변화</small><strong>{scenario.beforePercent}% → {scenario.afterPercent}%</strong></div>
+           <div><small>매수 후 남는 현금 (가정)</small><strong>{scenario.cashLeft} {priceCurrency}</strong></div>
            <div><small>보유 평가액 합계 (가정)</small><strong>{scenario.afterPositionValue} {priceCurrency}</strong></div>
          </div>
          {!scenario.withinCash&&<p className="plan-risk-warning" role="alert">계산상 매수 금액이 입력한 가용 현금보다 큽니다. 차입이나 추가 입금은 가정하지 않았습니다.</p>}
          {scenario.capExceeded!==null?<p className={scenario.capExceeded?"plan-risk-warning":"journal-form-hint"}>
            {capSource} 기준 {scenario.capReference}% 대비 {scenario.capExceeded?
              "추가 매수 후 예상 비중이 기준을 초과합니다.":"추가 매수 후 예상 비중이 기준 이내입니다."}
-           {" "}이 기준 안에서 새로 더할 수 있는 수량의 참고 상한: {scenario.maxAdditionalUnderCap}주
+           {" "}비중 기준만 고려한 정수주 계산 상한은 {scenario.maxAdditionalUnderCap}주입니다.
          </p>:<p className="journal-form-hint">단일 종목 최대 비중을 설정하면 본인의 계획과 비교할 수 있습니다.</p>}
+         <p className="journal-form-hint">
+           입력한 현금만 고려한 정수주 상한은 {scenario.maxAdditionalUnderCash}주입니다.
+           {scenario.maxAdditionalWithinLimits!==null
+             ?` 현금과 최대 비중을 모두 고려한 산술 상한은 ${scenario.maxAdditionalWithinLimits}주입니다.`
+             :" 최대 보유 비중이 미설정되어 통합 상한을 계산하지 않습니다."}
+           {" "}이는 권장 매수량이 아니며, 주문 단위·수수료·여유 현금을 고려하지 않은 단순 계산입니다.
+         </p>
          <h4>이 종목만 하락한다면 전체 계좌 기준 영향은?</h4>
          <div className="plan-drawdown-grid">
-           <div><small>종목 -10%</small><strong>-{scenario.drawdowns.ten}%</strong></div>
-           <div><small>종목 -20%</small><strong>-{scenario.drawdowns.twenty}%</strong></div>
-           <div><small>종목 -30%</small><strong>-{scenario.drawdowns.thirty}%</strong></div>
+           <div><small>종목 -10%</small><strong>-{scenario.drawdowns.ten}%</strong><small>매수 전 -{scenario.beforeDrawdowns.ten}%</small></div>
+           <div><small>종목 -20%</small><strong>-{scenario.drawdowns.twenty}%</strong><small>매수 전 -{scenario.beforeDrawdowns.twenty}%</small></div>
+           <div><small>종목 -30%</small><strong>-{scenario.drawdowns.thirty}%</strong><small>매수 전 -{scenario.beforeDrawdowns.thirty}%</small></div>
          </div>
          {strategy==="TECHNICAL"&&<p className="journal-form-hint">
            {scenario.stopImpact!==null?

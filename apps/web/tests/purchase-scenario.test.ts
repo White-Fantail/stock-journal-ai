@@ -52,3 +52,23 @@ test("reference unit price and cross-account quantity remain fixed-point",()=>{
  assert.equal(sumObservedShares(["0.000000000001","0.000000000002"]),"0.000000000003");
  assert.equal(sumObservedShares(["1","-2"]),null);
 });
+
+test("cash and concentration constraints are separate, and before/after drawdowns show the incremental exposure",()=>{
+ const r=calculatePurchaseScenario({...sample,cash:"700",buyShares:"3",maxAllocationPct:"30"});
+ assert.equal(r.state,"READY");
+ if(r.state!=="READY")return;
+ assert.equal(r.maxAdditionalUnderCash,"1");
+ assert.equal(r.maxAdditionalUnderCap,"2");
+ assert.equal(r.maxAdditionalWithinLimits,"1");
+ assert.equal(r.withinCash,false);
+ assert.deepEqual(r.beforeDrawdowns,{ten:"2.00",twenty:"4.00",thirty:"6.00"});
+ assert.deepEqual(r.drawdowns,{ten:"3.20",twenty:"6.40",thirty:"9.60"});
+});
+test("missing allocation cap never invents a recommended maximum",()=>{
+ const r=calculatePurchaseScenario({...sample,maxAllocationPct:null,buyShares:"0"});
+ assert.equal(r.state,"READY");
+ if(r.state!=="READY")return;
+ assert.equal(r.maxAdditionalWithinLimits,null);
+ assert.equal(r.maxAdditionalUnderCash,"10");
+ assert.equal(r.beforePercent,r.afterPercent);
+});

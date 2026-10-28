@@ -25,8 +25,10 @@ export type PurchaseScenario =
  | {state:"INVALID";reason:string}
  | {state:"READY";purchaseAmount:string;beforePercent:string;afterPercent:string;
     cashLeft:string;withinCash:boolean;capExceeded:boolean|null;
+    maxAdditionalUnderCash:string;maxAdditionalWithinLimits:string|null;
     capReference:string|null;maxAdditionalUnderCap:string|null;
     drawdowns:{ten:string;twenty:string;thirty:string};
+    beforeDrawdowns:{ten:string;twenty:string;thirty:string};
     stopImpact:string|null;stopWarning:string|null;
     existingPositionValue:string;afterPositionValue:string;};
 export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScenario{
@@ -45,7 +47,10 @@ export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScena
  const limit=cap===null?null:nav*cap/(BigInt(100)*SCALE);
  const budget=limit===null?null:limit>heldValue?limit-heldValue:BigInt(0);
  const maxAddition=budget===null?null:
-   ((budget* SCALE /price)/SCALE).toString();
+   ((budget*SCALE/price)/SCALE).toString();
+ const cashShares=(cash*SCALE/price)/SCALE;
+ const capShares=budget===null?null:(budget*SCALE/price)/SCALE;
+ const combinedShares=capShares===null?null:(cashShares<capShares?cashShares:capShares);
  // Ensure rounded display never determines the compliance decision.
  let stopImpact:string|null=null,stopWarning:string|null=null;
  if(i.stop){
@@ -62,12 +67,18 @@ export function calculatePurchaseScenario(i:PurchaseScenarioInput):PurchaseScena
  return {state:"READY",purchaseAmount:format(amount),
    beforePercent:pct(heldValue,nav),afterPercent:pct(after,nav),
    cashLeft:format(cash>amount?cash-amount:BigInt(0)),withinCash:amount<=cash,
+   maxAdditionalUnderCash:cashShares.toString(),maxAdditionalWithinLimits:combinedShares?.toString()??null,
    capExceeded:limit===null?null:after>limit,
    capReference:cap===null?null:format(cap),
    maxAdditionalUnderCap:maxAddition,
    drawdowns:{
      ten:format(after*BigInt(10)*SCALE/nav),
      twenty:format(after*BigInt(20)*SCALE/nav),thirty:format(after*BigInt(30)*SCALE/nav),
+   },
+   beforeDrawdowns:{
+     ten:format(heldValue*BigInt(10)*SCALE/nav),
+     twenty:format(heldValue*BigInt(20)*SCALE/nav),
+     thirty:format(heldValue*BigInt(30)*SCALE/nav),
    },
    stopImpact,stopWarning,
    existingPositionValue:format(heldValue),afterPositionValue:format(after)};

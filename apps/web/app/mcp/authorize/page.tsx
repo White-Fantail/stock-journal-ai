@@ -1,6 +1,6 @@
 import { auth, signIn } from "../../auth";
 import { resolveGoogleSubject } from "../../lib/saas-api";
-import { enabled, origin, ticket, validateAuthorization } from "../../lib/positionary-mcp-auth";
+import { enabled, origin, ticket, readTicket, validateAuthorization } from "../../lib/positionary-mcp-auth";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,8 @@ export default async function McpAuthorizePage({ searchParams }: {
   if (!params) return <main style={{ maxWidth: 560, margin: "60px auto", padding: 24 }}>
     <h1>잘못된 연결 요청</h1><p>OAuth 클라이언트, 콜백 주소, PKCE 또는 권한 범위가 유효하지 않습니다.</p>
   </main>;
+  const client = readTicket(params.clientId, "client");
+  const clientHost = new URL(params.redirectUri).hostname;
   const session = await auth();
   const subject = session?.user?.id;
   const workspace = subject && /^[0-9]{3,255}$/.test(subject)
@@ -61,6 +63,7 @@ export default async function McpAuthorizePage({ searchParams }: {
       <p>로그인된 계정: <strong>{session?.user?.email}</strong></p>
       <section className="state-panel">
         <h2>접근 권한 승인</h2>
+        <p><strong>연결 앱:</strong> {client?.clientName ?? "MCP 클라이언트"} · <strong>응답 도메인:</strong> {clientHost}</p>
         <p><strong>조회:</strong> 계좌 자산·보유 종목의 관측 스냅샷, 투자계획, 투자일지 및 투자 기록</p>
         {params.scope.includes("positionary:write") && <p><strong>수정:</strong> 투자계획, 투자일지, 직접 입력한 거래, 보조지표 등 사용자 작성 기록을 추가하거나 버전을 갱신합니다.</p>}
         <p>증권사 주문·취소·이체 권한은 제공하지 않습니다. Tiger 조회값은 완전성이 검증되지 않은 관측정보일 수 있습니다.</p>

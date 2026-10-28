@@ -1,10 +1,9 @@
-import {IndicatorHistory} from "../indicators/history";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
 import { currentWorkspace } from "../../../lib/require-workspace";
 import {
-  fetchJournal, fetchJournalPlans, fetchManualTrades,
+  fetchJournal, fetchJournalPlans, fetchManualTrades, fetchIndicatorRecords,
 } from "../../../lib/saas-trades-api";
 import { JournalWorkspace } from "./journal-workspace";
 import { tigerLedgerRead, tigerPersonalRead, type TigerLedgerRead } from "../../../lib/tiger-api";
@@ -18,7 +17,9 @@ export default async function JournalPage({
     currentWorkspace(),auth(),searchParams,
   ]);
   if(!workspace||!session?.user?.id) redirect("/login");
-  const personal=await tigerPersonalRead();
+  const [personal,indicatorHistory]=await Promise.all([tigerPersonalRead(),
+    fetchIndicatorRecords(session.user.id,{ticker:null,tradeEventId:null,journalId:null}).catch(()=>null),
+  ]);
   let entries:Awaited<ReturnType<typeof fetchJournal>>=[];
   let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
   let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
@@ -65,11 +66,10 @@ export default async function JournalPage({
     </p>}
     <p><a href="/private/indicators">나의 보조지표 · 기준 관리와 당시 값 기록 →</a></p>
     <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
-      entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
+      indicatorHistory={indicatorHistory} entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       personalPositions={personal?.accounts.flatMap(a=>a.positions)??[]}
       personalOrders={personal?.accounts.flatMap(a=>a.orders)??[]}
       personalFills={personal?.accounts.flatMap(a=>a.fillObservations)??[]}/>
-    {params.ticker&&/^[A-Z0-9.:-]{1,32}$/.test(params.ticker)&&<IndicatorHistory subject={session.user.id} filter={{ticker:params.ticker,tradeEventId:null,journalId:null}}/>}
     <p className="journal-limit">목표·손절은 직접 작성한 투자 계획이며 실제 증권사 주문이 아닙니다. 거래 관측 및 검증 체결은 각각의 출처를 구분하여 표시합니다.</p>
   </main>;
 }

@@ -65,7 +65,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.getByLabel(/기존 QATEST 보유 수량/).fill("0");
   await page.getByLabel(/가정할 매수가/).fill("400");
   await page.getByLabel(/추가 매수를 가정할 수량/).fill("2");
-  await expect(page.locator(".plan-scenario-result")).toContainText("8.00%");
+  await expect(page.locator(".plan-scenario-result")).toContainText("0% → 8%");
   await expect(page.locator('input[name="riskDecisionNote"]')).toHaveValue("");
   await page.locator(".plan-risk-decision input[type=checkbox]").check();
   await expect(page.locator('input[name="riskDecisionNote"]')).toHaveValue(/QATEST.*8.00%/);
@@ -153,6 +153,9 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(page.locator(".indicator-history")).toContainText("30 이하");
   await page.locator(".indicator-history").getByRole("link",{name:/연결된 거래/}).click();
   await expect(page.locator(".indicator-history")).toContainText("Synthetic manual indicator decision");
+  await page.goto("/private/journal?ticker=QATEST");
+  await page.getByText("QATEST 보조지표 기록 보기",{exact:true}).click();
+  await expect(page.locator(".indicator-history")).toContainText("Synthetic manual indicator decision");
   const exp=await a.request.get(ORIGIN+"/api/private/journal/export");
   expect(exp.status()).toBe(200);
   expect(exp.headers()["cache-control"]).toContain("no-store");
@@ -160,7 +163,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   expect(exported.complete).toBe(true);
   expect(exported.indicatorRules).toHaveLength(3);
   expect(exported.indicatorRecords).toHaveLength(1);
-  expect(exported.indicatorRecords[0].observations[0].rule.lower).toBe("30");
+  expect(exported.indicatorRecords[0].observations.find(o=>o.rule.timeframe==="일봉").rule.lower).toBe("30");
   expect(exported.plans.filter(p=>p.ticker==="QATEST").length).toBe(2);
   expect(exported.plans.filter(p=>p.ticker==="QATEST").some(p=>
     typeof p.riskDecisionNote==="string"&&p.riskDecisionNote.includes("8.00%"))).toBe(true);

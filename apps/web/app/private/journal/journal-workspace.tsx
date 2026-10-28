@@ -1,5 +1,7 @@
 "use client";
 
+import {IndicatorRecordList} from "../indicators/record-list";
+import type {IndicatorRecord} from "../../../lib/indicators";
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney,formatPercent,formatQuantity } from "../../../lib/format-decimal";
 import { groupTigerOrderObservations } from "../../../lib/tiger-order-groups";
@@ -36,6 +38,7 @@ type Summary={
 };
 type Props={
   enabled:boolean;
+  indicatorHistory:{records:IndicatorRecord[];hasMore:boolean}|null;
   entries:readonly JournalEntry[];
   plans:readonly JournalPlan[];
   trades:readonly ManualTradeEvent[];
@@ -67,10 +70,11 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 }
 
 export function JournalWorkspace({
-  enabled,entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,initialTicker,
+  enabled,indicatorHistory,entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,initialTicker,
 }:Props){
   const symbols=useMemo(()=>{
     const names=new Set<string>();
+    for(const item of indicatorHistory?.records??[]) names.add(item.ticker);
     for(const item of entries) names.add(item.ticker);
     for(const item of plans) names.add(item.ticker);
     for(const item of trades) if(item.ticker&&item.kind==="EXECUTION") names.add(item.ticker);
@@ -86,7 +90,7 @@ export function JournalWorkspace({
     return [...names].sort((a,b)=>
       Number(personalPositions.some(p=>p.symbol===b))-
       Number(personalPositions.some(p=>p.symbol===a))||a.localeCompare(b));
-  },[entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills]);
+  },[entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,indicatorHistory]);
   const [selected,setSelected]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
   useEffect(()=>{if(initialTicker&&symbols.includes(initialTicker))setSelected(initialTicker);},[initialTicker,symbols]);
   const [search,setSearch]=useState("");
@@ -289,6 +293,13 @@ export function JournalWorkspace({
            </div>}
         </section>
 
+        {active&&<details className="user-panel">
+          <summary>{selected} 보조지표 기록 보기</summary>
+          <p><a href={"/private/indicators/record?ticker="+encodeURIComponent(selected)}>당시 값 기록 →</a>{" · "}
+            <a href={"/private/indicators?ticker="+encodeURIComponent(selected)}>이 종목의 지표 기록 더 보기 →</a></p>
+          {indicatorHistory?<IndicatorRecordList records={indicatorHistory.records.filter(r=>r.ticker===selected)} hasMore={indicatorHistory.hasMore}/>:
+            <p role="alert">보조지표 기록을 불러올 수 없습니다.</p>}
+        </details>}
         {active&&<section className="journal-history">
           <div className="journal-section-heading">
             <div><span className="journal-kicker">기록 · 변경 이력</span><h2>{selected}의 판단 이력과 거래 출처</h2></div>

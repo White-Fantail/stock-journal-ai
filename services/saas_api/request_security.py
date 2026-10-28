@@ -51,3 +51,30 @@ def consume_signed_request(conn, path: str, subject: object, nonce: str) -> None
         if bucket % 32 == 0:
             conn.execute("DELETE FROM saas_internal_request_nonces WHERE expires_at < now()")
             conn.execute("DELETE FROM saas_internal_rate_limits WHERE minute_bucket < %s", (bucket - 10,))
+
+
+def consume_mcp_grant_nonce(conn, token_nonce: object, expires_at: object) -> None:
+    """Atomically burn a signed OAuth code/refresh token until its absolute expiry.
+
+    Unlike ordinary request nonces (two-minute window), refresh tokens survive
+    up to seven days. Their digest must remain unique through full token expiry.
+    No financial or OAuth bearer payload is persisted, only SHA-256 nonce hash.
+    """
+    now = datetime.now(timezone.utc)
+    exp = None
+    if isinstance(expires_at, int) and not isinstance(expires_at, bool):
+        try:
+            exp = datetime.fromtimestamp(expires_at, tz=timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            pass
+    if (not valid_nonce(token_nonce) or exp is None or
+        exp <= now or exp > now + timedelta(days=7, minutes=2)):
+        raise RequestRejected("Invalid grant expiration or nonce")
+    digest = hashlib.sha256(("positionary-mcp:" + token_nonce).encode("ascii")).hexdigest()
+    with conn.transaction():
+        row = conn.execute("""
+            INSERT INTO saas_internal_request_nonces (nonce_sha256,expires_at)
+            VALUES (%s,%s) ON CONFLICT DO NOTHING RETURNING nonce_sha256
+        """, (digest, exp)).fetchone()
+        if row is None:
+            raise RequestRejected("MCP grant already used")

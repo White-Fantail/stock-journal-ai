@@ -1,6 +1,6 @@
 # Positionary — current product contract
 
-**As of:** 2026-10-27. Implementation is available on `main`; feature eligibility still depends on authenticated account permissions, broker approval and verified evidence. A code path does not establish a live financial fact.
+**As of:** 2026-10-28. Implementation is available on `main`; feature eligibility still depends on authenticated account permissions, broker approval and verified evidence. A code path does not establish a live financial fact.
 
 ## Purpose and audience
 
@@ -30,6 +30,8 @@ Primary navigation: **Home, Portfolio, Investment journal, Review**, with other 
 | Independently attested released broker ledger | Separate, signed, scoped read model for validated historical fills/FIFO; can disappear from *current verified* display when latest review is BLOCKED |
 | User plan/note/check-in/follow-up | User-authored and versioned; plan target/stop does **not** place an actual order |
 | AI explanation | Generated commentary based on selected evidence; never broker verification or investment advice |
+
+The Tiger order history and investment journal display **one row per provider order**. Individual transaction observations are nested under their specific order only when a scoped parent-order reference matches; a different order with the same symbol, price and time is never merged. Each order carries its own user-authored decision note. Older fill-level notes remain visible in its detail; fills with no currently visible parent remain separately visible as unlinked, never discarded. Displayed sums are exact-decimal observation checks only, **not** audited execution completeness or broker-verified ledger publication. The original provider order and fill evidence remains immutable.
 
 Historical totals, net returns, cross-currency totals, costs, fees and current valuation must **not** be guessed from incomplete provider history. The long-horizon performance page is an evidence-readiness view; it does not publish an unverified return percentage. Daily Tiger delayed-price observations, when permitted, are non-triggering contextual estimates—not live portfolio accounting.
 

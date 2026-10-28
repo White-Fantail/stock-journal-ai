@@ -4,6 +4,7 @@
 import "server-only";
 import { createHmac, randomUUID } from "node:crypto";
 import { parsePersonalRead } from "./tiger-personal-parse";
+import { requireMcpWriteFields } from "./positionary-mcp-write-validation";
 import {
   fetchManualTrades, fetchJournal, fetchJournalPlans, fetchInvestorPrinciples,
   fetchUserRiskFactors, fetchIndicatorRules, fetchIndicatorRecords,
@@ -60,8 +61,7 @@ function write(name: string, description: string, properties: Shape, required: s
       if (args.confirm !== true) throw new Error("Explicit user confirmation required");
       const p = payload(args);
       only(p, ["idempotencyKey", ...Object.keys(properties)]);
-      for (const name of required) if (p[name] === undefined || p[name] === null)
-        throw new Error("Missing required field: " + name);
+      requireMcpWriteFields(p, required, properties);
       return invoke(sub, p);
     },
   };

@@ -38,9 +38,9 @@ export default async function ManualTradeList({searchParams}:{
             </div>
             <div className="mobile-data-card-meta">{e.side==="BUY"?"매수":e.side==="SELL"?"매도":"정정"} · {e.executedAt??e.createdAt}</div>
             <dl className="mobile-data-card-fields">
-              <div><dt>수량</dt><dd>{formatDecimal(e.quantity,"—")}</dd></div>
-              <div><dt>체결가</dt><dd>{formatDecimal(e.price,"—")} {e.currency??""}</dd></div>
-              <div><dt>수수료</dt><dd>{formatDecimal(e.fee,"미확인")}</dd></div>
+              <div><dt>수량</dt><dd>{formatQuantity(e.quantity,"—")}</dd></div>
+              <div><dt>체결가</dt><dd>{formatMoney(e.price,"—")} {e.currency??""}</dd></div>
+              <div><dt>수수료</dt><dd>{formatMoney(e.fee,"미확인")}</dd></div>
             </dl>
             <div className="mobile-data-card-action">
               <Link href={"/private/trades/"+e.id}>상세 및 정정 보기 →</Link>
@@ -54,9 +54,9 @@ export default async function ManualTradeList({searchParams}:{
             <td>{e.kind==="VOID"?"정정 기록":voidedIds.has(e.id)?"취소된 기록":"직접 입력"}</td>
             <td>{e.ticker??"정정 이벤트"}</td>
             <td>{e.side==="BUY"?"매수":e.side==="SELL"?"매도":"—"}</td>
-            <td>{formatDecimal(e.quantity,"—")}</td>
-            <td>{formatDecimal(e.price,"—")} {e.currency??""}</td>
-            <td>{formatDecimal(e.fee,"미확인")}</td>
+            <td>{formatQuantity(e.quantity,"—")}</td>
+            <td>{formatMoney(e.price,"—")} {e.currency??""}</td>
+            <td>{formatMoney(e.fee,"미확인")}</td>
             <td>{e.executedAt??e.createdAt}</td>
             <td><Link href={"/private/trades/"+e.id}>상세 / 정정 →</Link></td>
           </tr>)}</tbody>

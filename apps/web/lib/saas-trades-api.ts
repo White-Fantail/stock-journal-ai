@@ -1,3 +1,4 @@
+import type {IndicatorRule,IndicatorRuleInput,IndicatorRecord,IndicatorRecordInput,IndicatorFilter} from "./indicators";
 import {RISK_FACTOR_LABELS} from "./risk-factor-labels";
 export {RISK_FACTOR_LABELS} from "./risk-factor-labels";
 export type {UserRiskFactor} from "./risk-factor-labels";
@@ -51,7 +52,8 @@ export type ManualVoidInput = {
 export type ManualEventInput = ManualExecutionInput | ManualVoidInput;
 
 /** Only callable from trusted Next.js server code, never the browser. */
-async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/create" |
+async function postS2(path: "/internal/v1/indicators/rules" | "/internal/v1/indicators/rule/save" |
+      "/internal/v1/indicators/records" | "/internal/v1/indicators/record/save" | "/internal/v1/trades/list" | "/internal/v1/trades/create" |
       "/internal/v1/journal/list" | "/internal/v1/journal/create" | "/internal/v1/journal/export" | "/internal/v1/journal/monthly-process" | "/internal/v1/journal/weekly-process" | "/internal/v1/risk-factors/list" | "/internal/v1/risk-factors/create" |
       "/internal/v1/principles/get" | "/internal/v1/principles/save" |
       "/internal/v1/review/actions" | "/internal/v1/review/action/resolve" |
@@ -59,13 +61,17 @@ async function postS2(path: "/internal/v1/trades/list" | "/internal/v1/trades/cr
       "/internal/v1/journal/checkin/context" | "/internal/v1/journal/checkin/create" |
       "/internal/v1/journal/broker-note/create" | "/internal/v1/journal/observation-note/create" | "/internal/v1/ai/claim" |
       "/internal/v1/account/delete" | "/internal/v1/trades/detail",
-                      subject: string, payload?: ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | InvestorPrinciplesInput | ReviewActionInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
+                      subject: string, payload?: IndicatorRuleInput | IndicatorRecordInput | IndicatorFilter | ManualEventInput | JournalEntryInput | JournalPlanInput | BrokerFillNoteInput | TigerObservationNoteInput | AiClaimInput | PlanCheckinInput | RiskFactorInput | InvestorPrinciplesInput | ReviewActionInput | "DELETE_MY_ACCOUNT" | string): Promise<unknown> {
   const env = process.env;
   if (!saasAuthConfigured(env, env.NODE_ENV === "development")
       || !/^[0-9]{3,255}$/.test(subject)) {
     throw new Error("Authenticated financial API not configured");
   }
-  const body = JSON.stringify(path === "/internal/v1/trades/create" ? {subject, trade:payload} :
+  const body = JSON.stringify(
+    path === "/internal/v1/indicators/rule/save" ? {subject,rule:payload} :
+    path === "/internal/v1/indicators/record/save" ? {subject,record:payload} :
+    path === "/internal/v1/indicators/records" ? {subject,filter:payload} :
+    path === "/internal/v1/trades/create" ? {subject, trade:payload} :
     path === "/internal/v1/journal/create" ? {subject, entry:payload} :
     path === "/internal/v1/journal/broker-note/create" ? {subject, brokerNote:payload} :
     path === "/internal/v1/journal/observation-note/create" ? {subject, observationNote:payload} :
@@ -241,13 +247,13 @@ export async function submitJournal(subject: string, entry: JournalEntryInput): 
 export async function exportFullJournal(subject: string): Promise<unknown> {
   const result = await postS2("/internal/v1/journal/export",subject) as {
     complete?: boolean; format?: string; journal?:unknown;
-    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;investorPrinciples?:unknown;actionFollowups?:unknown;
+    trades?:unknown;plans?:unknown;planSelfReviews?:unknown;riskFactors?:unknown;investorPrinciples?:unknown;actionFollowups?:unknown;indicatorRules?:unknown;indicatorRecords?:unknown;
   };
   if (result?.complete !== true || result?.format !== "stock-journal-ai.v1"
       || !Array.isArray(result.journal) || !Array.isArray(result.trades)
       || !Array.isArray(result.plans) || !Array.isArray(result.planSelfReviews)
       || !Array.isArray(result.riskFactors) || !Array.isArray(result.investorPrinciples) ||
-      !Array.isArray(result.actionFollowups))
+      !Array.isArray(result.actionFollowups) || !Array.isArray(result.indicatorRules) || !Array.isArray(result.indicatorRecords))
     throw new Error("Journal export is incomplete");
   return result;
 }
@@ -474,4 +480,33 @@ export async function submitReviewAction(subject:string,input:ReviewActionInput)
     !/^[0-9a-f-]{36}$/i.test(result?.id??""))
    throw new Error("Action follow-up confirmation unavailable");
  return result.id!;
+}
+
+export async function fetchIndicatorRules(subject:string):Promise<IndicatorRule[]> {
+  const result=await postS2("/internal/v1/indicators/rules",subject) as {
+    rules?:IndicatorRule[];complete?:boolean;source?:string;
+  };
+  if(result?.complete!==true||result.source!=="USER_AUTHORED_ONLY"||!Array.isArray(result.rules))
+    throw new Error("Indicator rules unavailable");
+  return result.rules;
+}
+export async function saveIndicatorRule(subject:string,rule:IndicatorRuleInput):Promise<string> {
+  const result=await postS2("/internal/v1/indicators/rule/save",subject,rule) as {id?:string;source?:string};
+  if(!result?.id||result.source!=="USER_AUTHORED_ONLY")throw new Error("Indicator rule not saved");
+  return result.id;
+}
+export async function fetchIndicatorRecords(subject:string,filter:IndicatorFilter):Promise<{
+  records:IndicatorRecord[];hasMore:boolean;
+}> {
+  const result=await postS2("/internal/v1/indicators/records",subject,filter) as {
+    records:IndicatorRecord[];hasMore:boolean;source?:string;
+  };
+  if(result?.source!=="USER_AUTHORED_ONLY"||!Array.isArray(result.records)||typeof result.hasMore!=="boolean")
+    throw new Error("Indicator records unavailable");
+  return result;
+}
+export async function saveIndicatorRecord(subject:string,record:IndicatorRecordInput):Promise<string> {
+  const result=await postS2("/internal/v1/indicators/record/save",subject,record) as {id?:string;source?:string};
+  if(!result?.id||result.source!=="USER_AUTHORED_ONLY")throw new Error("Indicator record not saved");
+  return result.id;
 }

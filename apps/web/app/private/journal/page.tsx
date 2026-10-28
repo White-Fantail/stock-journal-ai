@@ -1,3 +1,4 @@
+import {IndicatorHistory} from "../indicators/history";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
@@ -62,11 +63,13 @@ export default async function JournalPage({
     {!unavailable && params.error && <p role="alert">
       입력한 내용을 확인해 주세요. 저장 결과가 불확실하다면 기록 목록을 먼저 확인해 주세요.
     </p>}
+    <p><a href="/private/indicators">나의 보조지표 · 기준 관리와 당시 값 기록 →</a></p>
     <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
       entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       personalPositions={personal?.accounts.flatMap(a=>a.positions)??[]}
       personalOrders={personal?.accounts.flatMap(a=>a.orders)??[]}
       personalFills={personal?.accounts.flatMap(a=>a.fillObservations)??[]}/>
+    {params.ticker&&/^[A-Z0-9.:-]{1,32}$/.test(params.ticker)&&<IndicatorHistory subject={session.user.id} filter={{ticker:params.ticker,tradeEventId:null,journalId:null}}/>}
     <p className="journal-limit">목표·손절은 직접 작성한 투자 계획이며 실제 증권사 주문이 아닙니다. 거래 관측 및 검증 체결은 각각의 출처를 구분하여 표시합니다.</p>
   </main>;
 }

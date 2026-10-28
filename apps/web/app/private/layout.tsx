@@ -23,6 +23,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
           <summary>더보기 ▾</summary>
           <div className="app-desktop-more-panel">
             <a href="/private/principles">나의 투자 원칙</a>
+            <a href="/private/indicators">나의 보조지표</a>
             <a href="/private/trades">거래 기록</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
             <a href="/private/analysis">AI 분석</a>
@@ -45,6 +46,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
           <summary>더보기 <span aria-hidden="true">▾</span></summary>
           <div className="app-mobile-more-panel">
             <a href="/private/principles">나의 투자 원칙</a>
+            <a href="/private/indicators">나의 보조지표</a>
             <a href="/private/trades">거래 기록</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
             <a href="/private/analysis">AI 분석</a>

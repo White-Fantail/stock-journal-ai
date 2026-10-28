@@ -611,3 +611,13 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .app-shell .plan-quantity-presets button{font:inherit;font-size:.85rem;min-height:40px;min-width:48px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:white;color:#365d53;cursor:pointer}
 .app-shell .plan-quantity-presets button.plan-quantity-active{background:#e3f3ec;border-color:#168e6b;color:#155e4a;font-weight:750}
 .plan-drawdown-grid small{display:block}
+
+/* Manual indicator criteria and historical snapshots: mobile-first authoring. */
+.indicator-card { min-width:0; border:1px solid var(--border, #ddd); border-radius:12px; padding:16px; margin:12px 0; overflow-wrap:anywhere; }
+.indicator-card legend { max-width:100%; padding:0 6px; }
+.indicator-card legend label { display:inline; }
+.indicator-card input[type="checkbox"] { width:auto; margin-right:8px; }
+.indicator-history li { margin:12px 0; overflow-wrap:anywhere; }
+.indicator-history p, .indicator-history a { overflow-wrap:anywhere; }
+.indicator-filter { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:24px 0; }
+.indicator-filter input { max-width:100%; }

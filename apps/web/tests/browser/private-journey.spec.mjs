@@ -21,6 +21,7 @@ test("unauthed browser redirects private workflows and cannot export data",async
  for(const path of ["/private","/private/portfolio","/private/journal",
    "/private/journal/new?mode=plan&ticker=QATEST","/private/review",
    "/private/review/action/new?checkin=00000000-0000-4000-8000-000000000001",
+   "/private/indicators","/private/indicators/edit","/private/indicators/record",
    "/private/principles","/private/analysis","/private/settings"]){
   await page.goto(path);
   await expect(page).toHaveURL(/\/login(?:\?|$)/);
@@ -101,11 +102,65 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.getByRole("button",{name:"내 확인 결과 저장"}).click();
   await expect(page).toHaveURL(/\/private\/review\?saved=action/);
   await expect(page.locator(".review-action-item").filter({hasText:"QATEST"})).toContainText("완료했다고 기록");
+  // Register two timeframe criteria, then attach manually entered values to a trade.
+  for(const [timeframe,operator,lower,condition] of [["일봉","LTE","30",""],["15분봉","MANUAL","","30 상향 돌파"]]){
+    await page.goto("/private/indicators/edit",{waitUntil:"networkidle"});
+    await page.getByLabel("지표 이름",{exact:true}).fill("RSI");
+    await page.getByLabel("설정값 (선택)",{exact:true}).fill("14");
+    await page.getByLabel("시간봉",{exact:true}).fill(timeframe);
+    await page.locator('select[name="operator"]').selectOption(operator);
+    if(lower)await page.locator('input[name="lower"]').fill(lower);
+    else {
+      await page.locator('select[name="stage"]').selectOption("TIMING");
+      await page.locator('textarea[name="condition"]').fill(condition);
+    }
+    await page.getByRole("button",{name:"지표 기준 저장"}).click();
+    await expect(page).toHaveURL(/indicators\?saved=rule/);
+  }
+  await page.goto("/private/trades/new",{waitUntil:"networkidle"});
+  await page.locator('input[name="ticker"]').fill("QATEST");
+  await page.locator('input[name="quantity"]').fill("1");
+  await page.locator('input[name="price"]').fill("100");
+  await page.locator('input[name="executedAt"]').fill("2026-10-20T14:30:00+13:00");
+  await page.locator('input[name="confirm"]').check();
+  await page.locator('input[name="recordIndicators"]').check();
+  await page.getByRole("button",{name:"거래 기록 저장"}).click();
+  await expect(page).toHaveURL(/indicators\/record\?savedTrade=1&tradeEventId=/);
+  const daily=page.locator("fieldset").filter({hasText:"일봉"});
+  const intraday=page.locator("fieldset").filter({hasText:"15분봉"});
+  await daily.locator('input[type="checkbox"]').check();
+  await daily.locator('input[inputmode="decimal"]').fill("31");
+  await intraday.locator('input[type="checkbox"]').check();
+  await intraday.locator('input[inputmode="decimal"]').fill("32");
+  await intraday.locator("select").selectOption("MET");
+  await page.locator('textarea[name="note"]').fill("Synthetic manual indicator decision");
+  await page.locator('input[name="observedAt"]').fill("2026-10-20T14:30:00");
+  await page.getByRole("button",{name:"당시 지표 기록 저장"}).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(daily.locator('input[inputmode="decimal"]')).toHaveValue("31");
+  await expect(page.locator('textarea[name="note"]')).toHaveValue("Synthetic manual indicator decision");
+  await page.locator('input[name="observedAt"]').fill("2026-10-20T14:30:00+13:00");
+  await page.getByRole("button",{name:"당시 지표 기록 저장"}).click();
+  await expect(page).toHaveURL(/indicators\?saved=record&ticker=QATEST/);
+  await expect(page.locator(".indicator-history")).toContainText("30 이하");
+  await expect(page.locator(".indicator-history")).toContainText("미충족");
+  await expect(page.locator(".indicator-history")).toContainText("직접 판단");
+  await page.locator(".indicator-rule-list article").filter({hasText:"일봉"}).getByRole("link").click();
+  await page.locator('input[name="lower"]').fill("35");
+  await page.getByRole("button",{name:"지표 기준 저장"}).click();
+  await expect(page).toHaveURL(/indicators\?saved=rule/);
+  await expect(page.locator(".indicator-rule-list")).toContainText("35 이하");
+  await expect(page.locator(".indicator-history")).toContainText("30 이하");
+  await page.locator(".indicator-history").getByRole("link",{name:/연결된 거래/}).click();
+  await expect(page.locator(".indicator-history")).toContainText("Synthetic manual indicator decision");
   const exp=await a.request.get(ORIGIN+"/api/private/journal/export");
   expect(exp.status()).toBe(200);
   expect(exp.headers()["cache-control"]).toContain("no-store");
   const exported=await exp.json();
   expect(exported.complete).toBe(true);
+  expect(exported.indicatorRules).toHaveLength(3);
+  expect(exported.indicatorRecords).toHaveLength(1);
+  expect(exported.indicatorRecords[0].observations[0].rule.lower).toBe("30");
   expect(exported.plans.filter(p=>p.ticker==="QATEST").length).toBe(2);
   expect(exported.plans.filter(p=>p.ticker==="QATEST").some(p=>
     typeof p.riskDecisionNote==="string"&&p.riskDecisionNote.includes("8.00%"))).toBe(true);
@@ -121,9 +176,13 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(bpage.locator("body")).not.toContainText(mark);
   await bpage.goto("/private/review/action/new?checkin="+encodeURIComponent(action.checkinId));
   await expect(bpage.getByRole("heading",{name:"선택한 행동을 확인할 수 없습니다"})).toBeVisible();
+  await bpage.goto("/private/indicators");
+  await expect(bpage.locator("body")).not.toContainText("Synthetic manual indicator decision");
   const bExport=await b.request.get(ORIGIN+"/api/private/journal/export");
   expect(bExport.status()).toBe(200);
   const bData=await bExport.json();
+  expect(bData.indicatorRules).toHaveLength(0);
+  expect(bData.indicatorRecords).toHaveLength(0);
   expect(bData.plans).toHaveLength(0);
   expect(bData.planSelfReviews).toHaveLength(0);
   expect(bData.actionFollowups).toHaveLength(0);
@@ -176,7 +235,7 @@ test("responsive real pages: 320–1024, touch menu, keyboard and overflow",asyn
   const page=await ctx.newPage();
   for(const width of [320,375,430,768,1024]){
    await page.setViewportSize({width,height:780});
-   for(const route of ["/private","/private/journal",
+   for(const route of ["/private","/private/journal","/private/indicators","/private/indicators/edit","/private/indicators/record",
      "/private/journal/new?mode=plan&ticker=BRTEST","/private/review",
      ...(width===375?["/private/portfolio","/private/principles",
       "/private/settings","/private/reports/weekly","/private/reports/monthly",

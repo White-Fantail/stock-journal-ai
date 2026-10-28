@@ -61,3 +61,20 @@ Public GitHub is not a database or archive for client data. Only synthetic test 
 - `saas_journal_plan_revisions.risk_decision_note` is nullable, 1–1200 characters when present, append-only, tenant-owned and user-authorized. Legacy revision content/digests are preserved.
 - Only user-approved hypothetical scenario assumptions and user judgment are persisted, never a quote feed, broker-verified balance, computed real trading profit or broker order. This narrative may become stale and is historical context, not a live risk grade.
 - Complete read/write permissions continue under existing FORCE RLS scoped to the authenticated workspace/user.
+
+
+## Manual indicators (migration 029)
+
+- `saas_indicator_rule_revisions` stores immutable tenant-owned JSON definitions,
+  stable rule IDs and idempotency hashes. Edits require the expected latest
+  revision; serialized tenant writes prevent concurrent overwrites.
+- `saas_indicator_records` stores exact user-entered decimal strings, the original
+  timezone-qualified observation time, immutable server-resolved rule snapshots,
+  comparison/self-assessment provenance and an optional composite tenant FK to
+  one manual execution or journal entry. Ticker and manual execution direction
+  must match. Numeric comparisons use Decimal; missing values stay unknown.
+- Both tables use FORCE RLS and SELECT/INSERT-only trade runtime grants. Rule
+  revision IDs and trade/journal links are resolved within fresh authenticated
+  tenant scope. No provider observation or trading endpoint is added.
+- Complete bounded exports include both tables; owner account deletion removes
+  them before their journal/trade/membership parents. No existing SQL is changed.

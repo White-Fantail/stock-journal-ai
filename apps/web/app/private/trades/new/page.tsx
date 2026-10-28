@@ -31,12 +31,14 @@ async function recordManualExecution(formData: FormData) {
     executedAt: value("executedAt"),
     rationale: value("rationale"),
   };
+  let recordedId="";
   try {
-    await submitManualTrade(subject, trade);
+    recordedId=(await submitManualTrade(subject, trade)).id;
   } catch {
     // Never embed broker/trade data or internal error details in redirect URL.
     redirect("/private/trades/new?error=unavailable");
   }
+  if(formData.get("recordIndicators")==="yes")redirect("/private/indicators/record?savedTrade=1&tradeEventId="+recordedId);
   redirect("/private/trades/manual?recorded=1");
 }
 
@@ -66,6 +68,7 @@ export default async function NewTradePage({searchParams}:{
         <small id="timehelp">반드시 타임존을 포함하세요. 예: 뉴질랜드 +13:00 또는 미국 동부 -04:00 (서머타임에 따라 달라짐)</small>
         <label>매매 이유 (선택) <textarea name="rationale" rows={3} maxLength={3000}/></label>
         <label><input name="confirm" value="yes" type="checkbox" required/> 실제 체결된 거래이며 입력값을 확인했습니다.</label>
+        <label><input type="checkbox" name="recordIndicators" value="yes"/> 저장 후 당시 보조지표 기록하기 (선택)</label>
         <button type="submit" className="btn btn-primary">거래 기록 저장</button>
       </form>
     </section>

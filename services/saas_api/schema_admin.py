@@ -36,6 +36,7 @@ REQUIRED_TABLES = (
     "saas_risk_factor_revisions",
     "saas_investor_principle_revisions",
     "saas_review_action_followups",
+    "saas_indicator_rule_revisions", "saas_indicator_records",
 )
 ADVISORY_LOCK = 2026102501
 
@@ -71,6 +72,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "025_user_risk_factors.sql", # tenant-authored revision history for thematic exposure
     "026_investor_principles.sql", # append-only investor-authored principles
     "027_review_action_followups.sql", # immutable user-confirmed previous action status
+    "029_manual_indicators.sql", # immutable manual indicator criteria and snapshots
     "028_plan_risk_decision_note.sql", # optional user-approved scenario note on plan revision
 ))
 # Pin unattended migrations to the independently observed production Railway

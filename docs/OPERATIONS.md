@@ -14,7 +14,7 @@
 ## Database and credentials
 
 - Railway API pre-deploy calls `python -m services.saas_api.schema_admin --deploy`, with approved manifest, pinned main/project/service/environment, `SAAS_AUTO_MIGRATE=1` and `SAAS_MIGRATION_BACKUP_VERIFIED=1` after actual backup assurance. Startup and web requests must **never** run DDL.
-- Production source has **27** sequential migrations. Guarded executor checks historical checksums and refuses drift; never change applied SQL (including retired CSV 004/005).
+- Production source has **29** sequential migrations (including the manual-indicator forward migration). Guarded executor checks historical checksums and refuses drift; never change applied SQL (including retired CSV 004/005).
 - Private Railway environment: `SAAS_DATABASE_URL` (identity), `SAAS_TRADE_DATABASE_URL` plus `SAAS_TRADE_RUNTIME_PASSWORD` (`saas_trade_app`), `SAAS_BROKER_DATABASE_URL` plus `SAAS_BROKER_RUNTIME_PASSWORD` (`saas_broker_app`) when needed; separated publisher/dispatch roles are approval gated.
 - Vercel server-only: Auth.js/Google configuration, `SAAS_INTERNAL_API_URL`, `SAAS_INTERNAL_SECRET`, and optionally `OPENROUTER_API_KEY`/`OPENROUTER_MODEL`. Do not put secrets in `NEXT_PUBLIC_` or logs.
 - Tiger personal RSA and account variables exist **only** on the isolated personal Railway runner; they must never be copied to GitHub, Vercel, or general customer OAuth service.

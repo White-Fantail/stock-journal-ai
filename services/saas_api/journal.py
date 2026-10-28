@@ -163,7 +163,10 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
             FROM saas_journal_plan_checkins
             WHERE workspace_id=%s ORDER BY created_at,id LIMIT %s
         """,(scope["workspaceId"],_LIMIT+1)).fetchall()
-        if (len(trades) > _LIMIT or len(notes) > _LIMIT
+        from services.saas_api.indicators import RULE_COLUMNS, RECORD_COLUMNS, rule_row, record_row
+        indicator_rules = trade_conn.execute(f"SELECT {RULE_COLUMNS} FROM saas_indicator_rule_revisions ORDER BY created_at,id LIMIT %s",(_LIMIT+1,)).fetchall()
+        indicator_records = trade_conn.execute(f"SELECT {RECORD_COLUMNS} FROM saas_indicator_records ORDER BY created_at,id LIMIT %s",(_LIMIT+1,)).fetchall()
+        if (len(indicator_rules) > _LIMIT or len(indicator_records) > _LIMIT or len(trades) > _LIMIT or len(notes) > _LIMIT
                 or len(plans) > _LIMIT or len(checkins) > _LIMIT
                 or len(risk_factors) > _LIMIT or len(principles) > _LIMIT
                 or len(action_followups) > _LIMIT):
@@ -173,6 +176,8 @@ def export_journal(identity_conn, trade_conn, subject: str) -> dict:
     return {"format": "stock-journal-ai.v1", "generatedAt": datetime.now(timezone.utc).isoformat(),
             "workspaceId": scope["workspaceId"], "trades": [_as_json(r) for r in trades],
             "journal": [_entry(r) for r in notes], "plans":[_plan_row(p) for p in plans],
+            "indicatorRules":[rule_row(r) for r in indicator_rules],
+            "indicatorRecords":[record_row(r) for r in indicator_records],
             "investorPrinciples":[_principle_row(r) for r in principles],
             "riskFactors": [{
                 "id":str(row[0]),"ticker":row[1],"factors":row[2],

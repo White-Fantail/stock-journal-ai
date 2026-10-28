@@ -50,3 +50,29 @@ No trading, order cancel/replace, transfers, customer RSA-key upload, CSV-import
 ## Scope and release status
 
 The interactive journal/review/dashboard, OAuth login and tenant API are deployed. Tiger **personal** access is only for one configured owner. Public Tiger partner authorization is distinct and remains approval-gated. Real two-account Google production testing, actual provider account coverage, mobile physical-device acceptance, and financial publication require separate operational evidence. See [Roadmap](ROADMAP.md) and [Operations](OPERATIONS.md).
+
+
+## Manual indicator criteria and trade observations
+
+`More → My indicators` (`/private/indicators`) lets the user register up to 100
+indicator definitions. Each definition names a parameter setting, timeframe,
+buy/sell direction, context/timing purpose and either an inclusive numeric
+threshold/range or a manually judged text condition. There are no recommended
+thresholds, market-data requests, price alerts or automatic trading signals.
+
+Dedicated pages register/edit criteria and record up to 20 selected indicators
+with a timezone-qualified observation timestamp, optional exact values and a
+judgment note. Numeric criteria compare only the entered value; missing values
+remain unknown. Crossings and other text conditions are explicitly self-assessed.
+Manual execution and journal/observed-order note forms can continue to this
+optional step after the primary record has saved. Existing manual trades also
+link from their detail page; observations can be standalone ticker decisions.
+
+Edits append rule revisions; disabling a rule preserves history. Each observation
+copies the selected revision on the server, so later rule edits cannot change
+historical criteria or assessments. The criteria shown when opening the form are
+the ones recorded, even if another tab subsequently changes them. These are
+user-authored records, not broker-verified indicators. Trade detail and ticker
+journal views show historical observations. Full JSON export and account deletion
+include both criteria history and indicator records. List history is bounded to
+200 entries and explicitly indicates more records.

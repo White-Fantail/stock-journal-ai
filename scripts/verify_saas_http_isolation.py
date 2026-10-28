@@ -228,6 +228,70 @@ def main():
         code,revised=request("/internal/v1/principles/save",{"subject":A,"principles":{
           **principles,"idempotencyKey":str(uuid4()),"maxSinglePct":"10"}})
         assert code==200 and revised["id"]!=pcreated["id"]
+        # Manual indicators: exact values, immutable criteria, ownership and replay.
+        indicator_rule={"idempotencyKey":str(uuid4()),"ruleId":None,"expectedRevisionId":None,
+          "name":"RSI","parameters":"14","timeframe":"일봉","side":"BUY","stage":"CONTEXT",
+          "operator":"LTE","lower":"30","upper":None,"condition":"","active":True}
+        code,rule_created=request("/internal/v1/indicators/rule/save",{"subject":A,"rule":indicator_rule})
+        assert code==200,(code,rule_created)
+        code,replay=request("/internal/v1/indicators/rule/save",{"subject":A,"rule":indicator_rule})
+        assert code==200 and replay["replayed"] and replay["id"]==rule_created["id"]
+        code,_=request("/internal/v1/indicators/rule/save",{"subject":A,"rule":{**indicator_rule,"lower":"35"}})
+        assert code==409,code
+        code,rule_list=request("/internal/v1/indicators/rules",{"subject":A})
+        assert code==200 and len(rule_list["rules"])==1
+        registered=rule_list["rules"][0]
+        indicator_record={"idempotencyKey":str(uuid4()),"ticker":"TSLA","side":"BUY",
+          "observedAt":"2026-10-20T15:00:00-04:00","tradeEventId":a_trade["id"],"journalId":None,
+          "note":"Synthetic manual observation","observations":[
+            {"revisionId":registered["id"],"value":"31.00000000","assessment":"MET"}]}
+        code,snapshot=request("/internal/v1/indicators/record/save",{"subject":A,"record":indicator_record})
+        assert code==200,(code,snapshot)
+        code,replay=request("/internal/v1/indicators/record/save",{"subject":A,"record":indicator_record})
+        assert code==200 and replay["replayed"] and replay["id"]==snapshot["id"]
+        record_filter={"ticker":"TSLA","tradeEventId":None,"journalId":None}
+        code,records=request("/internal/v1/indicators/records",{"subject":A,"filter":record_filter})
+        assert code==200 and records["records"][0]["observations"][0]["assessment"]=="NOT_MET"
+        assert records["records"][0]["observations"][0]["value"]=="31.00000000"
+        assert records["records"][0]["observedAt"]==indicator_record["observedAt"]
+        for path,payload,key in [("rules",{},"rules"),("records",{"filter":record_filter},"records")]:
+            code,other=request("/internal/v1/indicators/"+path,{"subject":B,**payload})
+            assert code==200 and other[key]==[]
+        code,_=request("/internal/v1/indicators/record/save",{"subject":B,"record":indicator_record})
+        assert code==404,code  # Foreign trade denied.
+        code,_=request("/internal/v1/indicators/record/save",{"subject":B,"record":{
+          **indicator_record,"idempotencyKey":str(uuid4()),"tradeEventId":None}})
+        assert code==404,code  # Foreign indicator revision denied independently.
+        for change,expected in [({"ticker":"OTHER"},404),({"side":"SELL"},404),
+            ({"observedAt":"2026-10-20T15:00:00"},400),({"workspaceId":"forged"},400)]:
+            code,_=request("/internal/v1/indicators/record/save",{"subject":A,"record":{
+              **indicator_record,"idempotencyKey":str(uuid4()),**change}})
+            assert code==expected,(change,code)
+        edited_rule={**indicator_rule,"idempotencyKey":str(uuid4()),"ruleId":registered["ruleId"],
+                     "expectedRevisionId":registered["id"],"lower":"35"}
+        code,edited=request("/internal/v1/indicators/rule/save",{"subject":A,"rule":edited_rule})
+        assert code==200,(code,edited)
+        code,_=request("/internal/v1/indicators/rule/save",{"subject":A,"rule":{**edited_rule,"idempotencyKey":str(uuid4())}})
+        assert code==409,code  # Stale tab cannot overwrite latest criteria.
+        code,_=request("/internal/v1/indicators/rule/save",{"subject":B,"rule":edited_rule})
+        assert code==404,code
+        code,records=request("/internal/v1/indicators/records",{"subject":A,"filter":record_filter})
+        old=records["records"][0]["observations"][0]
+        assert old["rule"]["lower"]=="30" and old["assessment"]=="NOT_MET"
+        # Editing criteria does not invalidate a retry or reinterpret old observations.
+        code,replay=request("/internal/v1/indicators/record/save",{"subject":A,"record":indicator_record})
+        assert code==200 and replay["replayed"]
+        code,_=request("/internal/v1/indicators/rules",{"subject":A,"workspaceId":"forged"})
+        assert code==400,code
+        with psycopg.connect(trade_dsn) as restricted:
+            for table in ("saas_indicator_rule_revisions","saas_indicator_records"):
+                assert restricted.execute("SELECT count(*) FROM "+table).fetchone()[0]==0
+                restricted.commit()
+                for verb in ("UPDATE "+table+" SET id=id","DELETE FROM "+table):
+                    try:
+                        with restricted.transaction():restricted.execute(verb)
+                    except psycopg.errors.InsufficientPrivilege:pass
+                    else:raise AssertionError("Indicator history must be immutable")
         # Owner manual risk tagging is independent from broker positions.
         factors={"idempotencyKey":str(uuid4()),"ticker":"TSLA",
                  "factors":["AI_INFRA","HIGH_GROWTH"],
@@ -309,10 +373,13 @@ def main():
         assert len(out["investorPrinciples"])==2
         assert out["investorPrinciples"][0]["objective"]=="GROWTH"
         assert out["investorPrinciples"][1]["maxSinglePct"]=="10.00"
+        assert len(out["indicatorRules"])==2 and len(out["indicatorRecords"])==1
+        assert out["indicatorRecords"][0]["observations"][0]["rule"]["lower"]=="30"
         assert len(out["riskFactors"])==1
         assert out["riskFactors"][0]["id"]==created_factor["id"]
         code,out=request("/internal/v1/journal/export",{"subject":B})
         assert code==200 and out["journal"]==[] and out["trades"]==[] and out["plans"]==[] and out["planSelfReviews"]==[] and out["riskFactors"]==[] and out["investorPrinciples"]==[] and out["actionFollowups"]==[]
+        assert out["indicatorRules"]==[] and out["indicatorRecords"]==[]
         nonce=str(uuid4())
         code,_=request("/internal/v1/resolve",{"subject":A},nonce)
         assert code==200
@@ -330,6 +397,8 @@ def main():
         code,_=request("/internal/v1/journal/list",{"subject":B})
         assert code==404,code
         code,_=request("/internal/v1/journal/plans",{"subject":B})
+        assert code==404,code
+        code,_=request("/internal/v1/indicators/rules",{"subject":B})
         assert code==404,code
         # A non-credentialled synthetic broker link and sync-health row
         # previously blocked account deletion via an unhandled FK.
@@ -364,6 +433,7 @@ def main():
             for table in (
                 "saas_journal_plan_revisions",
                 "saas_journal_plan_checkins",
+                "saas_indicator_records", "saas_indicator_rule_revisions",
                 "saas_review_action_followups",
                 "saas_risk_factor_revisions",
                 "saas_investor_principle_revisions",

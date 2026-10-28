@@ -1,3 +1,4 @@
+import {IndicatorHistory} from "../../indicators/history";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "../../../../auth";
@@ -32,6 +33,10 @@ export default async function TradeDetail({params}:{
     </dl>
     {trade.kind==="EXECUTION" && <p><Link className="btn btn-outline" href="/private/journal">투자 일지에서 매매 이유와 복기 작성 →</Link></p>}
     {trade.kind==="EXECUTION"&&<p><Link className="btn btn-outline" href={"/private/trades/"+trade.id+"/correct"}>이 체결 정정하기 →</Link></p>}
+    {trade.kind==="EXECUTION"&&<>
+      <p><a className="btn btn-outline" href={"/private/indicators/record?tradeEventId="+trade.id}>당시 보조지표 기록 →</a></p>
+      <IndicatorHistory subject={session.user.id} filter={{ticker:null,tradeEventId:trade.id,journalId:null}}/>
+    </>}
     <p>원본 체결은 수정하지 않습니다. 잘못된 경우 별도 정정 페이지에서 취소 이벤트를 추가한 후 정확한 체결을 다시 등록하세요.</p>
   </main>;
 }

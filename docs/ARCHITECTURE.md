@@ -31,7 +31,7 @@ Future: approved Tiger partner OAuth -> tenant worker -> staging
 
 ## Source and processing boundaries
 
-- **User-authored:** investment principles, watch entries, plan revisions, annotated target/stop, manual trades, plan check-ins and next-action resolutions.
+- **User-authored:** investment principles, watch entries, plan revisions, annotated target/stop, manual trades, plan check-ins, next-action resolutions, versioned indicator criteria and manual indicator observation snapshots.
 - **Provider observed:** owner-only personal Tiger account holdings, order history, partial transactions, itemized fee probes, read-only delayed quotes and sync health. These are never automatically certified fills/cost basis.
 - **Verified/released:** guarded encrypted staging, account coverage verification, source-linked reconciliation, independent attestation, publication signature, immutable released ledger and historical FIFO reads. Source code/tests exist; publication requires separate official approval and evidence. An unavailable grant or superseding BLOCKED review fails closed.
 - **AI:** only user-submitted requests; selects bounded source excerpts and coarse evidence, strips common sensitive data and requires consent + quota + ZDR parameter checks. Output is structured and evidence-linked, not saved as an authenticated journal entry.

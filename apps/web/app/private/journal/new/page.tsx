@@ -34,8 +34,9 @@ async function addJournal(form:FormData) {
   const ticker=field(form,"ticker").toUpperCase();
   if(!KINDS.has(kind) || !TICKER.test(ticker))
     redirect("/private/journal/new?error=invalid");
+  let journalId="";
   try {
-    await submitJournal(subject,{
+    journalId=await submitJournal(subject,{
       idempotencyKey:field(form,"idempotencyKey"),kind,ticker,
       content:field(form,"content"),
       tradeEventId:kind==="TRADE_NOTE" ? field(form,"tradeEventId")||null : null,
@@ -43,6 +44,7 @@ async function addJournal(form:FormData) {
   }catch{
     redirect("/private/journal/new?error=unavailable");
   }
+  if(form.get("recordIndicators")==="yes")redirect("/private/indicators/record?savedJournal=1&journalId="+journalId);
   redirect("/private/journal?saved=journal&ticker="+encodeURIComponent(ticker));
 }
 
@@ -54,8 +56,9 @@ async function addBrokerFillNote(form:FormData){
   const ticker=field(form,"ticker").toUpperCase();
   if(!TICKER.test(ticker))
     redirect("/private/journal/new?error=invalid");
+  let journalId="";
   try{
-    await submitBrokerFillNote(subject,{
+    journalId=await submitBrokerFillNote(subject,{
       idempotencyKey:field(form,"idempotencyKey"),
       ticker,content:field(form,"content"),
       accountId:field(form,"fillSelection").split(":")[0]??"",
@@ -64,6 +67,7 @@ async function addBrokerFillNote(form:FormData){
   }catch{
     redirect("/private/journal/new?error=unavailable");
   }
+  if(form.get("recordIndicators")==="yes")redirect("/private/indicators/record?savedJournal=1&journalId="+journalId);
   redirect("/private/journal?saved=broker-note&ticker="+encodeURIComponent(ticker));
 }
 
@@ -81,8 +85,9 @@ async function addObservationNote(form:FormData){
      !["ORDER","FILL"].includes(sourceKind) || !/^(?:0|[1-9][0-9]?)$/.test(pageRaw) ||
      Number(pageRaw)>20 || (sourceKind==="FILL" && pageRaw!=="0"))
     redirect("/private/journal/new?error=invalid");
+  let journalId="";
   try{
-    await submitTigerObservationNote(subject,{
+    journalId=await submitTigerObservationNote(subject,{
       idempotencyKey:field(form,"idempotencyKey"),
       ticker,content:field(form,"content"),
       sourceRef,observationKind:sourceKind as "ORDER"|"FILL",
@@ -91,6 +96,7 @@ async function addObservationNote(form:FormData){
   }catch{
     redirect("/private/journal/new?error=unavailable");
   }
+  if(form.get("recordIndicators")==="yes")redirect("/private/indicators/record?savedJournal=1&journalId="+journalId);
   redirect("/private/journal?saved=observed-note&ticker="+encodeURIComponent(ticker));
 }
 
@@ -242,6 +248,7 @@ export default async function JournalNewPage({searchParams}:{
           <textarea name="content" rows={7} maxLength={6000} required
             placeholder="왜 매수/매도했나요? 계획했던 목표·손절 기준과 비교해 보세요."/>
         </label>
+        <label><input type="checkbox" name="recordIndicators" value="yes"/> 저장 후 당시 보조지표 기록하기 (선택)</label>
         <button type="submit" className="btn btn-primary journal-save">관측 매매 복기 저장</button>
       </form>
     :mode==="broker"&&brokerFills.length>0 ?
@@ -256,6 +263,7 @@ export default async function JournalNewPage({searchParams}:{
         </label>
         <p className="journal-form-hint">독립 검증된 체결만 선택할 수 있습니다. 직접 입력 거래와 구분됩니다.</p>
         <label>이 체결의 매매 근거와 복기<textarea name="content" rows={7} maxLength={6000} required placeholder="진입·청산 근거, 잘한 점, 다음에 보완할 점"/></label>
+        <label><input type="checkbox" name="recordIndicators" value="yes"/> 저장 후 당시 보조지표 기록하기 (선택)</label>
         <button type="submit" className="btn btn-primary journal-save">복기 저장</button>
       </form>
     :mode==="plan"&&!planHistoryAvailable?
@@ -341,6 +349,7 @@ export default async function JournalNewPage({searchParams}:{
       </div>
       <label>내 생각 (관심종목 추가·제외는 선택)<textarea name="content" rows={7} maxLength={6000} placeholder="투자 이유, 확인할 지표, 손절·청산을 재검토할 조건 등"/></label>
 
+      <label><input type="checkbox" name="recordIndicators" value="yes"/> 저장 후 당시 보조지표 기록하기 (선택)</label>
       <button type="submit" className="btn btn-primary journal-save">기록 저장</button>
     </form>}
     </section>

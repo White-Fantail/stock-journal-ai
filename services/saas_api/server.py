@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 from services.saas_api.identity import provision, resolve
 from services.saas_api.trades import TradeInputError, TradeConflict, TradeNotFound, list_trades, create_trade
+from services.saas_api.indicators import list_rules, save_rule, list_records, save_record
 from services.saas_api.journal import list_notes, create_note, export_journal
 from services.saas_api.plan_checkins import context as checkin_context, create_checkin
 from services.saas_api.monthly_process import monthly_process
@@ -71,6 +72,8 @@ _ALLOWED = {"/internal/v1/provision", "/internal/v1/resolve",
             "/internal/v1/trades/list", "/internal/v1/trades/create",
             "/internal/v1/journal/list", "/internal/v1/journal/create",
             "/internal/v1/journal/export", "/internal/v1/journal/monthly-process", "/internal/v1/journal/weekly-process", "/internal/v1/risk-factors/list", "/internal/v1/risk-factors/create",
+            "/internal/v1/indicators/rules", "/internal/v1/indicators/rule/save",
+            "/internal/v1/indicators/records", "/internal/v1/indicators/record/save",
             "/internal/v1/principles/get", "/internal/v1/principles/save",
             "/internal/v1/review/actions", "/internal/v1/review/action/resolve", "/internal/v1/journal/checkin/context", "/internal/v1/journal/checkin/create", "/internal/v1/journal/broker-note/create", "/internal/v1/journal/observation-note/create", "/internal/v1/journal/plans",
             "/internal/v1/journal/plan/create", "/internal/v1/ai/claim", "/internal/v1/account/delete", "/internal/v1/trades/detail",
@@ -145,7 +148,8 @@ class Handler(BaseHTTPRequestHandler):
                                                 "/internal/v1/journal/create",
                                                 "/internal/v1/journal/plan/create",
                                                 "/internal/v1/journal/checkin/create", "/internal/v1/risk-factors/create",
-                                                "/internal/v1/principles/save", "/internal/v1/review/action/resolve")
+                                                "/internal/v1/principles/save", "/internal/v1/indicators/rule/save",
+                                                "/internal/v1/indicators/record/save", "/internal/v1/review/action/resolve")
                         else _MAX_BYTES)
             if n < 0 or n > max_body:
                 return self.reply(413,{"error":"INVALID_BODY"})
@@ -252,6 +256,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200,out)
             if (path.startswith("/internal/v1/trades/") or path.startswith("/internal/v1/journal/") or
                 path.startswith("/internal/v1/risk-factors/") or
+                path.startswith("/internal/v1/indicators/") or
                 path.startswith("/internal/v1/principles/") or
                 path.startswith("/internal/v1/review/") or path == "/internal/v1/ai/claim"):
                 # Financial operations ALWAYS require a separate
@@ -268,6 +273,9 @@ class Handler(BaseHTTPRequestHandler):
                 # Deny tenant/account selection in client payload, even though
                 # every request also derives membership fresh from Google subject.
                 if set(data) - ({"subject","mode","consented"} if path == "/internal/v1/ai/claim" else
+                                {"subject","rule"} if path == "/internal/v1/indicators/rule/save" else
+                                {"subject","record"} if path == "/internal/v1/indicators/record/save" else
+                                {"subject","filter"} if path == "/internal/v1/indicators/records" else
                                 {"subject","tradeId"} if path == "/internal/v1/trades/detail" else
                                 {"subject","month"} if path == "/internal/v1/journal/monthly-process" else
                                 {"subject","week"} if path == "/internal/v1/journal/weekly-process" else
@@ -308,6 +316,14 @@ class Handler(BaseHTTPRequestHandler):
                             out=list_followups(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/review/action/resolve":
                             out=create_followup(identity_conn,trade_conn,data.get("subject"),data.get("actionFollowup"))
+                        elif path == "/internal/v1/indicators/rules":
+                            out=list_rules(identity_conn,trade_conn,data.get("subject"))
+                        elif path == "/internal/v1/indicators/rule/save":
+                            out=save_rule(identity_conn,trade_conn,data.get("subject"),data.get("rule"))
+                        elif path == "/internal/v1/indicators/records":
+                            out=list_records(identity_conn,trade_conn,data.get("subject"),data.get("filter"))
+                        elif path == "/internal/v1/indicators/record/save":
+                            out=save_record(identity_conn,trade_conn,data.get("subject"),data.get("record"))
                         elif path == "/internal/v1/principles/get":
                             out=get_principles(identity_conn,trade_conn,data.get("subject"))
                         elif path == "/internal/v1/principles/save":

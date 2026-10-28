@@ -42,7 +42,8 @@ test("home and portfolio use real scoped records instead of onboarding cards",()
   const portfolio=read("../app/private/portfolio/page.tsx");
   assert.ok(home.includes("tigerPersonalRead()"));
   assert.ok(home.includes("fetchJournal("));
-  assert.ok(home.includes("formatDecimal"));
+  assert.ok(home.includes("formatMoney(a.assets?.netLiquidation)"));
+  assert.ok(home.includes("formatQuantity(p.quantity)"));
   assert.ok(!home.includes("dashboard-hero"));
   assert.ok(!home.includes("이렇게 시작해 보세요"));
   assert.ok(portfolio.includes("PersonalPortfolioBlock"));

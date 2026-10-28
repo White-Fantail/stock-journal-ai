@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import {formatDecimal} from "../../../lib/format-decimal";
+import {groupTigerOrderObservations, type GroupedTigerOrder} from "../../../lib/tiger-order-groups";
 import {parseStatementFeeEvidence,resolvedFeeCurrency,statementMatchesOrder} from "../../../lib/tiger-fee-statement";
 
 const when=(raw:string|null)=> {
@@ -11,6 +12,23 @@ const when=(raw:string|null)=> {
     :"시각 미확인";
 };
 const viewNumber=(value:string|null)=>formatDecimal(value);
+
+function PartialFillDetails({fills,reconciliation}:{fills:GroupedTigerOrder["fills"];reconciliation:GroupedTigerOrder["reconciliation"]}){
+  if(fills.length===0) return <small className="user-muted">개별 체결 미조회</small>;
+  return <details className="data-disclosure">
+    <summary>부분체결 {fills.length}건 보기</summary>
+    <ul className="tiger-order-fills">
+      {fills.map(f=><li key={f.sourceRef}>
+        <strong>{viewNumber(f.quantity)}주 · {viewNumber(f.price)} {f.currency}</strong>
+        <small>원본 시각 {f.timeRaw??"미확인"} · 시간대 미검증</small>
+      </li>)}
+    </ul>
+    <small className="user-muted">{reconciliation==="OBSERVED_SUM_MATCH"?
+      "현재 조회한 체결 수량 합계 일치 · 전체 이력 검증 아님":
+      reconciliation==="QUANTITY_UNKNOWN"?"주문 수량 확인 필요":
+      "현재 관측 합계와 주문 수량 차이 · 일부 조회 가능"}</small>
+  </details>;
+}
 
 /** Owner-only Tiger observation, never inferred FIFO or account-wide performance. */
 export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
@@ -98,6 +116,8 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
        alias:account.alias,...o,
        feeView:resolvedFeeCurrency(o,account.alias,account.assets?.currency??null,proof),
      }))).sort((a,b)=>Number(b.at??0)-Number(a.at??0));
+  const groups=groupTigerOrderObservations(rows,data.accounts.flatMap(a=>a.fillObservations));
+  const groupedRows=groups.orders.map((g,i)=>({...rows[i],fills:g.fills,reconciliation:g.reconciliation}));
   const feeRows=data.accounts.flatMap(account=>account.feeObservations.map(f=>{
     const order=account.orders.find(o=>o.sourceRef===f.sourceRef &&
       o.symbol===f.symbol && o.fee!==null && f.total===o.fee);
@@ -112,7 +132,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
   const feeLabel=(currency:string|null,statement:boolean)=>currency
     ?currency+(statement?" (명세서 대조)":""):"통화 미확인";
   return <section className="state-panel">
-    <h2>Tiger 주문 및 부분체결 관측 이력</h2>
+    <h2>Tiger 주문 이력</h2>
     {!!data.readWarnings?.length && <p role="status">Tiger 원본 응답의 일부 항목 형식이 맞지 않아 해당 항목만 제외했습니다. 표시된 자료는 부분 조회 결과이며 전체 주문 이력으로 사용하지 마세요.</p>}
     {statementVerifiedCount>0&&<p className="user-footnote" role="status">
       Tiger 원본 API의 수수료 통화 누락분 중 {statementVerifiedCount}건을
@@ -133,7 +153,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
     </nav>}
     {rows.length===0 ? <p>아직 조회된 Tiger 주문 이력이 없어. 보유 종목 스냅샷은 별도로 표시돼.</p> :
       <><div className="mobile-data-cards" aria-label="Tiger 주문 모바일 목록">
-        {rows.slice(0,compact?12:120).map((o,i)=>
+        {groupedRows.slice(0,compact?12:120).map((o,i)=>
           <article className="mobile-data-card" key={o.sourceRef+":"+i}>
             <div className="mobile-data-card-head">
               <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></strong>
@@ -146,20 +166,22 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
               <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</dd></div>
               <div><dt>계좌</dt><dd>{o.alias}</dd></div>
             </dl>
+            <PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>
             <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></div>
           </article>)}
       </div>
       <div className="responsive-table desktop-data-table">
         <table>
-          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>투자 기록</th></tr></thead>
-          <tbody>{rows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
+          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>부분체결</th><th>투자 기록</th></tr></thead>
+          <tbody>{groupedRows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
             <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
             <td>{o.filled===null?"수량 재수집 필요":viewNumber(o.filled)}</td>
             <td>{viewNumber(o.price)} {o.currency}</td>
             <td>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</td>
+            <td><PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/></td>
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
           </tr>)}</tbody>
@@ -167,69 +189,51 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
       </div></>}
     {compact && rows.length>12 && <Link href="/private/trades">전체 관측 주문 보기 →</Link>}
     {!compact && <div className="journal-trades" style={{marginTop:26}}>
-      <h3>개별 체결 API 확인 · 검증 전</h3>
-      <p>Tiger의 Prime 계좌용 get_transactions 읽기 전용 조회 결과야. 각 체결의 수량·가격은 관측값이며, 전체 계좌 이력이나 확정 손익으로 사용하지 않아.
-      원본 체결 시각의 시간대가 확인되지 않으면 뉴질랜드 시간으로 임의 변환하지 않아. 수수료는 주문 단위 관측값이고 개별 체결에 배분하지 않아.</p>
-      <p>조회한 주문 {data.accounts.reduce((n,a)=>n+a.fillProbeCount,0)}건 ·
-        세부 체결 관측 {data.accounts.reduce((n,a)=>n+a.fillObservations.length,0)}건 ·
-        조회 불가 {data.accounts.reduce((n,a)=>n+a.fillProbeUnavailable,0)}건 ·
-        수량 불일치 {data.accounts.reduce((n,a)=>n+a.fillProbeDifference,0)}건 ·
-        일부만 확인 {data.accounts.reduce((n,a)=>n+a.fillProbePartial,0)}건</p>
-      <p>주문별 수수료 세부 조회: 금액·통화 일치 {data.accounts.reduce((n,a)=>n+a.feeProbeMatched,0)}건 ·
-        금액 일치·Tiger API 통화 누락 {data.accounts.reduce((n,a)=>n+a.feeProbeCurrencyUnknown,0)}건 (명세서 대조 별도) ·
-        금액 또는 증거 불일치 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
-        조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
-      <p className="user-footnote">Tiger 원본 get_order(show_charges=true)의 주문별 항목 합계를 비교했어. 개별 체결마다 얼마의 수수료가 배분됐는지는 여전히 미확인이야. API 수수료 통화가 빠진 경우에도 별도 명세서와 정확하게 대조한 주문은 USD로 표시하고 있어. 조회 통계는 API 원본 상태를 유지해.</p>
-      {data.accounts.some(a=>a.feeObservations.length>0) && <>
-        <div className="mobile-data-cards" aria-label="주문 수수료 검증 목록">
-          {feeRows.map(f=><article className="mobile-data-card" key={f.sourceRef}>
-            <div className="mobile-data-card-head"><strong>{f.symbol}</strong>
-              <small>{f.status==="MATCHED"?"API 금액·통화 확인":f.statementVerified?"명세서 대조 USD":"API 통화 미확인"}</small></div>
-            <dl className="mobile-data-card-fields">
-              <div><dt>주문 수수료 합계</dt><dd>{viewNumber(f.total)} {feeLabel(f.currencyForDisplay,f.statementVerified)}</dd></div>
-            </dl>
-            <details className="data-disclosure"><summary>수수료 구성 보기</summary>
-              <p>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</p>
-            </details>
-          </article>)}
-        </div>
-        <div className="responsive-table desktop-data-table">
-        <table style={{width:"100%"}}>
-          <thead><tr><th>주문 종목</th><th>수수료 합계</th><th>검증 수준</th><th>수수료 구성</th></tr></thead>
-          <tbody>{feeRows.map(f=><tr key={f.sourceRef}>
-            <td>{f.symbol}</td>
-            <td>{viewNumber(f.total)} {feeLabel(f.currencyForDisplay,f.statementVerified)}</td>
-            <td>{f.status==="MATCHED"?"API 주문 수수료 합계·통화 확인":f.statementVerified?"주문 합계 일치 · USD 명세서 대조":"주문 합계 일치 · API 통화 미확인"}</td>
-            <td>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</td>
-          </tr>)}</tbody>
-        </table>
-      </div></>}
-      {data.accounts.some(a=>a.fillProbeTruncated) && <p role="status">진단 결과는 화면 표시 한도가 적용됐어. 이를 전체 체결 이력으로 판단하지 마.</p>}
-      {data.accounts.every(a=>a.fillProbeCount===0) ? <p className="user-empty">개별 체결 조회 결과가 아직 없어. 별도 수집기의 다음 실행에서 지원 여부를 확인해야 해.</p> :
-        <><div className="mobile-data-cards" aria-label="개별 체결 관측 모바일 목록">
-          {data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><article className="mobile-data-card" key={f.sourceRef}>
-            <div className="mobile-data-card-head"><strong><Link href={"/private/journal?ticker="+encodeURIComponent(f.symbol)}>{f.symbol}</Link></strong>
-              <small>{f.side==="BUY"?"매수":"매도"}</small></div>
-            <div className="mobile-data-card-meta">원본 체결 시각 {f.timeRaw??"미확인"} · 시간대 미검증</div>
-            <dl className="mobile-data-card-fields">
-              <div><dt>체결 수량</dt><dd>{viewNumber(f.quantity)}주</dd></div>
-              <div><dt>체결 가격</dt><dd>{viewNumber(f.price)} {f.currency}</dd></div>
-            </dl>
+      {groups.unlinked.length>0&&<section aria-label="상위 주문 미조회 개별 체결">
+        <h3>연결된 주문을 현재 목록에서 찾지 못한 체결 · {groups.unlinked.length}건</h3>
+        <p className="user-footnote">다른 주문 페이지에 있거나 조회가 불완전할 수 있습니다. 종목·가격·시각으로 임의로 묶지 않습니다.</p>
+        <div className="mobile-data-cards" aria-label="미연결 개별 체결 모바일 목록">
+          {groups.unlinked.map(f=><article className="mobile-data-card" key={f.sourceRef}>
+            <strong>{f.symbol} · {f.side==="BUY"?"매수":"매도"} · {viewNumber(f.quantity)}주</strong>
+            <small>{viewNumber(f.price)} {f.currency} · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
             <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 복기 작성 →</Link></div>
+              "&page=0&ticker="+encodeURIComponent(f.symbol)}>기존 체결 메모 보기·작성 →</Link></div>
           </article>)}
         </div>
         <div className="responsive-table desktop-data-table"><table>
-          <thead><tr><th>원본 체결 시각 (시간대 미검증)</th><th>종목</th><th>방향</th><th>체결 수량</th><th>체결 가격</th><th>수수료</th><th>투자 기록</th></tr></thead>
-          <tbody>{data.accounts.flatMap(a=>a.fillObservations).slice(0,100).map(f=><tr key={f.sourceRef}>
+          <thead><tr><th>종목</th><th>방향</th><th>수량</th><th>가격</th><th>원본 시각 (시간대 미검증)</th><th>기록</th></tr></thead>
+          <tbody>{groups.unlinked.map(f=><tr key={f.sourceRef}>
+            <td>{f.symbol}</td><td>{f.side==="BUY"?"매수":"매도"}</td>
+            <td>{viewNumber(f.quantity)}</td><td>{viewNumber(f.price)} {f.currency}</td>
             <td>{f.timeRaw??"미확인"}</td>
-            <td><Link href={"/private/journal?ticker="+encodeURIComponent(f.symbol)}>{f.symbol}</Link></td>
-            <td>{f.side==="BUY"?"매수":"매도"}</td><td>{viewNumber(f.quantity)}</td>
-            <td>{viewNumber(f.price)} {f.currency}</td><td>개별 배분 미확인</td>
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 복기 작성 →</Link></td>
+              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link></td>
           </tr>)}</tbody>
-        </table></div></>}
+        </table></div>
+      </section>}
+      <details className="data-disclosure">
+        <summary>수집·수수료 검증 진단 보기 (선택)</summary>
+        <p>개별 체결은 Tiger Prime API에서 관측한 값이며 확정 원장이 아닙니다.
+          원본 체결 시각의 시간대가 확인되지 않으면 임의 변환하지 않습니다. 수수료는 주문 단위로만 표시합니다.</p>
+        <p>조회한 주문 {data.accounts.reduce((n,a)=>n+a.fillProbeCount,0)}건 ·
+          체결 관측 {data.accounts.reduce((n,a)=>n+a.fillObservations.length,0)}건 ·
+          조회 불가 {data.accounts.reduce((n,a)=>n+a.fillProbeUnavailable,0)}건 ·
+          수량 차이 {data.accounts.reduce((n,a)=>n+a.fillProbeDifference,0)}건 ·
+          일부 조회 {data.accounts.reduce((n,a)=>n+a.fillProbePartial,0)}건</p>
+        <p>주문별 수수료: 금액·통화 일치 {data.accounts.reduce((n,a)=>n+a.feeProbeMatched,0)}건 ·
+          통화 미확인 {data.accounts.reduce((n,a)=>n+a.feeProbeCurrencyUnknown,0)}건 ·
+          차이 {data.accounts.reduce((n,a)=>n+a.feeProbeDifference,0)}건 ·
+          조회 불가 {data.accounts.reduce((n,a)=>n+a.feeProbeUnavailable,0)}건</p>
+        {data.accounts.some(a=>a.fillProbeTruncated)&&<p role="status">진단 자료는 조회 한도가 적용됐으므로 전체 체결 내역으로 판단하면 안 됩니다.</p>}
+        {feeRows.length>0&&<div className="responsive-table">
+          <table><thead><tr><th>주문 종목</th><th>주문 수수료</th><th>검증 수준</th><th>구성</th></tr></thead>
+          <tbody>{feeRows.map(f=><tr key={f.sourceRef}>
+            <td>{f.symbol}</td>
+            <td>{viewNumber(f.total)} {feeLabel(f.currencyForDisplay,f.statementVerified)}</td>
+            <td>{f.status==="MATCHED"?"API 금액·통화 확인":f.statementVerified?"명세서 대조 USD":"API 통화 미확인"}</td>
+            <td>{f.details.map(d=>d.type+" ("+d.category+"): "+viewNumber(d.amount)).join(" · ")}</td>
+          </tr>)}</tbody></table></div>}
+      </details>
     </div>}
     {!compact && <nav className="record-pagination" aria-label="주문 페이지 이동">
       {page>0 && <Link href={"/private/trades?page="+(page-1)}>← 이전 페이지</Link>}

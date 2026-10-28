@@ -25,13 +25,13 @@ export async function POST(request: Request) {
         return failure("invalid_grant");
       // The signed code nonce is inserted atomically into the existing DB-backed
       // replay table and resolves fresh Google subject membership. Fail closed.
-      if (!await consumeOneUse(code.subject!, code.nonce)) return failure("invalid_grant");
+      if (!await consumeOneUse(code.subject!, code.nonce, code.exp)) return failure("invalid_grant");
       return Response.json(accessGrant(code.subject!, clientId, code.scope!), { headers });
     }
     if (grantType === "refresh_token") {
       const refresh = readTicket(form.get("refresh_token"), "refresh");
       if (!refresh || refresh.clientId !== clientId) return failure("invalid_grant");
-      if (!await consumeOneUse(refresh.subject!, refresh.nonce)) return failure("invalid_grant");
+      if (!await consumeOneUse(refresh.subject!, refresh.nonce, refresh.exp)) return failure("invalid_grant");
       return Response.json(accessGrant(refresh.subject!, clientId, refresh.scope!), { headers });
     }
     return failure("unsupported_grant_type");

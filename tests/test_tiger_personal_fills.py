@@ -78,6 +78,24 @@ class TigerPersonalFillProbeTests(unittest.TestCase):
             def get_transactions(self,**kwargs): return response([transaction()],"repeated")
         self.assertEqual(fill_probe._probe_order(Loop(),"12345678",ORDER)["status"],"PARTIAL")
 
+    def test_read_projection_links_fills_to_parent_order_without_exposing_order_id(self):
+        import hashlib
+        class Broker:
+            def execute(self, sql, params):
+                return SimpleNamespace(fetchall=lambda: [(b"synthetic-encrypted",)])
+        doc={"source":"PERSONAL_TRANSACTION_OBSERVATION",
+             "probes":[{"orderId":"41234","symbol":"TSLA",
+                        "fills":[fill_probe._transaction(transaction(),"12345678",ORDER)],
+                        "status":"OBSERVED"}]}
+        with patch("temporary.tiger_personal.fill_probe.unseal",return_value=doc):
+            result=fill_probe.load_probes(Broker(),"workspace","synthetic-account")
+        observed=result["fillObservations"]
+        self.assertEqual(len(observed),1)
+        self.assertEqual(observed[0]["orderSourceRef"],
+                         hashlib.sha256(b"synthetic-account:41234").hexdigest())
+        self.assertNotIn("orderId",observed[0])
+        self.assertEqual(observed[0]["quantity"],"1.25")
+
     def test_ingress_does_not_promote_unverified_to_ledger(self):
         doc={"subject":OWNER,"account":"12345678","from":"1764547200000","to":"1767139200000",
              "probes":[{**{k:ORDER[k] for k in ("symbol","currency","side")},

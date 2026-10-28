@@ -57,7 +57,7 @@ function displayTime(value:string):string{
 function planPrice(value:string|null,currency:string|null){
   if(value===null) return "미설정";
   const compact=value.replace(/(\.\d*?[1-9])0+$/,"$1").replace(/\.0+$/,"");
-  return `${formatDecimal(compact)} ${currency??""}`;
+  return `${formatMoney(compact)} ${currency??""}`;
 }
 function contentPreview(value:string,max=115){
   return value.length>max?value.slice(0,max)+"…":value;
@@ -267,7 +267,7 @@ export function JournalWorkspace({
               <small>{active.plan?.investmentHorizon?HORIZON_LABEL[active.plan.investmentHorizon]??"기간 확인 필요":"투자 기간 미설정"}</small>
             </div>
             <div><span>최대 보유 비중 (나의 기준)</span>
-              <strong>{active.plan?.maxAllocationPct?active.plan.maxAllocationPct+"%":"미설정"}</strong>
+              <strong>{active.plan?.maxAllocationPct?formatPercent(active.plan.maxAllocationPct)+"%":"미설정"}</strong>
               <small>계좌 스냅샷과 직접 비교한 매매 신호가 아닙니다.</small>
             </div>
             <div><span>정기 투자 점검</span>
@@ -326,7 +326,7 @@ export function JournalWorkspace({
                         <div className="journal-plan-values">
                           {e.value.strategyType&&<span>전략 <strong>{STRATEGY_LABEL[e.value.strategyType]??"확인 필요"}</strong></span>}
                           {e.value.investmentHorizon&&<span>기간 <strong>{HORIZON_LABEL[e.value.investmentHorizon]??"확인 필요"}</strong></span>}
-                          {e.value.maxAllocationPct&&<span>최대 비중 <strong>{e.value.maxAllocationPct}%</strong></span>}
+                          {e.value.maxAllocationPct&&<span>최대 비중 <strong>{formatPercent(e.value.maxAllocationPct)}%</strong></span>}
                           {e.value.reviewCadence&&<span>점검 <strong>{CADENCE_LABEL[e.value.reviewCadence]??"확인 필요"}</strong></span>}
                         </div>}
                       {e.value.invalidationCondition&&<p className="journal-entry-text">
@@ -361,7 +361,7 @@ export function JournalWorkspace({
             {connectedTrades.length===0 ?
               <p className="journal-empty">현재 목록에서 이 종목의 유효한 직접 입력 거래가 확인되지 않았습니다.</p>:
               connectedTrades.map(t=><div className="journal-trade-row" key={t.id}>
-                <div><strong>{t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity,"?")}주</strong>
+                <div><strong>{t.side==="BUY"?"매수":"매도"} {formatQuantity(t.quantity,"?")}주</strong>
                   <small>{displayTime(t.executedAt??t.createdAt)} · 사용자 직접 입력</small>
                 </div>
                 <a href={`/private/trades/${t.id}`}>상세 보기 ↗</a>
@@ -373,7 +373,7 @@ export function JournalWorkspace({
               <>
                 {observedGroups.orders.map(({order:o,fills,reconciliation})=><article className="journal-trade-row" key={"order:"+o.sourceRef}>
                   <div>
-                    <strong>{o.side==="BUY"?"매수":"매도"} · 체결 {formatDecimal(o.filled,"?")}주 · {formatDecimal(o.price,"?")} {o.currency}</strong>
+                    <strong>{o.side==="BUY"?"매수":"매도"} · 체결 {formatQuantity(o.filled,"?")}주 · {formatMoney(o.price,"?")} {o.currency}</strong>
                     <small>Tiger 주문 관측 · {o.status} · {fills.length>0?fills.length+"회 부분체결 관측":"개별 체결 미조회"}</small>
                     {entries.filter(e=>e.observationRef?.sourceRef===o.sourceRef &&
                         e.observationRef?.kind==="ORDER").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
@@ -383,7 +383,7 @@ export function JournalWorkspace({
                       <summary>부분체결 상세 {fills.length}건 보기</summary>
                       <div className="journal-trades" aria-label="주문에 연결된 개별 체결">
                         {fills.map(f=><div className="journal-trade-row" key={f.sourceRef}>
-                          <div><strong>{formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
+                          <div><strong>{formatQuantity(f.quantity)}주 · {formatMoney(f.price)} {f.currency}</strong>
                             <small>원본 체결 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
                             {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
                                 e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
@@ -401,7 +401,7 @@ export function JournalWorkspace({
                     "&page=0&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link>
                 </article>)}
                 {observedGroups.unlinked.map(f=><article className="journal-trade-row" key={"unlinked:"+f.sourceRef}>
-                  <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatDecimal(f.quantity)}주 · {formatDecimal(f.price)} {f.currency}</strong>
+                  <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatQuantity(f.quantity)}주 · {formatMoney(f.price)} {f.currency}</strong>
                     <small>개별 체결 관측 · 연결된 주문을 현재 조회 목록에서 확인할 수 없음 · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
                     {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
                         e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
@@ -422,10 +422,10 @@ export function JournalWorkspace({
               현재 조회한 검증 원장에서 이 종목의 체결이 확인되지 않았습니다. 이것이 거래가 없었다는 뜻은 아닙니다.
             </p> : brokerTrades.map(t=><article className="journal-trade-row" key={t.accountId+":"+t.sourceRef}>
               <div>
-                <strong>{t.side==="BUY"?"매수":"매도"} {formatDecimal(t.quantity)}주 · {formatDecimal(t.price)} {t.currency}</strong>
+                <strong>{t.side==="BUY"?"매수":"매도"} {formatQuantity(t.quantity)}주 · {formatMoney(t.price)} {t.currency}</strong>
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
-                <small>수수료 {formatDecimal(t.fee)} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
+                <small>수수료 {formatMoney(t.fee)} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
                 {entries.filter(e=>e.brokerRef?.accountId===t.accountId &&
                      e.brokerRef?.sourceRef===t.sourceRef &&
                      e.brokerRef?.reviewVersion===t.reviewVersion).map(e=>

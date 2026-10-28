@@ -10,7 +10,7 @@ import {PlanRiskCheck} from "./plan-risk-check";
 import {fetchInvestorPrinciples} from "../../../../lib/saas-trades-api";
 import {assessPortfolioOverviewRisk} from "../../../../lib/portfolio-overview-risk";
 import {sumObservedShares} from "../../../../lib/purchase-scenario";
-import {formatDecimal} from "../../../../lib/format-decimal";
+import {formatQuantity,formatMoney} from "../../../../lib/format-decimal";
 
 export const dynamic="force-dynamic";
 export const metadata={title:"투자 기록 작성 · Positionary"};

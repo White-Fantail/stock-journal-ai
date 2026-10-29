@@ -42,6 +42,30 @@ export function sanitizedExcerpt(value:string,max:number):string{
     .trim().slice(0,max);
 }
 const short=sanitizedExcerpt;
+/** For cross-symbol habit analysis, retain recent coverage across symbols rather
+ * than allowing a burst of notes for one ticker to consume the whole sample.
+ * Every ticker is internally newest-first; the overall result remains bounded. */
+function diversifiedRecent<T extends {ticker:string;createdAt:string}>(
+  rows:readonly T[],limit:number,
+):T[]{
+  const byTicker=new Map<string,T[]>();
+  for(const row of [...rows].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))){
+    const group=byTicker.get(row.ticker)??[];
+    group.push(row);
+    byTicker.set(row.ticker,group);
+  }
+  const selected:T[]=[];
+  while(selected.length<limit){
+    let added=false;
+    for(const group of byTicker.values()){
+      const next=group.shift();
+      if(next){selected.push(next);added=true;}
+      if(selected.length===limit)break;
+    }
+    if(!added)break;
+  }
+  return selected.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+}
 export function evidenceForAnalysis(
   mode:Exclude<AnalysisMode,"COACHING">,symbol:string|null,
   entries:readonly JournalEntry[],plans:readonly JournalPlan[],
@@ -52,13 +76,15 @@ export function evidenceForAnalysis(
     throw new Error("INVALID_SCOPE");
   const eligible=(ticker:string)=>mode==="HABITS"||ticker===symbol;
   const refs:AnalysisEvidence[]=[];
-  const sortedNotes=entries.filter(e=>eligible(e.ticker)&&e.content.trim())
-    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,18);
+  const noteCandidates=entries.filter(e=>eligible(e.ticker)&&e.content.trim());
+  const sortedNotes=mode==="HABITS"?diversifiedRecent(noteCandidates,18):
+    noteCandidates.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,18);
   for(const e of sortedNotes)refs.push({ref:"N"+(refs.filter(x=>x.kind==="NOTE").length+1),
     kind:"NOTE",ticker:e.ticker,on:day(e.createdAt),source:"USER_AUTHORED",
     detail:short("["+e.kind+"] "+e.content,380)});
-  const orderedPlans=plans.filter(p=>eligible(p.ticker))
-    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,10);
+  const planCandidates=plans.filter(p=>eligible(p.ticker));
+  const orderedPlans=mode==="HABITS"?diversifiedRecent(planCandidates,10):
+    planCandidates.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,10);
   for(const p of orderedPlans)refs.push({ref:"P"+(refs.filter(x=>x.kind==="PLAN").length+1),
     kind:"PLAN",ticker:p.ticker,on:day(p.createdAt),source:"USER_AUTHORED",
     detail:short("목표가 기록: "+(p.targetPrice?"있음":"없음")+

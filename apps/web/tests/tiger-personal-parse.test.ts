@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {parsePersonalRead} from "../lib/tiger-personal-parse";
+import {assessPortfolioOverviewRisk} from "../lib/portfolio-overview-risk";
 
 const observedOrder={
   sourceRef:"a".repeat(64),symbol:"RKLB",currency:"USD",side:"BUY",
@@ -37,6 +38,23 @@ test("valid broker response is unchanged and does not claim verified executions"
   assert.equal(data.value?.accounts[0].totalOrders,471);
   assert.equal(data.value?.accounts[0].partial,false);
 });
+test("a genuine personal-view response with more order pages can still show stock concentration",()=>{
+ const input=payload();
+ // In this synthetic case current positions + cash reconcile exactly to NAV.
+ input.accounts[0].assets.netLiquidation="282.63";
+ const parsed=parsePersonalRead(input);
+ assert.deepEqual(parsed.warnings,[]);
+ assert.equal(parsed.value?.accounts[0].hasMore,true);
+ const risk=assessPortfolioOverviewRisk(parsed.value,[],new Date("2026-10-27T00:00:00Z"));
+ assert.equal(risk.state,"READY",risk.state==="UNAVAILABLE"?risk.reason:"");
+ if(risk.state==="READY"){
+   assert.equal(risk.positions[0].ticker,"RKLB");
+   assert.equal(risk.currency,"USD");
+   assert.equal(risk.nav,"282.63");
+   assert.equal(risk.completePortfolioVerified,false);
+ }
+});
+
 test("malformed optional quote does not hide the actual order and holding",()=>{
   const input=payload();
   (input.accounts[0].marketObservations as unknown[]).push({

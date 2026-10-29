@@ -222,8 +222,12 @@ export default async function PortfolioPage() {
     const immediate=portfolioReviewActions({personal,plans,factors:userFactors})
       .find(a=>a.id==="partial"||a.id==="holdings-limit");
     return <main className="portfolio-data">
-      <div className="page-intro home-data-heading">
+      <div className="page-intro home-data-heading portfolio-page-heading">
         <div><h1>포트폴리오</h1><p>내 계좌에 관측된 보유 종목을 확인합니다.</p></div>
+        <nav className="home-actions portfolio-page-actions" aria-label="포트폴리오 바로가기">
+          <Link className="btn btn-primary" href="/private/journal">종목별 투자 계획 →</Link>
+          <Link className="btn btn-outline" href="/private/journal/new?mode=plan">매수 전 위험 점검</Link>
+        </nav>
       </div>
       {immediate&&<section className="state-panel portfolio-priority" role="alert">
         <div><strong>{immediate.title}</strong><p>{immediate.description}</p></div>
@@ -237,10 +241,6 @@ export default async function PortfolioPage() {
         </div>
         <PersonalPortfolioBlock data={personal}/>
       </section>
-      <div className="home-actions portfolio-after-holdings">
-        <Link className="btn btn-primary" href="/private/journal">종목별 투자 계획 →</Link>
-        <Link className="btn btn-outline" href="/private/journal/new?mode=plan">매수 전 위험 점검</Link>
-      </div>
       <details className="portfolio-technical-details user-panel" aria-label="비중과 위험 분석">
         <summary>비중·공통 위험 분석 보기</summary>
         <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>

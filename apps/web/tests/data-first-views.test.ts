@@ -101,8 +101,25 @@ test("B3 investor-centered portfolio links to source-aware risks without suppres
  assert.ok(focus.includes("확정 투자 원장 아님"));
  assert.ok(focus.includes('risk.state==="READY"'));
  assert.ok(actions.includes("hasHoldingsReadWarnings(personal.readWarnings)"));
- assert.ok(actions.includes("plans.length>=200"));
- assert.ok(actions.includes("factors.length>100"));
+ assert.ok(actions.includes("plans.length<200"));
+ assert.ok(actions.includes("factors.length<=100"));
+});
+
+test("portfolio follow-up panel prioritizes practical next actions over large caveat banners",()=>{
+ const page=read("../app/private/portfolio/page.tsx");
+ const panel=read("../app/private/portfolio/portfolio-attention.tsx");
+ const css=read("../app/globals.css");
+ assert.ok(page.includes("투자계획·위험 분류 보완 제안 보기"));
+ assert.ok(panel.includes("portfolioReviewQueue({personal,plans,factors})"));
+ assert.ok(panel.includes("다음에 확인할 투자 판단"));
+ assert.ok(panel.includes("투자계획 작성"));
+ assert.ok(panel.includes("위험 요인 분류"));
+ assert.ok(panel.includes("remaining.length>0"));
+ assert.ok(panel.includes("관측 보유종목"));
+ assert.ok(panel.includes("투자계획 준수 판정이 아닙니다"));
+ assert.ok(!panel.includes("portfolio-scope-banner"));
+ assert.ok(css.includes(".portfolio-review-item"));
+ assert.ok(css.includes("@media(max-width:420px)"));
 });
 
 test("portfolio shows observed holdings before optional analysis and prompts",()=>{

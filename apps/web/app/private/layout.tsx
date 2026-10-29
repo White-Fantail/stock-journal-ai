@@ -26,8 +26,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
             <a href="/private/indicators">나의 보조지표</a>
             <a href="/private/trades">거래 기록</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
-            <a href="/private/analysis">AI 분석</a>
-            <a href="/private/analysis?mode=COACHING">AI 코칭</a>
+            <a href="/private/analysis">AI 투자 복기</a>
             <a href="/private/alerts">점검 센터</a>
             <a href="/private/reports/weekly">주간 점검</a>
             <a href="/private/reports/monthly">월간 복기</a>
@@ -49,8 +48,7 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
             <a href="/private/indicators">나의 보조지표</a>
             <a href="/private/trades">거래 기록</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
-            <a href="/private/analysis">AI 분석</a>
-            <a href="/private/analysis?mode=COACHING">AI 코칭</a>
+            <a href="/private/analysis">AI 투자 복기</a>
             <a href="/private/alerts">점검 센터</a>
             <a href="/private/reports/weekly">주간 점검</a>
             <a href="/private/reports/monthly">월간 복기</a>

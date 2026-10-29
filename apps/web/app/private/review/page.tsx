@@ -91,9 +91,9 @@ export default async function ReviewHub({searchParams}:{
      <section className="user-panel"><h2>월간 복기</h2>
        <p>계획 변경과 자기평가 습관을 월별로 확인합니다.</p>
        <Link className="btn btn-outline" href="/private/reports/monthly">월간 복기 →</Link></section>
-     <section className="user-panel"><h2>내 기록에 대한 AI 코칭</h2>
+     <section className="user-panel"><h2>AI 투자 복기</h2>
        <p>사용자의 별도 동의를 받은 뒤 일부 기록을 외부 AI로 보내 근거를 확인합니다.</p>
-       <Link className="btn btn-outline" href="/private/analysis?mode=COACHING">선택 종목 코칭 →</Link></section>
+       <Link className="btn btn-outline" href="/private/analysis?mode=COACHING">지난 행동과 개선 추적 →</Link></section>
      <section className="user-panel"><h2>나의 투자 원칙</h2>
        <p>목표와 위험 기준은 필요할 때 직접 수정할 수 있습니다.</p>
        <Link className="btn btn-outline" href="/private/principles">원칙 다시 보기 →</Link></section>

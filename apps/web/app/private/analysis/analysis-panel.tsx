@@ -15,17 +15,24 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
   const selectedEvidence=new Map(state.evidence.map(x=>[x.ref,x]));
   return <div style={{display:"grid",gap:24}}>
     <section className="state-panel">
-      <h2>투자 기록 복기</h2>
+      <h2>내 기록에서 무엇을 확인할까요?</h2>
       <p>매매 기록과 내가 작성한 투자 논리를 근거로, 의사결정의 일관성과 반복되는 습관을 점검합니다.
         주가를 예측하거나 자동으로 주문하지 않습니다.</p>
       <form action={submit} style={{display:"grid",gap:16,maxWidth:680}}>
-        <label>분석 범위
-          <select name="mode" value={mode} onChange={e=>{setMode(e.target.value as typeof mode);setConsented(false);}}>
-            <option value="STOCK_REVIEW">선택 종목의 매매·계획 복기</option>
-            <option value="HABITS">전체 기록에서 반복 습관 살펴보기</option>
-            <option value="COACHING">최근 3개월과 이번 달의 계획·실천 복기</option>
-          </select>
-        </label>
+        <fieldset style={{border:0,padding:0,margin:0,display:"grid",gap:12}}>
+          <legend style={{fontWeight:700,marginBottom:10}}>무엇을 점검하고 싶나요?</legend>
+          {([
+            ["STOCK_REVIEW","종목별 투자 판단 검토","기존 투자 논리와 실제 기록이 일치하는지 확인합니다."],
+            ["HABITS","내 투자 습관 분석","여러 종목에 걸친 최근 기록의 반복 패턴을 살펴봅니다."],
+            ["COACHING","지난 점검과 개선 추적","최근 세 달과 이번 달의 자기평가 및 다음 행동을 비교합니다."],
+          ] as const).map(([value,title,description])=><label key={value}
+            style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",border:"1px solid var(--border, #ddd)",
+              borderRadius:12,padding:14,background:mode===value?"var(--surface-raised, transparent)":"transparent"}}>
+            <input type="radio" name="mode" value={value} checked={mode===value}
+              onChange={()=>{setMode(value);setConsented(false);}} style={{marginTop:4}}/>
+            <span><strong>{title}</strong><small style={{display:"block",marginTop:4}}>{description}</small></span>
+          </label>)}
+        </fieldset>
         {mode!=="HABITS"&&<label>{mode==="COACHING"?"코칭할 종목":"분석 종목"}
           <select name="symbol" required value={selected} onChange={e=>{setSelected(e.target.value);setConsented(false);}}>
             {symbols.length===0?<option value="">기록된 종목이 없습니다</option>:
@@ -70,7 +77,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
     {state.status==="success"&&state.result&&state.mode===mode&&
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
-      <p className="user-footnote">AI가 제시한 행동은 자동 저장하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
+      <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>

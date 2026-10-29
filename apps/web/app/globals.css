@@ -540,6 +540,21 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .portfolio-unclassified-list a{min-height:44px;padding:10px;background:#f2f8f5;border-radius:9px}
 @media(max-width:640px){.portfolio-action-grid{grid-template-columns:1fr}.portfolio-scope-banner{padding:12px}}
 
+/* Holdings first: keep only actionable data-integrity warnings above account cards. */
+.portfolio-priority{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.portfolio-priority>div{min-width:0}
+.portfolio-priority p{margin:5px 0 0;color:var(--muted);font-size:.87rem}
+.portfolio-priority .btn{flex:0 0 auto}
+.portfolio-holdings-primary{display:grid;gap:12px;min-width:0}
+.portfolio-main-head{margin:0;align-items:center}
+.portfolio-main-head .user-muted{display:block;margin-top:4px}
+.portfolio-after-holdings{margin-top:16px}
+@media(max-width:640px){
+ .portfolio-priority{flex-direction:column;align-items:stretch}
+ .portfolio-priority .btn{align-self:flex-start}
+ .portfolio-main-head{align-items:flex-start;gap:10px}
+}
+
 /* B4 journal UX: an authored decision flow precedes optional prices and raw fills. */
 .journal-metrics-details{margin:4px 0 18px}
 .journal-metrics-details>summary{cursor:pointer;color:var(--muted);font-size:.83rem;font-weight:750;min-height:44px;display:flex;align-items:center}

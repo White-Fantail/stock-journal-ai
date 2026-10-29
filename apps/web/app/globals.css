@@ -548,7 +548,17 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .portfolio-holdings-primary{display:grid;gap:12px;min-width:0}
 .portfolio-main-head{margin:0;align-items:center}
 .portfolio-main-head .user-muted{display:block;margin-top:4px}
-.portfolio-after-holdings{margin-top:16px}
+.portfolio-page-heading{align-items:center}
+.portfolio-page-heading>div:first-child{min-width:0}
+.portfolio-page-actions{margin-left:auto;justify-content:flex-end;align-items:center}
+.portfolio-page-actions .btn{white-space:nowrap}
+@media(max-width:700px){
+ .portfolio-page-heading{align-items:stretch}
+ .portfolio-page-actions{margin-left:0;justify-content:flex-start}
+}
+@media(max-width:400px){
+ .portfolio-page-actions .btn{flex:1 1 100%;text-align:center}
+}
 @media(max-width:640px){
  .portfolio-priority{flex-direction:column;align-items:stretch}
  .portfolio-priority .btn{align-self:flex-start}

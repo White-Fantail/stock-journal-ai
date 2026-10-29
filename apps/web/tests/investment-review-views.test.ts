@@ -10,7 +10,7 @@ test("private account-reference view never claims multi-account policy complianc
   assert.ok(ui.includes("assessAccountPolicyReference("));
   assert.ok(ui.includes("전체 포트폴리오 정책 준수 여부는 미확인"));
   assert.ok(ui.includes("계좌 기준 참고 비중"));
-  assert.ok(ui.includes("data.readWarnings?.length"));
+  assert.ok(ui.includes("hasHoldingsReadWarnings(data.readWarnings)"));
   assert.ok(risk.includes("ACCOUNT_COMPARISON_NOT_PORTFOLIO_COMPLIANCE"));
   for(const marker of ["quoteAt","marketObservations","fetch(","PRICE_TARGET","PRICE_STOP","placeOrder"])
     assert.ok(!risk.includes(marker),marker);

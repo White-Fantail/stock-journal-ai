@@ -123,3 +123,21 @@ test("AI navigation is unified while legacy coaching deep links remain supported
  assert.ok(panel.includes('name="consent"'));
  assert.ok(panel.includes('name="mode"'));
 });
+
+test("stock plan comparison reports changed fields without disclosing prices",()=>{
+ const previous={...plans[0],ticker:"RKLB",targetPrice:"60",stopPrice:"50",
+   rationale:"Initial strategy",createdAt:"2026-10-10T00:00:00Z"};
+ const latest={...previous,targetPrice:"65",stopPrice:"56.5",
+   rationale:"Revised conditions",createdAt:"2026-10-20T00:00:00Z"};
+ const evidence=evidenceForAnalysis("STOCK_REVIEW","RKLB",[],[previous,latest],[],[]);
+ const change=evidence.evidence.find(e=>e.kind==="PLAN_CHANGE");
+ assert.ok(change);
+ assert.equal(change.ref,"D1");
+ assert.ok(change.detail.includes("목표가"));
+ assert.ok(change.detail.includes("손절가"));
+ for(const amount of ["56.5","65","60"]){
+   assert.ok(!JSON.stringify(evidence).includes('"'+amount+'"'));
+ }
+ const unchanged=evidenceForAnalysis("STOCK_REVIEW","RKLB",[],[previous],[],[]);
+ assert.ok(!unchanged.evidence.some(e=>e.kind==="PLAN_CHANGE"));
+});

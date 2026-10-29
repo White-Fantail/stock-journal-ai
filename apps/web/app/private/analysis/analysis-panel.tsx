@@ -78,6 +78,14 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
       <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
+      {state.evidence.some(e=>e.kind==="PLAN_CHANGE")&&
+        <div className="state-panel" style={{padding:16,marginBottom:16}}>
+          <h3>투자계획 변경 기록</h3>
+          <p className="user-footnote">최근 두 계획을 비교해 변경된 항목을 확인했습니다. 변경은 위반이나 매매 신호를 뜻하지 않습니다.</p>
+          {state.evidence.filter(e=>e.kind==="PLAN_CHANGE").map(e=>
+            <p key={e.ref}><strong>{e.ticker} · {e.on}</strong> — {e.detail}</p>)}
+          <p className="user-footnote">AI에는 목표가·손절가·비중의 구체적인 숫자를 전달하지 않았습니다.</p>
+        </div>}
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>

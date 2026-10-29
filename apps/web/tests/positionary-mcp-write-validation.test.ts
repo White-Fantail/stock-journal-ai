@@ -30,7 +30,7 @@ test("MCP plan revision allows explicitly unset target, stop, currency and inval
 });
 
 test("MCP required nullable properties still must be provided", () => {
-  const payload = Object.fromEntries(required.map(k => [k, null]));
+  const payload = Object.fromEntries(required.map(k => [k, k === "ticker" ? "TSLA" : k === "rationale" ? "Synthetic plan rationale" : null]));
   for (const missing of ["targetPrice", "priceCurrency", "maxAllocationPct"]) {
     const incomplete = { ...payload };
     delete incomplete[missing];

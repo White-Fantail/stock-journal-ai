@@ -119,6 +119,22 @@ test("portfolio shows observed holdings before optional analysis and prompts",()
  assert.ok(!page.slice(0,holding).includes("<PortfolioOverview personal={personal}"));
 });
 
+test("portfolio navigation actions sit to the right of the heading, not below holdings",()=>{
+ const page=read("../app/private/portfolio/page.tsx");
+ const css=read("../app/globals.css");
+ const title=page.indexOf('className="page-intro home-data-heading portfolio-page-heading"');
+ const actions=page.indexOf('className="home-actions portfolio-page-actions"');
+ const holding=page.indexOf("<PersonalPortfolioBlock data={personal}/>");
+ assert.ok(title>=0&&title<actions&&actions<holding);
+ assert.ok(page.includes('aria-label="포트폴리오 바로가기"'));
+ assert.equal(page.split('href="/private/journal">종목별 투자 계획 →').length-1,1);
+ assert.equal(page.split('href="/private/journal/new?mode=plan">매수 전 위험 점검').length-1,1);
+ assert.ok(!page.includes("portfolio-after-holdings"));
+ assert.ok(css.includes(".portfolio-page-actions{margin-left:auto"));
+ assert.ok(css.includes("@media(max-width:700px)"));
+ assert.ok(css.includes(".portfolio-page-actions .btn{flex:1 1 100%"));
+});
+
 test("B4 plan editing retains all existing strategy fields as a new full immutable revision",()=>{
  const page=read("../app/private/journal/new/page.tsx");
  const pricing=read("../app/private/journal/new/plan-risk-check.tsx");

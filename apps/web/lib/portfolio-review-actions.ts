@@ -3,6 +3,7 @@
  */
 import type {JournalPlan,RiskFactorRevision} from "./saas-trades-api";
 import type {TigerPersonalRead} from "./tiger-api";
+import {hasHoldingsReadWarnings} from "./portfolio-overview-risk";
 
 type Plans=readonly Pick<JournalPlan,"ticker"|"createdAt"|"id">[]|null;
 type Factors=readonly Pick<RiskFactorRevision,"ticker"|"factors">[]|null;
@@ -18,10 +19,11 @@ const SAFE_TICKER=/^[A-Z0-9.:-]{1,32}$/;
 export function portfolioReviewActions({personal,plans,factors}:PortfolioReviewInput):PortfolioReviewAction[]{
  const actions:PortfolioReviewAction[]=[];
  const add=(item:PortfolioReviewAction)=>{if(!actions.some(a=>a.id===item.id))actions.push(item);};
- // An incomplete response is not proof that another holding or authoring record does not exist.
- if(personal.readWarnings?.length || personal.accounts.some(a=>a.truncated||a.partial)){
-   add({id:"partial",kind:"CHECK",title:"계좌 원본 조회 범위를 확인하세요",
-    description:"일부 자료가 제외되거나 부분 수집됐습니다. 미작성 종목·전체 비중을 확정하지 않습니다.",
+ // Only holdings-related validation failures suppress decisions about missing plans
+ // and shared risks. Historical orders can be incomplete without hiding stocks.
+ if(hasHoldingsReadWarnings(personal.readWarnings)){
+   add({id:"partial",kind:"CHECK",title:"보유 자산 원본 조회를 확인하세요",
+    description:"보유종목·계좌자산·기준 시각의 일부 자료가 제외됐습니다. 전체 비중이나 미작성 종목을 확정하지 않습니다.",
     href:"/private/brokers"});
    return actions;
  }

@@ -96,3 +96,30 @@ test("AI evidence strips financial numbers and short labeled account identifiers
  assert.ok(payload.includes("[계좌 식별정보 숨김]"));
  assert.ok(read("../app/private/analysis/analysis-panel.tsx").includes("모든 민감한 표현이 자동 제거된다고 보장할 수 없으므로"));
 });
+
+test("habit evidence includes different symbols despite a burst of newest notes",()=>{
+ const many=Array.from({length:24},(_,i)=>({...entries[0],
+   createdAt:new Date(Date.UTC(2026,9,30,0,0,24-i)).toISOString(),
+   content:"TSLA memo "+i}));
+ const older={...entries[0],ticker:"RKLB",content:"Older RKLB thesis",
+   createdAt:"2026-10-10T00:00:00Z"};
+ const result=evidenceForAnalysis("HABITS",null,[...many,older],[],[],[]);
+ const notes=result.evidence.filter(e=>e.kind==="NOTE");
+ assert.equal(notes.length,18);
+ assert.ok(notes.some(e=>e.ticker==="RKLB"),"other symbols must not be starved");
+ assert.ok(notes.some(e=>e.ticker==="TSLA"));
+});
+
+test("AI navigation is unified while legacy coaching deep links remain supported",()=>{
+ const menu=read("../app/private/layout.tsx");
+ const page=read("../app/private/analysis/page.tsx");
+ const panel=read("../app/private/analysis/analysis-panel.tsx");
+ assert.equal(menu.split('href="/private/analysis">AI 투자 복기').length-1,2);
+ assert.ok(!menu.includes('href="/private/analysis?mode=COACHING"'));
+ assert.ok(page.includes('params.mode==="COACHING"'));
+ for(const title of ["종목별 투자 판단 검토","내 투자 습관 분석","지난 점검과 개선 추적"]){
+   assert.ok(panel.includes(title),title);
+ }
+ assert.ok(panel.includes('name="consent"'));
+ assert.ok(panel.includes('name="mode"'));
+});

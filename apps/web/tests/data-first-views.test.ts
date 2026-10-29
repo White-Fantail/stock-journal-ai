@@ -100,7 +100,7 @@ test("B3 investor-centered portfolio links to source-aware risks without suppres
  assert.ok(page.includes("portfolio-technical-details"));
  assert.ok(focus.includes("확정 투자 원장 아님"));
  assert.ok(focus.includes('risk.state==="READY"'));
- assert.ok(actions.includes("personal.readWarnings?.length"));
+ assert.ok(actions.includes("hasHoldingsReadWarnings(personal.readWarnings)"));
  assert.ok(actions.includes("plans.length>=200"));
  assert.ok(actions.includes("factors.length>100"));
 });

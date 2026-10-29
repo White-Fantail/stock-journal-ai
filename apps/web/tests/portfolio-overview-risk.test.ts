@@ -96,9 +96,6 @@ test("missing funds, stale snapshot, incomplete source and unaccounted risk fail
    read([{...good,asOf:null}]),
    read([{...good,asOf:"2026-10-10T00:00:00Z"}]),
    read([{...good,asOf:"2026-10-28T00:00:00Z"}]),
-   read([{...good,partial:true}]),
-   read([{...good,truncated:true}]),
-   read([{...good,hasMore:true}]),
    read([{...good,assets:null}]),
    read([{...good,assets:{...good.assets,cashBalance:null}}]),
    read([{...good,assets:{...good.assets,netLiquidation:null}}]),
@@ -119,6 +116,39 @@ test("missing funds, stale snapshot, incomplete source and unaccounted risk fail
  assert.equal(assessPortfolioOverviewRisk(read([good]),null,NOW).state,"UNAVAILABLE");
  assert.equal(assessPortfolioOverviewRisk(read([good]),
    Array.from({length:200},()=>plan("TSLA","10")),NOW).state,"UNAVAILABLE");
+});
+
+test("historical order paging and optional observation warnings do not block current holdings",()=>{
+ const good=account("1","300","1000",[position("TSLA","700")]);
+ const variations:TigerPersonalRead[]=[
+   read([{...good,partial:true}]),
+   read([{...good,truncated:true}]),
+   read([{...good,hasMore:true,totalOrders:471,orders:[]}]),
+   read([{...good,partial:true,truncated:true,hasMore:true}],
+     ["ORDERS_INVALID","ORDERS_LEGACY_FEE_CURRENCY","QUOTES_INVALID","FILLS_INVALID",
+      "FEES_INVALID","COUNTS_INVALID","PAGINATION_INVALID"]),
+ ];
+ for(const source of variations){
+   const v=assessPortfolioOverviewRisk(source,[plan("TSLA","60")],NOW);
+   assert.equal(v.state,"READY",v.state==="UNAVAILABLE"?v.reason:"");
+   if(v.state==="READY"){
+     assert.equal(v.positions[0].observedTigerPct,"70.00");
+     assert.equal(v.completePortfolioVerified,false);
+   }
+ }
+});
+
+test("damaged assets or positions and unknown parser warnings still block exposure",()=>{
+ const good=account("1","300","1000",[position("TSLA","700")]);
+ for(const code of ["POSITIONS_INVALID","ASSETS_INVALID","ACCOUNT_TIME_INVALID",
+                    "UNKNOWN_SOURCE_ERROR"]){
+   const v=assessPortfolioOverviewRisk(read([{...good,partial:true}],[code]),[],NOW);
+   assert.equal(v.state,"UNAVAILABLE",code);
+ }
+ // A full 100-position source must not become trusted from order-page flags.
+ const capped=read([account("saturated","0","100",
+   Array.from({length:100},(_,i)=>position("T"+String(i),"1")))]);
+ assert.equal(assessPortfolioOverviewRisk(capped,[],NOW).state,"UNAVAILABLE");
 });
 
 test("latest revision wins, exact threshold beats rounded display, and no-plan stays unknown",()=>{

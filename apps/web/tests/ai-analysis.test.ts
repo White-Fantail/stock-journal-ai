@@ -141,3 +141,10 @@ test("stock plan comparison reports changed fields without disclosing prices",()
  const unchanged=evidenceForAnalysis("STOCK_REVIEW","RKLB",[],[previous],[],[]);
  assert.ok(!unchanged.evidence.some(e=>e.kind==="PLAN_CHANGE"));
 });
+
+test("plan revision evidence is visible independently from model narrative",()=>{
+ const view=read("../app/private/analysis/analysis-panel.tsx");
+ assert.ok(view.includes('e.kind==="PLAN_CHANGE"'));
+ assert.ok(view.includes("최근 두 계획을 비교해 변경된 항목을 확인했습니다"));
+ assert.ok(view.includes("구체적인 숫자를 전달하지 않았습니다"));
+});

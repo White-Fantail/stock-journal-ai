@@ -621,3 +621,29 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .indicator-history p, .indicator-history a { overflow-wrap:anywhere; }
 .indicator-filter { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:24px 0; }
 .indicator-filter input { max-width:100%; }
+
+/* Journal: surface the user's own notes before optional onboarding and detail panels. */
+.journal-page .journal-root{margin-top:12px}
+.journal-page .journal-workspace{gap:12px}
+.journal-page .journal-current{padding:18px 21px}
+.journal-page .journal-history{padding:19px 21px}
+.journal-page .journal-primary-reason{margin-top:12px;padding:12px 14px}
+.journal-page .journal-tabs{margin-top:10px}
+.journal-page .journal-timeline{margin-top:14px}
+.journal-plan-snapshot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.journal-plan-snapshot>div{min-width:0;display:grid;align-content:start;gap:4px;border:1px solid #e1eee7;border-radius:10px;background:#fff;padding:10px 12px}
+.journal-plan-snapshot span{font-size:.72rem;color:#708880;font-weight:700}
+.journal-plan-snapshot strong{font-size:.93rem;line-height:1.4;overflow-wrap:anywhere;color:var(--ink)}
+.journal-workspace>.journal-investment-details{margin:0;padding:12px 18px;background:#fff;border:1px solid var(--line);border-radius:14px}
+.journal-workspace>.journal-investment-details>summary{min-height:40px}
+.journal-workspace>.journal-investment-details .journal-current-grid{margin-top:6px}
+.journal-workspace>.journal-investment-details .journal-form-hint{margin-top:10px;white-space:pre-wrap}
+.journal-guidance-details{padding:12px 18px}
+.journal-guidance-details>summary{font-weight:750;cursor:pointer;min-height:40px;display:flex;align-items:center}
+.journal-guidance-details .journal-guided-workflow{margin-top:8px}
+.journal-workspace>.journal-coaching-link{margin:0;font-size:.82rem}
+@media(max-width:900px){.journal-plan-snapshot{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.app-shell .journal-page .journal-current,.app-shell .journal-page .journal-history{padding:15px}
+  .journal-plan-snapshot>div{padding:9px 10px}
+  .journal-workspace>.journal-investment-details{padding:10px 13px}
+}

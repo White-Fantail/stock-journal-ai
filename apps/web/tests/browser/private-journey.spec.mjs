@@ -75,6 +75,11 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);
   await expect(page.locator(".journal-current")).toContainText("QATEST");
+  await expect(page.locator(".journal-primary-reason")).toContainText("Synthetic thesis");
+  await expect(page.locator(".journal-plan-snapshot")).toContainText("목표가");
+  await expect(page.locator(".journal-history")).toBeVisible();
+  await expect(page.locator(".journal-guidance-details")).not.toHaveAttribute("open","");
+  await page.locator(".journal-guidance-details summary").click();
   await expect(page.locator(".journal-guided-workflow")).toContainText("투자 논리 기록됨");
   await page.goto("/private/journal/new?mode=plan&ticker=QATEST");
   await expect(page.locator("[data-private-hydrated]")).toBeAttached();

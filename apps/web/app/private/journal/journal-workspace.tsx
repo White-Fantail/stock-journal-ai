@@ -198,7 +198,7 @@ export function JournalWorkspace({
           <div className="journal-current-top">
             <div><span className="journal-kicker">{active?"INVESTMENT NOTES":"MY JOURNAL"}</span>
               <h2>{active?.ticker??"기록할 종목을 선택하세요"}</h2>
-              <p>{active?"현재 투자 논리·계획·복기 현황을 먼저 확인하세요.":"첫 종목 계획은 거래 없이도 작성할 수 있습니다."}</p>
+              {!active&&<p>첫 종목 계획은 거래 없이도 작성할 수 있습니다.</p>}
             </div>
             {active&&<div className="journal-current-actions">
                <Link className="btn btn-outline" href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>+ 투자 판단 작성</Link>
@@ -207,85 +207,17 @@ export function JournalWorkspace({
              </div>}
              {active?.watched&&<span className="pill">관심종목</span>}
           </div>
-          {active&&<p className="journal-coaching-link"><Link
-            href={"/private/analysis?mode=COACHING&ticker="+encodeURIComponent(active.ticker)}>
-              이 종목의 판단 습관을 AI와 돌아보기 →</Link>
-            <small> 선택한 기록 일부 전송은 다음 화면에서 별도로 동의합니다.</small></p>}
-          {active&&guide&&<div className="journal-guided-workflow" aria-label="종목별 투자 관리 흐름">
-            <article className="journal-guided-step">
-              <small>1 · 현재 계획</small>
-              <strong>{guide.plan==="EXISTS"?"투자계획 기록됨":"투자계획 작성 필요"}</strong>
-              <p>{active.plan?.invalidationCondition
-                ?"재검토 조건: "+contentPreview(active.plan.invalidationCondition,150):
-                "어떤 조건에서 투자 논리를 재검토할지 기록해 두세요."}</p>
-              <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>
-                {guide.plan==="EXISTS"?"계획 확인·변경":"내 계획 세우기"} →</Link>
-            </article>
-            <article className="journal-guided-step">
-              <small>2 · 판단 기록</small>
-              <strong>{guide.thesis==="EXISTS"?"투자 논리 기록됨":"투자 논리 기록 필요"}</strong>
-              <p>{authoredReason?contentPreview(authoredReason,150):
-                "왜 이 종목을 선택했는지, 어떤 가정을 믿고 있는지 기록하세요."}</p>
-              <Link href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>
-                {authoredReason?"추가 판단 메모 작성":"판단 기록 작성"} →</Link>
-            </article>
-            <article className="journal-guided-step">
-              <small>3 · 정기 복기</small>
-              <strong>{guide.coverageIncomplete?"일지 일부 조회 · 일정 미확인":
-                !active.plan?"먼저 투자계획을 세우세요":
-                guide.due?"내가 정한 점검 시점 도래":
-                guide.nextReview?"다음 점검 "+displayTime(guide.nextReview):
-                guide.cadenceKnown?"점검 예정일 확인 필요":"정기 점검 주기 미설정"}</strong>
-              <p>{guide.reviewDate?"최근 사용자 복기 "+displayTime(guide.reviewDate)+" · 자동 준수 판정 아님":
-                "투자 이후에도 판단이 유효한지 스스로 점검해 보세요."}</p>
-              {active.plan?<Link href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>원칙 자기평가 →</Link>:
-                <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>점검 주기 설정 →</Link>}
-            </article>
-          </div>}
-          {active&&<div className="journal-primary-reason">
+          {active&&authoredReason&&<div className="journal-primary-reason">
             <h3>내가 기록한 투자 논리</h3>
-            <p>{authoredReason??"투자 논리 기록이 없습니다. 매매 없이도 투자 논리를 먼저 기록할 수 있습니다."}</p>
+            <p>{authoredReason}</p>
             {authoredReasonAt&&<small>직접 작성 · {displayTime(authoredReasonAt)} · {active.plan?.rationale.trim()?"현재 투자계획의 근거":"별도 판단 메모"}</small>}
           </div>}
-          {active&&<details className="journal-investment-details">
-            <summary>세부 투자 전략과 목표가·손절가 보기 (선택 사항)</summary>
-          <div className="journal-current-grid">
-            <div><span>최근 투자 논리</span><strong>{authoredReason?
-              contentPreview(authoredReason,105):"기록 없음"}</strong>
-              {authoredReasonAt&&<small>{displayTime(authoredReasonAt)} 기준</small>}
-            </div>
-            <div><span>목표가</span><strong>{active.plan?
-              planPrice(active.plan.targetPrice,active.plan.priceCurrency):"미설정"}</strong>
-              <small>계획 가격 · 주문 아님</small>
-               <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>목표가 {active.plan?"변경":"입력"} →</Link>
-            </div>
-            <div><span>손절가</span><strong>{active.plan?
-              planPrice(active.plan.stopPrice,active.plan.priceCurrency):"미설정"}</strong>
-              <small>나의 계획 · 주문 아님</small>
-               <Link className="journal-plan-edit-link" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>손절가 {active.plan?"변경":"입력"} →</Link>
-            </div>
-          </div>
-          <div className="journal-current-grid" aria-label="투자 전략과 위험 계획">
-            <div><span>투자 전략</span>
-              <strong>{active.plan?.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong>
-              <small>{active.plan?.investmentHorizon?HORIZON_LABEL[active.plan.investmentHorizon]??"기간 확인 필요":"투자 기간 미설정"}</small>
-            </div>
-            <div><span>최대 보유 비중 (나의 기준)</span>
-              <strong>{active.plan?.maxAllocationPct?formatPercent(active.plan.maxAllocationPct)+"%":"미설정"}</strong>
-              <small>계좌 스냅샷과 직접 비교한 매매 신호가 아닙니다.</small>
-            </div>
-            <div><span>정기 투자 점검</span>
-              <strong>{active.plan?.reviewCadence?CADENCE_LABEL[active.plan.reviewCadence]??"확인 필요":"미설정"}</strong>
-              <small>가격 감시 없이 스스로 검토하는 주기입니다.</small>
-            </div>
-          </div>
-          {active?.plan?.riskDecisionNote&&<p className="journal-form-hint">
-            <strong>당시 내가 확인한 매수 가정 · 사용자 작성:</strong> {active.plan.riskDecisionNote}
-          </p>}
-          {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
-            <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
-          </p>}
-          </details>}
+          {active?.plan&&<div className="journal-plan-snapshot" aria-label="현재 작성한 투자계획">
+            <div><span>목표가</span><strong>{planPrice(active.plan.targetPrice,active.plan.priceCurrency)}</strong></div>
+            <div><span>손절가</span><strong>{planPrice(active.plan.stopPrice,active.plan.priceCurrency)}</strong></div>
+            <div><span>투자 전략</span><strong>{active.plan.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong></div>
+            <div><span>최대 보유 비중</span><strong>{active.plan.maxAllocationPct?formatPercent(active.plan.maxAllocationPct)+"%":"미설정"}</strong></div>
+          </div>}
           {!active&&<div className="journal-actions">
              <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
              <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>
@@ -293,19 +225,11 @@ export function JournalWorkspace({
            </div>}
         </section>
 
-        {active&&<details className="user-panel">
-          <summary>{selected} 보조지표 기록 보기</summary>
-          <p><a href={"/private/indicators/record?ticker="+encodeURIComponent(selected)}>당시 값 기록 →</a>{" · "}
-            <a href={"/private/indicators?ticker="+encodeURIComponent(selected)}>이 종목의 지표 기록 더 보기 →</a></p>
-          {indicatorHistory?<IndicatorRecordList records={indicatorHistory.records.filter(r=>r.ticker===selected)} hasMore={indicatorHistory.hasMore}/>:
-            <p role="alert">보조지표 기록을 불러올 수 없습니다.</p>}
-        </details>}
         {active&&<section className="journal-history">
           <div className="journal-section-heading">
             <div><span className="journal-kicker">기록 · 변경 이력</span><h2>{selected}의 판단 이력과 거래 출처</h2></div>
             <span className="journal-history-count">최근 {history.length}개 기록</span>
           </div>
-          <p className="user-footnote">기록은 작성·변경 순서대로 남습니다. 내가 입력한 거래, Tiger 관측 주문, 독립 검증 체결은 서로 다른 출처입니다.</p>
           <div className="journal-tabs" role="group" aria-label="기록 필터">
             <button type="button" aria-pressed={view==="activity"} onClick={()=>setView("activity")}
               className={`btn ${view==="activity"?"journal-tab-active":""}`}>투자 판단 · 계획</button>
@@ -457,6 +381,75 @@ export function JournalWorkspace({
             </p>}
           </div>}
         </section>}
+        {active?.plan&&<details className="journal-investment-details">
+            <summary>투자계획 상세 조건 보기 (선택 사항)</summary>
+          <div className="journal-current-grid" aria-label="투자 전략과 위험 계획">
+            <div><span>투자 전략</span>
+              <strong>{active.plan?.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong>
+              <small>{active.plan?.investmentHorizon?HORIZON_LABEL[active.plan.investmentHorizon]??"기간 확인 필요":"투자 기간 미설정"}</small>
+            </div>
+            <div><span>최대 보유 비중 (나의 기준)</span>
+              <strong>{active.plan?.maxAllocationPct?formatPercent(active.plan.maxAllocationPct)+"%":"미설정"}</strong>
+              <small>계좌 스냅샷과 직접 비교한 매매 신호가 아닙니다.</small>
+            </div>
+            <div><span>정기 투자 점검</span>
+              <strong>{active.plan?.reviewCadence?CADENCE_LABEL[active.plan.reviewCadence]??"확인 필요":"미설정"}</strong>
+              <small>가격 감시 없이 스스로 검토하는 주기입니다.</small>
+            </div>
+          </div>
+          {active?.plan?.riskDecisionNote&&<p className="journal-form-hint">
+            <strong>당시 내가 확인한 매수 가정 · 사용자 작성:</strong> {active.plan.riskDecisionNote}
+          </p>}
+          {active?.plan?.invalidationCondition&&<p className="journal-form-hint">
+            <strong>투자 논리 무효화 조건:</strong> {active.plan.invalidationCondition}
+          </p>}
+          </details>}
+          
+        {active&&<details className="user-panel">
+          <summary>{selected} 보조지표 기록 보기</summary>
+          <p><a href={"/private/indicators/record?ticker="+encodeURIComponent(selected)}>당시 값 기록 →</a>{" · "}
+            <a href={"/private/indicators?ticker="+encodeURIComponent(selected)}>이 종목의 지표 기록 더 보기 →</a></p>
+          {indicatorHistory?<IndicatorRecordList records={indicatorHistory.records.filter(r=>r.ticker===selected)} hasMore={indicatorHistory.hasMore}/>:
+            <p role="alert">보조지표 기록을 불러올 수 없습니다.</p>}
+        </details>}
+        
+        {active&&guide&&<details className="user-panel journal-guidance-details"><summary>투자 관리 가이드 보기 (선택 사항)</summary><div className="journal-guided-workflow" aria-label="종목별 투자 관리 흐름">
+            <article className="journal-guided-step">
+              <small>1 · 현재 계획</small>
+              <strong>{guide.plan==="EXISTS"?"투자계획 기록됨":"투자계획 작성 필요"}</strong>
+              <p>{active.plan?.invalidationCondition
+                ?"재검토 조건: "+contentPreview(active.plan.invalidationCondition,150):
+                "어떤 조건에서 투자 논리를 재검토할지 기록해 두세요."}</p>
+              <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>
+                {guide.plan==="EXISTS"?"계획 확인·변경":"내 계획 세우기"} →</Link>
+            </article>
+            <article className="journal-guided-step">
+              <small>2 · 판단 기록</small>
+              <strong>{guide.thesis==="EXISTS"?"투자 논리 기록됨":"투자 논리 기록 필요"}</strong>
+              <p>{authoredReason?contentPreview(authoredReason,150):
+                "왜 이 종목을 선택했는지, 어떤 가정을 믿고 있는지 기록하세요."}</p>
+              <Link href={"/private/journal/new?ticker="+encodeURIComponent(active.ticker)}>
+                {authoredReason?"추가 판단 메모 작성":"판단 기록 작성"} →</Link>
+            </article>
+            <article className="journal-guided-step">
+              <small>3 · 정기 복기</small>
+              <strong>{guide.coverageIncomplete?"일지 일부 조회 · 일정 미확인":
+                !active.plan?"먼저 투자계획을 세우세요":
+                guide.due?"내가 정한 점검 시점 도래":
+                guide.nextReview?"다음 점검 "+displayTime(guide.nextReview):
+                guide.cadenceKnown?"점검 예정일 확인 필요":"정기 점검 주기 미설정"}</strong>
+              <p>{guide.reviewDate?"최근 사용자 복기 "+displayTime(guide.reviewDate)+" · 자동 준수 판정 아님":
+                "투자 이후에도 판단이 유효한지 스스로 점검해 보세요."}</p>
+              {active.plan?<Link href={"/private/journal/review/new?ticker="+encodeURIComponent(active.ticker)}>원칙 자기평가 →</Link>:
+                <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(active.ticker)}>점검 주기 설정 →</Link>}
+            </article>
+          </div></details>}
+
+        {active&&<p className="journal-coaching-link"><Link
+            href={"/private/analysis?mode=COACHING&ticker="+encodeURIComponent(active.ticker)}>
+              이 종목의 판단 습관을 AI와 돌아보기 →</Link>
+            <small> 선택한 기록 일부 전송은 다음 화면에서 별도로 동의합니다.</small></p>}
+          
       </div>
     </div>}
   </div>;

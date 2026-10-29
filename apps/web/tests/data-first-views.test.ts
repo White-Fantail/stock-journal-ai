@@ -56,8 +56,9 @@ test("a selected stock displays actionable target and stop controls",()=>{
   const create=read("../app/private/journal/new/page.tsx");
   const pricing=read("../app/private/journal/new/plan-risk-check.tsx");
   assert.ok(ui.includes("투자 전략·계획 관리"));
-  assert.ok(ui.includes("목표가 {active.plan?"));
-  assert.ok(ui.includes("손절가 {active.plan?"));
+  assert.ok(ui.includes('aria-label="현재 작성한 투자계획"'));
+  assert.ok(ui.includes("planPrice(active.plan.targetPrice,active.plan.priceCurrency)"));
+  assert.ok(ui.includes("planPrice(active.plan.stopPrice,active.plan.priceCurrency)"));
   assert.ok(ui.includes("/private/journal/new?mode=plan&ticker="));
   assert.ok(create.includes("action={addPlan}"));
   assert.ok(create.includes("<PlanRiskCheck"));
@@ -130,4 +131,15 @@ test("B4 plan editing retains all existing strategy fields as a new full immutab
  assert.ok(client.includes("useEffect(()=>{if(initialTicker"));
  assert.ok(client.includes("history.map(e=>"));
  assert.ok(api.includes("export type JournalPlan"));
+});
+
+test("stock journal prioritizes authored content and chronology over explanatory guides",()=>{
+  const ui=read("../app/private/journal/journal-workspace.tsx");
+  const history=ui.indexOf('className="journal-history"');
+  assert.ok(ui.indexOf('className="journal-primary-reason"')<history);
+  assert.ok(ui.indexOf('className="journal-plan-snapshot"')<history);
+  assert.ok(ui.indexOf('className="journal-guided-workflow"')>history);
+  assert.ok(ui.indexOf("보조지표 기록 보기")>history);
+  assert.ok(ui.includes('className="user-panel journal-guidance-details"'));
+  assert.ok(ui.includes('active&&authoredReason&&'));
 });

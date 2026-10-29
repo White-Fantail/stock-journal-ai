@@ -130,7 +130,7 @@ export function evidenceForAnalysis(
   const orderCandidates=observed.filter(o=>eligible(o.symbol));
   const orderRows=mode==="HABITS"
     ? diversifiedRecent(orderCandidates.map(o=>({...o,ticker:o.symbol,
-        createdAt:o.at&&/^\\d{13}$/.test(o.at)?new Date(Number(o.at)).toISOString():""})),12)
+        createdAt:o.at&&/^\d{13}$/.test(o.at)?new Date(Number(o.at)).toISOString():""})),12)
     : orderCandidates.sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,12);
   for(const o of orderRows)refs.push({ref:"O"+(refs.filter(x=>x.kind==="TIGER_ORDER_OBSERVED").length+1),
     kind:"TIGER_ORDER_OBSERVED",ticker:o.symbol,on:dateMillis(o.at),

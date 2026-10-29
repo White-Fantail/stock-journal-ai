@@ -540,6 +540,32 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .portfolio-unclassified-list a{min-height:44px;padding:10px;background:#f2f8f5;border-radius:9px}
 @media(max-width:640px){.portfolio-action-grid{grid-template-columns:1fr}.portfolio-scope-banner{padding:12px}}
 
+/* Portfolio follow-up: compact progress and priorities without obscuring holdings. */
+.portfolio-review-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 18px}
+.portfolio-review-progress>div{min-width:0;border:1px solid var(--line);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:4px}
+.portfolio-review-progress small{font-size:.77rem;color:var(--muted)}
+.portfolio-review-progress strong{font-size:1rem;overflow-wrap:anywhere}
+.portfolio-review-list{display:grid;gap:0}
+.portfolio-review-item{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 2px;border-top:1px solid var(--line);min-width:0}
+.portfolio-review-copy{min-width:0}
+.portfolio-review-meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.75rem;color:var(--muted);margin-bottom:6px}
+.portfolio-review-meta span:first-child{font-weight:750;color:var(--ink)}
+.portfolio-review-item h3{font-size:.98rem;margin:0 0 5px;overflow-wrap:anywhere}
+.portfolio-review-item p{font-size:.85rem;color:var(--muted);margin:0;max-width:720px;line-height:1.6;overflow-wrap:anywhere}
+.portfolio-review-item>.btn{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.portfolio-review-more{margin-top:5px}
+.portfolio-review-more>summary{font-weight:700;cursor:pointer;min-height:44px;display:flex;align-items:center}
+.portfolio-review-footnote{margin-top:16px}
+@media(max-width:700px){
+ .portfolio-review-item{flex-direction:column;align-items:stretch;gap:12px}
+ .portfolio-review-item>.btn{align-self:flex-start}
+}
+@media(max-width:420px){
+ .portfolio-review-progress{grid-template-columns:1fr;gap:7px}
+ .portfolio-review-progress>div{padding:10px 12px;flex-direction:row;justify-content:space-between;align-items:center;gap:8px}
+ .portfolio-review-item>.btn{align-self:stretch}
+}
+
 /* Holdings first: keep only actionable data-integrity warnings above account cards. */
 .portfolio-priority{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
 .portfolio-priority>div{min-width:0}

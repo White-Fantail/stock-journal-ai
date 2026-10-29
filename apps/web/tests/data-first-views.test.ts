@@ -105,6 +105,20 @@ test("B3 investor-centered portfolio links to source-aware risks without suppres
  assert.ok(actions.includes("factors.length>100"));
 });
 
+test("portfolio shows observed holdings before optional analysis and prompts",()=>{
+ const page=read("../app/private/portfolio/page.tsx");
+ const holding=page.indexOf("<PersonalPortfolioBlock data={personal}/>");
+ const overview=page.indexOf("<PortfolioOverview personal={personal}");
+ const attention=page.indexOf("<PortfolioAttention personal={personal}");
+ assert.ok(holding>0&&holding<overview&&overview<attention);
+ assert.ok(page.includes('a.id==="partial"||a.id==="holdings-limit"'));
+ assert.ok(page.indexOf('portfolio-priority" role="alert"')<holding);
+ assert.ok(page.includes("<summary>비중·공통 위험 분석 보기</summary>"));
+ assert.ok(page.includes("<summary>투자계획·위험 분류 보완 제안 보기</summary>"));
+ assert.ok(!page.slice(0,holding).includes("<PortfolioAttention personal={personal}"));
+ assert.ok(!page.slice(0,holding).includes("<PortfolioOverview personal={personal}"));
+});
+
 test("B4 plan editing retains all existing strategy fields as a new full immutable revision",()=>{
  const page=read("../app/private/journal/new/page.tsx");
  const pricing=read("../app/private/journal/new/plan-risk-check.tsx");

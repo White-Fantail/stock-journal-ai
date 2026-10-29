@@ -20,11 +20,20 @@ test("unverified observation can prompt plan, never a verified exposure claim",(
  assert.ok(actions.some(a=>a.id==="factor:TSLA"));
  assert.equal(actions.some(a=>/매수|매도|자동 매매/.test(a.title)),false);
 });
-test("partial readings suppress confident missing-plan and factor claims",()=>{
- for(const personal of [data(["malformed provider entry"]),data([],true)]){
+test("holding-related read warnings suppress confident missing-plan and factor claims",()=>{
+ for(const personal of [data(["POSITIONS_INVALID"]),data(["ASSETS_INVALID"]),
+                        data(["UNKNOWN_SOURCE_ERROR"])]){
   const actions=portfolioReviewActions({personal,plans:[],factors:[]});
   assert.equal(actions.length,1);
   assert.equal(actions[0].id,"partial");
+ }
+});
+test("order pagination and unrelated parser warnings do not hide holdings follow-ups",()=>{
+ for(const personal of [data([],true),data(["ORDERS_INVALID","QUOTES_INVALID"],true)]){
+   const actions=portfolioReviewActions({personal,plans:[],factors:[]});
+   assert.ok(actions.some(a=>a.id==="plan:TSLA"));
+   assert.ok(actions.some(a=>a.id==="factor:TSLA"));
+   assert.ok(!actions.some(a=>a.id==="partial"));
  }
 });
 test("failed authoring fetch is not interpreted as missing records",()=>{

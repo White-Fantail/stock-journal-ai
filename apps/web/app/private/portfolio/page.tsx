@@ -9,6 +9,7 @@ import {assessConcentration} from "../../../lib/portfolio-risk";
 import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
 import {PortfolioOverview} from "./portfolio-overview";
 import {PortfolioAttention} from "./portfolio-attention";
+import {portfolioReviewActions} from "../../../lib/portfolio-review-actions";
 import {fetchJournalPlans,fetchUserRiskFactors,type JournalPlan} from "../../../lib/saas-trades-api";
 import {auth} from "../../../auth";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
@@ -215,27 +216,42 @@ export default async function PortfolioPage() {
   const personal=accountResult.status==="fulfilled"?accountResult.value:null;
   const plans=planResult.status==="fulfilled"?planResult.value:null;
   const userFactors=factorResult.status==="fulfilled"?factorResult.value:null;
-  if(personal && personal.accounts.length>0) return <main className="portfolio-data">
-    <div className="page-intro home-data-heading">
-      <div><h1>포트폴리오</h1><p>내 보유 현황에서 투자 집중도와 계획을 먼저 살펴보세요.</p></div>
-      <div className="home-actions">
+  if(personal && personal.accounts.length>0) {
+    // Only incomplete or capped broker holdings warrant interruption before the list.
+    // Missing plans and optional risk classifications are follow-up work, not blockers.
+    const immediate=portfolioReviewActions({personal,plans,factors:userFactors})
+      .find(a=>a.id==="partial"||a.id==="holdings-limit");
+    return <main className="portfolio-data">
+      <div className="page-intro home-data-heading">
+        <div><h1>포트폴리오</h1><p>내 계좌에 관측된 보유 종목을 확인합니다.</p></div>
+      </div>
+      {immediate&&<section className="state-panel portfolio-priority" role="alert">
+        <div><strong>{immediate.title}</strong><p>{immediate.description}</p></div>
+        <Link href={immediate.href} className="btn btn-outline">조회 상태 확인 →</Link>
+      </section>}
+      <section className="portfolio-holdings-primary" aria-label="계좌별 보유 종목">
+        <div className="user-panel-head portfolio-main-head">
+          <div><h2>내 보유 종목</h2>
+            <small className="user-muted">Tiger 관측 · {personal.accounts.length}개 계좌 · 계좌별 기준 시각 표시</small></div>
+          <Link href="/private/trades">거래 기록 →</Link>
+        </div>
+        <PersonalPortfolioBlock data={personal}/>
+      </section>
+      <div className="home-actions portfolio-after-holdings">
         <Link className="btn btn-primary" href="/private/journal">종목별 투자 계획 →</Link>
         <Link className="btn btn-outline" href="/private/journal/new?mode=plan">매수 전 위험 점검</Link>
       </div>
-    </div>
-    <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>
-    <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>
-    <section className="user-panel">
-      <div className="user-panel-head"><h2>계좌별 보유 내역</h2>
-        <Link href="/private/trades">원본 거래 기록 →</Link></div>
-      <p className="user-footnote">실제 Tiger 계좌에서 조회한 값이며, 거래이력 전체의 검증이나 현재 투자 성과 확정은 아닙니다.</p>
-      <PersonalPortfolioBlock data={personal}/>
-    </section>
-    <details className="portfolio-technical-details user-panel">
-      <summary>계좌별 집중도와 검증 범위 자세히 보기</summary>
-      <PortfolioConcentration data={personal} plans={plans}/>
-    </details>
-  </main>;
+      <details className="portfolio-technical-details user-panel" aria-label="비중과 위험 분석">
+        <summary>비중·공통 위험 분석 보기</summary>
+        <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>
+        <PortfolioConcentration data={personal} plans={plans}/>
+      </details>
+      <details className="portfolio-technical-details user-panel" aria-label="추가 점검 제안">
+        <summary>투자계획·위험 분류 보완 제안 보기</summary>
+        <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>
+      </details>
+    </main>;
+  }
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);
   const accountState:TigerStatus|null=links.status==="fulfilled"?links.value:null;
   const historyState:TigerSyncStatus|null=history.status==="fulfilled"?history.value:null;

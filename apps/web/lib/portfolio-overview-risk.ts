@@ -14,6 +14,19 @@ const CENT=BigInt(10)**BigInt(10);
 const MAX_AGE=7*24*60*60*1000;
 const MAX_SKEW=60*60*1000;
 
+/** Personal-read order pagination and optional quote/fill diagnostics are not
+ * evidence of missing holdings. Only source problems affecting the actual
+ * assets/positions/as-of snapshot can disqualify a holdings-based ratio.
+ * Unknown warning codes still fail closed.
+ */
+const NON_HOLDING_READ_WARNINGS=new Set([
+ "ORDERS_INVALID","ORDERS_LEGACY_FEE_CURRENCY","QUOTES_INVALID",
+ "FILLS_INVALID","FEES_INVALID","COUNTS_INVALID","PAGINATION_INVALID",
+]);
+export function hasHoldingsReadWarnings(warnings:readonly string[]|undefined):boolean{
+ return !!warnings?.some(code=>!NON_HOLDING_READ_WARNINGS.has(code));
+}
+
 const money=(s:string|null|undefined):bigint|null=>{
  if(s===null||s===undefined||!DECIMAL.test(s))return null;
  const [whole,frac=""]=s.split(".");
@@ -61,8 +74,8 @@ export function assessPortfolioOverviewRisk(
  now=new Date(),
 ):PortfolioOverviewRisk{
  if(!personal||personal.coverage!=="SNAPSHOT_ONLY"||personal.verified!==false||
-    personal.readWarnings?.length)
-   return fail("Tiger 계좌 정보가 없거나 일부 자료가 제외되어 전체 합산을 보류합니다.");
+    hasHoldingsReadWarnings(personal.readWarnings))
+   return fail("Tiger 보유자산 스냅샷이 없거나 일부 자산·수량·기준 시각이 제외되어 합산을 보류합니다.");
  if(!personal.accounts.length||personal.accounts.length>5)
    return fail("합산할 계좌가 없거나 계좌 조회 상한을 초과했습니다.");
  if(plans===null||plans.length>=200)
@@ -73,8 +86,8 @@ export function assessPortfolioOverviewRisk(
  let nav=BigInt(0),cash=BigInt(0),invested=BigInt(0);
  const byTicker=new Map<string,{amount:bigint;accounts:Set<string>}>();
  for(const account of personal.accounts){
-   if(account.partial||account.truncated||account.hasMore)
-     return fail("일부 보유 내역이 잘렸거나 수집 범위가 불완전해 자동 합산을 중단합니다.");
+   // partial/truncated/hasMore describe historical ORDER coverage and paging,
+   // not the separate current account asset/position snapshot.
    const alias=account.alias;
    if(!alias||aliases.has(alias))
      return fail("계좌 식별명이 중복되거나 없어 서로 다른 계좌임을 보장할 수 없습니다.");

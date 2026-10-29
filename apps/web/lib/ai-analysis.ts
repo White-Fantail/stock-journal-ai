@@ -119,14 +119,19 @@ export function evidenceForAnalysis(
     }
   }
   const voided=new Set(trades.filter(x=>x.kind==="VOID").map(x=>x.voidsEventId));
-  const typedTrades=trades.filter(e=>e.kind==="EXECUTION"&&e.ticker&&eligible(e.ticker)&&!voided.has(e.id))
-    .sort((a,b)=>(b.executedAt??b.createdAt).localeCompare(a.executedAt??a.createdAt)).slice(0,12);
+  const tradeCandidates=trades.filter(e=>e.kind==="EXECUTION"&&e.ticker&&eligible(e.ticker)&&!voided.has(e.id));
+  const typedTrades=mode==="HABITS"
+    ? diversifiedRecent(tradeCandidates.map(e=>({...e,ticker:e.ticker!,createdAt:e.executedAt??e.createdAt})),12)
+    : tradeCandidates.sort((a,b)=>(b.executedAt??b.createdAt).localeCompare(a.executedAt??a.createdAt)).slice(0,12);
   for(const t of typedTrades)refs.push({ref:"M"+(refs.filter(x=>x.kind==="USER_TRADE").length+1),
     kind:"USER_TRADE",ticker:t.ticker!,on:day(t.executedAt??t.createdAt),
     source:"USER_ASSERTED_NOT_BROKER_VERIFIED",
     detail:short((t.side==="BUY"?"매수":"매도")+" 직접 입력; 사유: "+(t.rationale||"미기록"),200)});
-  const orderRows=observed.filter(o=>eligible(o.symbol))
-    .sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,12);
+  const orderCandidates=observed.filter(o=>eligible(o.symbol));
+  const orderRows=mode==="HABITS"
+    ? diversifiedRecent(orderCandidates.map(o=>({...o,ticker:o.symbol,
+        createdAt:o.at&&/^\d{13}$/.test(o.at)?new Date(Number(o.at)).toISOString():""})),12)
+    : orderCandidates.sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,12);
   for(const o of orderRows)refs.push({ref:"O"+(refs.filter(x=>x.kind==="TIGER_ORDER_OBSERVED").length+1),
     kind:"TIGER_ORDER_OBSERVED",ticker:o.symbol,on:dateMillis(o.at),
     source:"UNVERIFIED_BROKER_ORDER_NOT_FILL",

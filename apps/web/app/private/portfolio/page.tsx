@@ -9,6 +9,7 @@ import {assessConcentration} from "../../../lib/portfolio-risk";
 import {assessAccountPolicyReference} from "../../../lib/allocation-policy";
 import {PortfolioOverview} from "./portfolio-overview";
 import {PortfolioAttention} from "./portfolio-attention";
+import {hasHoldingsReadWarnings} from "../../../lib/portfolio-overview-risk";
 import {portfolioReviewActions} from "../../../lib/portfolio-review-actions";
 import {fetchJournalPlans,fetchUserRiskFactors,type JournalPlan} from "../../../lib/saas-trades-api";
 import {auth} from "../../../auth";
@@ -158,10 +159,10 @@ function PortfolioConcentration({data,plans}:{data:TigerPersonalRead;plans:reado
     </div>
     <p className="user-footnote">기존 Tiger 계좌 스냅샷의 보유 종목 평가액만으로 계산한 참고 비중입니다.
       현금·다른 계좌·다른 통화를 합산하지 않습니다. 수익률이나 매매 신호가 아닙니다.</p>
-    {data.readWarnings?.length?<p role="status">조회된 정보에 오류가 있어 집중도 계산을 보류합니다.</p>:
+    {hasHoldingsReadWarnings(data.readWarnings)?<p role="status">보유자산 자료에 누락이 있어 집중도 계산을 보류합니다.</p>:
       data.accounts.map((account,index)=>{
         const result=assessConcentration(account);
-        const policy=data.readWarnings?.length?null:assessAccountPolicyReference(account,plans);
+        const policy=assessAccountPolicyReference(account,plans);
         return <div key={account.alias+":"+index} className="account-summary-item">
           <div className="account-summary-head"><strong>{account.alias}</strong>
             <small>{timeLabel(account.asOf)} 기준</small></div>

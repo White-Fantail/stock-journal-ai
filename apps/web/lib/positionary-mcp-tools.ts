@@ -72,7 +72,13 @@ const optionalStr = (description: string, maxLength=1500): Shape =>
   ({ type: ["string", "null"], description, maxLength });
 const ticker = { type: "string", pattern: "^[A-Z0-9.:-]{1,32}$", description: "Uppercase ticker." };
 const option = (items: string[]) => ({ type: "string", enum: items });
-const note = str("User's original notes. Never invent their intent.", 6000);
+const JOURNAL_FORMAT_GUIDANCE = [
+  "For a new substantial investment note drafted from the conversation, use readable plain text with real newline characters and blank lines between sections, never a single dense paragraph.",
+  "Use brief, applicable section labels such as 판단 요약, 근거, 진입·보류 조건, 위험, 다음 확인. Put A/B/C scenarios and their conditions on separate lines.",
+  "Preserve the user's facts, prices, dates, conditions, uncertainty, and actual-versus-proposed trade status exactly; never invent or imply an execution. Do not rewrite previously stored notes.",
+  "For a short verbatim note from the user, preserve their wording instead of adding unrequested sections. Do not use HTML or Markdown tables.",
+].join(" ");
+const note = str("User's original notes. Never invent their intent. " + JOURNAL_FORMAT_GUIDANCE, 6000);
 const date = str("ISO-8601 datetime with timezone", 64);
 const uuid = str("Existing Positionary record UUID", 36);
 const nullableUuid = { type: ["string", "null"], description: "Existing user's UUID or null" };
@@ -164,7 +170,7 @@ export const MCP_TOOLS: readonly Tool[] = [
   read("get_monthly_review", "Read bounded user-authored monthly investment process review, not verified performance.",{
     month:str("YYYY-MM",7)
   },["month"],async (sub,a)=>fetchMonthlyProcessReport(sub,field(a,"month"))),
-  write("add_investment_journal", "Append the user's approved investment note.", {
+  write("add_investment_journal", "Append the user's approved investment note. " + JOURNAL_FORMAT_GUIDANCE, {
     kind:option(["THESIS","STRATEGY","REVIEW","TRADE_NOTE","WATCHLIST_ADD","WATCHLIST_REMOVE"]),
     ticker,content:note,tradeEventId:nullableUuid,
   },["kind","ticker","content","tradeEventId"],

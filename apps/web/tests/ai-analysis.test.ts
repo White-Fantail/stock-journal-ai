@@ -148,3 +148,19 @@ test("plan revision evidence is visible independently from model narrative",()=>
  assert.ok(view.includes("최근 두 계획을 비교해 변경된 항목을 확인했습니다"));
  assert.ok(view.includes("구체적인 숫자를 전달하지 않았습니다"));
 });
+
+test("habit evidence diversifies manual trades and observed orders across tickers",()=>{
+ const trades=Array.from({length:20},(_,i)=>({...events[0],
+   id:"t"+i,ticker:"TSLA",
+   executedAt:new Date(Date.UTC(2026,9,30,0,0,30-i)).toISOString()}));
+ trades.push({...events[0],id:"other",ticker:"RKLB",executedAt:"2026-10-01T00:00:00Z"});
+ const orders=Array.from({length:20},(_,i)=>({...ordersFixture(),
+   symbol:"TSLA",at:String(Date.UTC(2026,9,30,0,0,30-i))}));
+ orders.push({...ordersFixture(),symbol:"RKLB",at:String(Date.UTC(2026,9,1))});
+ const result=evidenceForAnalysis("HABITS",null,[],[],trades as ManualTradeEvent[],orders as TigerPersonalOrder[]);
+ assert.ok(result.evidence.some(x=>x.kind==="USER_TRADE"&&x.ticker==="RKLB"));
+ assert.ok(result.evidence.some(x=>x.kind==="TIGER_ORDER_OBSERVED"&&x.ticker==="RKLB"));
+ assert.equal(result.evidence.filter(x=>x.kind==="USER_TRADE").length,12);
+ assert.equal(result.evidence.filter(x=>x.kind==="TIGER_ORDER_OBSERVED").length,12);
+});
+function ordersFixture(){return {...orders[0]};}

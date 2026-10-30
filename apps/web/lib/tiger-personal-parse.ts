@@ -30,6 +30,13 @@ function order(x:unknown):x is TigerPersonalOrder {
     side(x.side) && typeof x.status==="string" && /^[A-Z_]{3,32}$/.test(x.status) &&
     nullableDecimal(x.filled) && nullableDecimal(x.price) && nullableDecimal(x.fee) &&
     (x.feeCurrency===undefined || x.feeCurrency===null || moneyCurrency(x.feeCurrency)) &&
+    (x.orderType===undefined || x.orderType===null ||
+      ["MKT","LMT","STP","STP_LMT","TRAIL","AL","AM"].includes(x.orderType as string)) &&
+    ["orderQuantity","auxPrice","limitPrice"].every(k=>
+      x[k]===undefined || nullableDecimal(x[k])) &&
+    (x.timeInForce===undefined || x.timeInForce===null ||
+      ["DAY","GTC","GTD","IOC","FOK","OPG"].includes(x.timeInForce as string)) &&
+    (x.outsideRth===undefined || x.outsideRth===null || typeof x.outsideRth==="boolean") &&
     (x.at===null || epoch(x.at));
 }
 function fill(x:unknown):x is TigerPersonalFill {
@@ -108,7 +115,10 @@ export function parsePersonalRead(raw:unknown):PersonalReadParseResult {
         warnings.add("ORDERS_LEGACY_FEE_CURRENCY");
         return {...o,feeCurrency:null};
       }
-      return o;
+      return {...o,
+        orderType:o.orderType??null,orderQuantity:o.orderQuantity??null,
+        auxPrice:o.auxPrice??null,limitPrice:o.limitPrice??null,
+        timeInForce:o.timeInForce??null,outsideRth:o.outsideRth??null};
     });
     const marketObservations=list(a.marketObservations,40,quote,"QUOTES_INVALID",warnings);
     const fillObservations=list(a.fillObservations,60,fill,"FILLS_INVALID",warnings);

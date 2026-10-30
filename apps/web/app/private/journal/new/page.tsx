@@ -144,6 +144,13 @@ export default async function JournalNewPage({searchParams}:{
   const sourceRef=params.sourceRef??"";
   const observedPage=/^(?:0|[1-9][0-9]?)$/.test(params.page??"0") &&
     Number(params.page??"0")<=20 ? Number(params.page??"0") : -1;
+  // Legacy deep links to a Tiger order now land in the trade-owned editor.
+  // Keep existing journal notes and server-side source verification unchanged.
+  if(mode==="observed"){
+    if(!safeTicker || !sourceKind || !/^[0-9a-f]{64}$/.test(sourceRef) ||
+       observedPage<0 || (sourceKind==="FILL" && observedPage!==0))notFound();
+    redirect("/private/trades/tiger/"+sourceRef+"/note?page="+observedPage+"&kind="+sourceKind);
+  }
   let brokerFills:Awaited<ReturnType<typeof tigerLedgerRead>>["executions"]=[];
   if(mode==="broker"){
     if(!safeTicker) notFound();
@@ -342,7 +349,7 @@ export default async function JournalNewPage({searchParams}:{
           <option value="THESIS">투자 논리</option>
           <option value="STRATEGY">전략 변경</option>
           <option value="REVIEW">매매 복기</option>
-          <option value="TRADE_NOTE">체결 메모</option>
+          
           <option value="WATCHLIST_ADD">관심종목 추가</option>
           <option value="WATCHLIST_REMOVE">관심종목 제외</option>
         </select></label>

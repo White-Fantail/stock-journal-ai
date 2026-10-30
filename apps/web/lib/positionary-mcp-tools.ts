@@ -11,7 +11,7 @@ import {
   fetchReviewActions, fetchWeeklyProcessReport, fetchMonthlyProcessReport,
   submitJournal, submitJournalPlan, submitManualTrade,
   submitInvestorPrinciples, submitRiskFactors, saveIndicatorRule, saveIndicatorRecord,
-  submitPlanCheckin, submitReviewAction,
+  submitPlanCheckin, submitReviewAction, submitTigerObservationNote,
 } from "./saas-trades-api";
 
 type Args = Record<string, unknown>;
@@ -84,7 +84,7 @@ const uuid = str("Existing Positionary record UUID", 36);
 const nullableUuid = { type: ["string", "null"], description: "Existing user's UUID or null" };
 const decimal = optionalStr("Exact decimal as a string; null if unset.", 32);
 
-async function tiger(subject: string, action: "personal-view"|"status"|"ledger-read", page?: number): Promise<unknown> {
+async function tiger(subject: string, action: "personal-view"|"status"|"ledger-read"|"personal-refresh"|"personal-refresh-status", page?: number): Promise<unknown> {
   const path = "/internal/v1/tiger/" + action;
   const body = JSON.stringify(action === "personal-view" ? {subject, page: String(page ?? 0)} : {subject});
   const timestamp = String(Math.floor(Date.now() / 1000));
@@ -139,6 +139,20 @@ export const MCP_TOOLS: readonly Tool[] = [
         partial:a.partial,truncated:a.truncated,hasMore:a.hasMore,totalOrders:a.totalOrders,
         fillProbePartial:a.fillProbePartial,fillProbeTruncated:a.fillProbeTruncated}))};
   }),
+  read("request_tiger_order_refresh",
+    "User-triggered read-only Tiger RSA sync for the current owner: request recent 30-day order and partial-fill observation refresh. No broker orders are placed or modified. If state is RUNNING, use get_tiger_order_refresh_status until COMPLETED before searching observed orders. COOLDOWN means a recent request is already rate-limited, not a fresh synchronization. Never claim a broker execution from this result.",
+    {},[],async sub=>{
+      const state=await tiger(sub,"personal-refresh") as {state?:string};
+      if(!state || typeof state.state!=="string" || state.state==="UNAVAILABLE")throw new Error("TIGER_REFRESH_UNAVAILABLE");
+      return {...state,source:"PERSONAL_REFRESH_ONLY",verified:false};
+    }),
+  read("get_tiger_order_refresh_status",
+    "Check the current read-only Tiger refresh job without triggering it. After state COMPLETED, call get_tiger_order_observations(page=0) and identify the exact order; a refresh is NOT proof of execution, settled fees or complete broker history.",
+    {},[],async sub=>{
+      const state=await tiger(sub,"personal-refresh-status") as {state?:string};
+      if(!state || typeof state.state!=="string" || state.state==="UNAVAILABLE")throw new Error("TIGER_REFRESH_UNAVAILABLE");
+      return {...state,source:"PERSONAL_REFRESH_ONLY",verified:false};
+    }),
   read("get_verified_broker_ledger", "Read independently released, still-valid broker facts only. Empty/unverified results are not zeros.", {}, [],
     async sub=>tiger(sub,"ledger-read")),
   read("list_manual_trades", "Read self-entered manual execution and correction records; never confuse with broker fills.", {}, [],
@@ -175,6 +189,24 @@ export const MCP_TOOLS: readonly Tool[] = [
     ticker,content:note,tradeEventId:nullableUuid,
   },["kind","ticker","content","tradeEventId"],
     (sub,p)=>submitJournal(sub,p as Parameters<typeof submitJournal>[1]).then(id=>({id,source:"USER_AUTHORED"}))),
+  write("add_tiger_order_note",
+    "Attach an explicitly user-approved TRADE_NOTE to one exact owner-authorized Tiger ORDER observation. For a new order mentioned in chat: request_tiger_order_refresh, check status until COMPLETED, get_tiger_order_observations(page=0), match actual order sourceRef by symbol, BUY/SELL, orderType, trigger price, quantity and status. If multiple candidates or missing evidence, ask the user to select the right order; NEVER guess based on ticker alone. SUBMITTED/0 shares is a pending order, NOT a fill. Preserve the user's original facts, including stop/limit conditions and session scope. This does not submit or cancel trades. " + JOURNAL_FORMAT_GUIDANCE,{
+      ticker, sourceRef:{type:"string",pattern:"^[0-9a-f]{64}$",description:"Exact sourceRef of an observed Tiger ORDER, obtained from get_tiger_order_observations; never invent."},
+      page:{type:"integer",minimum:0,maximum:20,description:"Page containing this sourceRef at note creation."},
+      content:note,
+    },["ticker","sourceRef","page","content"],async (sub,p)=>{
+      if(typeof p.ticker!=="string"||!TICKER.test(p.ticker) ||
+         typeof p.sourceRef!=="string"||!/^[0-9a-f]{64}$/.test(p.sourceRef) ||
+         !Number.isInteger(p.page)||Number(p.page)<0||Number(p.page)>20)
+        throw new Error("INVALID_TIGER_ORDER_REFERENCE");
+      // Backend additionally verifies that this exact reference exists for the
+      // active owner and ticker under RLS before accepting an append-only note.
+      const id=await submitTigerObservationNote(sub,{
+        idempotencyKey:field(p,"idempotencyKey"),ticker:p.ticker,
+        sourceRef:p.sourceRef,observationKind:"ORDER",page:p.page as number,
+        content:field(p,"content")});
+      return {id,source:"USER_AUTHORED",linkedTo:"TIGER_ORDER_OBSERVATION",verifiedExecution:false};
+    }),
   write("revise_investment_plan", "Create a new plan revision; never modify broker orders or overwrite history.",planFields,
     ["ticker","targetPrice","stopPrice","priceCurrency","rationale","strategyType","investmentHorizon",
       "invalidationCondition","maxAllocationPct","reviewCadence"],

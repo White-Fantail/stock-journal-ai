@@ -9,6 +9,7 @@ import {buildCoachingEvidence,monthlyCoachingScope,withAuthoredActionFollowup} f
 import {summarizeReviewHistory} from "../../../lib/ai-review-history";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
 import {aiConfigured} from "../../../lib/ai-configuration";
+import {tradeLinked} from "../../../lib/trade-reasons";
 import {planNoteDifferences,type PlanNoteDifference} from "../../../lib/plan-note-differences";
 import {planDecisionDifferences,type PlanDecisionDifference} from "../../../lib/plan-decision-differences";
 import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
@@ -105,8 +106,11 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     // Deliberately NOT part of the AI request envelope: numeric comparisons
     // stay inside our server and the authenticated result page.
     if(mode==="STOCK_REVIEW"){
-      planSignals=planNoteDifferences(symbol as string,notes.value,plans.value);
-      decisionSignals=planDecisionDifferences(symbol as string,notes.value,plans.value);
+      // Transaction-linked notes describe a specific trade and must not
+      // become a second independent change of investment thesis.
+      const investmentNotes=notes.value.filter(e=>!tradeLinked(e));
+      planSignals=planNoteDifferences(symbol as string,investmentNotes,plans.value);
+      decisionSignals=planDecisionDifferences(symbol as string,investmentNotes,plans.value);
     }
     const orders=personal.status==="fulfilled"&&personal.value
       ? personal.value.accounts.flatMap(a=>a.orders):[];

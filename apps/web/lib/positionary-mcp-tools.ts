@@ -157,7 +157,7 @@ export const MCP_TOOLS: readonly Tool[] = [
     async sub=>tiger(sub,"ledger-read")),
   read("list_manual_trades", "Read self-entered manual execution and correction records; never confuse with broker fills.", {}, [],
     async sub=>fetchManualTrades(sub)),
-  read("list_investment_journal", "Read user-written journal and investment notes.",{},[],
+  read("list_investment_journal", "Read investment theses, plan notes and legacy stored notes. TRADE_NOTE records with observationRef, brokerRef or tradeEventId belong to the linked TRADE detail and must not be repeated as separate strategy decisions. For a user asking why a specific order was placed, use the trade note tools.",{},[],
     async sub=>fetchJournal(sub)),
   read("list_investment_plans", "Read versioned user-defined target, stop, strategy, horizon and review cadence; not live orders.",{},[],
     async sub=>fetchJournalPlans(sub)),
@@ -184,13 +184,13 @@ export const MCP_TOOLS: readonly Tool[] = [
   read("get_monthly_review", "Read bounded user-authored monthly investment process review, not verified performance.",{
     month:str("YYYY-MM",7)
   },["month"],async (sub,a)=>fetchMonthlyProcessReport(sub,field(a,"month"))),
-  write("add_investment_journal", "Append the user's approved investment note. " + JOURNAL_FORMAT_GUIDANCE, {
+  write("add_investment_journal", "Append a user-approved ticker-level investment thesis, strategy or general review. Do NOT use this tool when the user asks to record the reason for a specific Tiger order; use add_tiger_order_note instead after identifying the exact sourceRef. Generic unlinked historical TRADE_NOTE is permitted for legacy recovery only. " + JOURNAL_FORMAT_GUIDANCE, {
     kind:option(["THESIS","STRATEGY","REVIEW","TRADE_NOTE","WATCHLIST_ADD","WATCHLIST_REMOVE"]),
     ticker,content:note,tradeEventId:nullableUuid,
   },["kind","ticker","content","tradeEventId"],
     (sub,p)=>submitJournal(sub,p as Parameters<typeof submitJournal>[1]).then(id=>({id,source:"USER_AUTHORED"}))),
   write("add_tiger_order_note",
-    "Attach an explicitly user-approved TRADE_NOTE to one exact owner-authorized Tiger ORDER observation. For a new order mentioned in chat: request_tiger_order_refresh, check status until COMPLETED, get_tiger_order_observations(page=0), match actual order sourceRef by symbol, BUY/SELL, orderType, trigger price, quantity and status. If multiple candidates or missing evidence, ask the user to select the right order; NEVER guess based on ticker alone. SUBMITTED/0 shares is a pending order, NOT a fill. Preserve the user's original facts, including stop/limit conditions and session scope. This does not submit or cancel trades. " + JOURNAL_FORMAT_GUIDANCE,{
+    "PRIMARY tool when the user says 기록해줘/거래 이유 저장/매수·매도 이유 기록 for a particular Tiger order. Attach a user-approved TRADE_NOTE to that exact owner-authorized Tiger ORDER observation. The trade detail is the canonical presentation; journal shows only a summary link. Never also create a second add_investment_journal record with the same rationale. For a new order mentioned in chat: request_tiger_order_refresh, check status until COMPLETED, get_tiger_order_observations(page=0), match actual order sourceRef by symbol, BUY/SELL, orderType, trigger price, quantity and status. If multiple candidates or missing evidence, ask the user to select the right order; NEVER guess based on ticker alone. SUBMITTED/0 shares is a pending order, NOT a fill. Preserve the user's original facts, including stop/limit conditions and session scope. This does not submit or cancel trades. " + JOURNAL_FORMAT_GUIDANCE,{
       ticker, sourceRef:{type:"string",pattern:"^[0-9a-f]{64}$",description:"Exact sourceRef of an observed Tiger ORDER, obtained from get_tiger_order_observations; never invent."},
       page:{type:"integer",minimum:0,maximum:20,description:"Page containing this sourceRef at note creation."},
       content:note,

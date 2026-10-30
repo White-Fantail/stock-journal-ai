@@ -31,7 +31,7 @@ export default async function TradeDetail({params}:{
       <dt>변경 이력</dt><dd>{trade.voidsEventId ? <Link href={"/private/trades/" + trade.voidsEventId}>취소 대상 원본 보기</Link> : "원본 기록"}</dd>
       <dt>매매 이유/정정 사유</dt><dd style={{whiteSpace:"pre-wrap"}}>{trade.rationale ?? "미기록"}</dd>
     </dl>
-    {trade.kind==="EXECUTION" && <p><Link className="btn btn-outline" href="/private/journal">투자 일지에서 매매 이유와 복기 작성 →</Link></p>}
+    {trade.kind==="EXECUTION" && <p><Link className="btn btn-outline" href={"/private/journal?ticker="+encodeURIComponent(trade.ticker??"")}>투자 일지에서 종목 전략과 계획 보기 →</Link></p>}
     {trade.kind==="EXECUTION"&&<p><Link className="btn btn-outline" href={"/private/trades/"+trade.id+"/correct"}>이 체결 정정하기 →</Link></p>}
     {trade.kind==="EXECUTION"&&<>
       <p><a className="btn btn-outline" href={"/private/indicators/record?tradeEventId="+trade.id}>당시 보조지표 기록 →</a></p>

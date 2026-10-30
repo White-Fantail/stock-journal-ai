@@ -4,7 +4,7 @@ import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 import {AiImprovementForm} from "./ai-improvement-form";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[]};
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[],decisionSignals:[]};
 
 export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOCK_REVIEW",initialSymbol}:{
   available:boolean;symbols:readonly string[];planRevisions:Readonly<Record<string,string>>;initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
@@ -79,6 +79,15 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
       <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 개선 행동은 직접 검토·수정하고 승인한 경우에만 기존 자기평가와 다음 점검에 기록할 수 있습니다.</p>
+      {mode==="STOCK_REVIEW"&&state.decisionSignals.length>0&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
+        <h3>투자 판단의 변경 표현 확인</h3>
+        <p className="user-footnote">현재 계획 이후 작성한 일지에서 계획과 다른 방향을 암시하는 명시적 표현을 발견했습니다. 문맥이나 실제 의사결정은 검증하지 않았으므로 변경·위반이라고 확정하지 않습니다. 원문은 외부 AI에 추가 전송하지 않습니다.</p>
+        <ul>{state.decisionSignals.map((v,i)=><li key={v.kind+v.notedAt+i}>
+          <strong>{v.planDescription}</strong> · {v.mentionedDescription}
+          <small style={{display:"block"}}>{v.notedAt.slice(0,10)} · 사용자 확인 필요</small>
+        </li>)}</ul>
+        <Link href={"/private/journal?ticker="+encodeURIComponent(selected)}>원본 일지와 계획 검토 →</Link>
+      </section>}
       {state.planSignals.length>0&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
         <h3>최근 일지와 현재 계획의 가격 기준 차이 후보</h3>
         <p className="user-footnote">내가 작성한 최근 일지에서 다른 가격이 언급된 부분입니다.
@@ -128,7 +137,47 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
             실행 여부 직접 확인·정정 →
           </Link>
         </div>:<p className="user-footnote">이 종목에는 확인 가능한 최근 자기평가의 다음 행동이 없습니다.</p>}
+        <details className="data-disclosure" style={{marginTop:16}}>
+          <summary>이전 자기평가와 개선 행동 기록 {state.coachingProgress.history.items.length}건 보기</summary>
+          <p className="user-footnote">{state.coachingProgress.history.coverage}
+            과거 행동의 실제 실행 상태는 이번 목록만으로 확인할 수 없습니다.</p>
+          {state.coachingProgress.history.distribution&&<div style={{overflowX:"auto"}}>
+            <h4>최근 4회와 그 이전 4회의 자기평가 분포</h4>
+            <p className="user-footnote">동일한 건수끼리 비교한 주관적 기록이며 동일 기간 비교나 객관적 개선 점수가 아닙니다.</p>
+            <table style={{width:"100%"}}>
+              <thead><tr><th scope="col">내가 표시한 평가</th><th scope="col">이전 4회</th><th scope="col">최근 4회</th></tr></thead>
+              <tbody>{([
+                ["FOLLOWED","원칙을 지켰음"],["PARTIAL","일부만 지켰음"],
+                ["DEVIATED","원칙에서 벗어남"],["UNCERTAIN","판단 유보"],
+              ] as const).map(([status,label])=><tr key={status}>
+                <th scope="row">{label}</th>
+                <td>{state.coachingProgress!.history.distribution!.previous[status]}건</td>
+                <td>{state.coachingProgress!.history.distribution!.recent[status]}건</td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+          <div className="user-list">{state.coachingProgress.history.items.map(item=>
+            <div className="user-list-row" key={item.id}>
+              <div><strong>{item.createdAt.slice(0,10)} · {({
+                FOLLOWED:"지켰다고 평가",PARTIAL:"일부만 지켰다고 평가",
+                DEVIATED:"벗어났다고 평가",UNCERTAIN:"판단 유보",
+              } as Record<string,string>)[item.selfAssessment]}</strong>
+                <p>당시 작성한 다음 행동: {item.nextAction}</p></div>
+            </div>)}</div>
+          <Link href="/private/review">현재 확인 가능한 행동 상태 점검 →</Link>
+        </details>
       </section>}
+      <section className="state-panel" style={{padding:16,marginBottom:16}} aria-label="목적별 핵심 분석">
+        <h3>{mode==="STOCK_REVIEW"?"종목 판단과 계획 점검":
+          mode==="HABITS"?"내 기록에서 반복된 습관":"지난 행동과 개선 확인"} · {state.result.focus.title}</h3>
+        <p className="user-footnote">아래 판단은 인용된 기록 범위에 한정됩니다. 거래 결과나 심리 상태를 자동 검증하지 않습니다.</p>
+        {state.result.focus.items.map((item,i)=><article key={i} style={{marginTop:12}}>
+          <strong>{item.subject}</strong><p>{item.assessment}</p>
+          <small>근거: {item.evidenceRefs.map(ref=>{const ev=selectedEvidence.get(ref);
+            return <span key={ref} style={{marginRight:10}}>{ref} {ev?.ticker} · {ev?.on}</span>;
+          })}</small>
+        </article>)}
+      </section>
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>

@@ -123,6 +123,7 @@ test("coaching model remains per-request ZDR and citations required",()=>{
  assert.ok(request.messages[0].content.includes("monthly investment decision-process coach"));
  assert.ok(request.messages[0].content.includes("UNCONFIRMED"));
  const reply={summary:"지난달의 기록과 다음 행동을 점검했습니다.",
+  focus:{mode:"COACHING",title:"후속 확인",items:[{subject:"다음 행동",assessment:"실행 여부를 확인할 필요",evidenceRefs:["R1"]}]},
   findings:[{type:"pattern",title:"다음 행동 후속 기록 필요",
    explanation:"다음 행동 기록만으로 이행을 증명할 수 없습니다.",
    evidenceRefs:["R2","R1","C1"],nextStep:"이번 달 복기에서 실행 여부를 직접 기록하세요."}],

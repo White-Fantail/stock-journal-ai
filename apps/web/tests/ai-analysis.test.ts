@@ -50,6 +50,7 @@ test("source material is untrusted and hallucinated evidence IDs fail closed",()
   const envelope=evidenceForAnalysis("HABITS",null,entries,plans,events,orders);
   const response={
     summary:"투자 논리와 계획을 비교했습니다.",
+    focus:{mode:"HABITS",title:"반복되는 기록 습관",items:[{subject:"손절 계획",assessment:"계획이 미기록",evidenceRefs:["P1"]}]},
     findings:[{type:"risk",title:"손절 미기록",explanation:"계획이 부족합니다.",
       evidenceRefs:["P1"],nextStep:"손절 기준을 기록해 보세요."}],
     questions:["계획에서 벗어난 이유는 무엇인가요?"],limitations:["체결 이력 검증 전"],
@@ -65,7 +66,7 @@ test("ZDR only, no silent fallback, no background generation or broker trading",
   const envelope=evidenceForAnalysis("STOCK_REVIEW","TSLA",entries,plans,events,orders);
   const request=aiRequestBody("test/model",envelope);
   assert.deepEqual(request.provider,{zdr:true,data_collection:"deny",require_parameters:true});
-  assert.equal(request.max_tokens,950);
+  assert.equal(request.max_tokens,1400);
   const route=read("../app/private/analysis/actions.ts");
   assert.ok(route.includes('form.get("consent")!=="SEND_SELECTED_JOURNAL_TO_OPENROUTER"'));
   assert.ok(route.includes('https://openrouter.ai/api/v1/chat/completions'));
@@ -164,3 +165,19 @@ test("habit evidence diversifies manual trades and observed orders across ticker
  assert.equal(result.evidence.filter(x=>x.kind==="TIGER_ORDER_OBSERVED").length,12);
 });
 function ordersFixture(){return {...orders[0]};}
+
+test("focus schema and parser reject cross-mode, ungrounded and empty model focus",()=>{
+ const e=evidenceForAnalysis("STOCK_REVIEW","TSLA",entries,plans,events,orders);
+ const base={summary:"모델이 기록을 확인했습니다.",
+   focus:{mode:"STOCK_REVIEW",title:"판단 점검",items:[{subject:"계획",assessment:"기록 확인 필요",evidenceRefs:["P1"]}]},
+   findings:[],questions:[],limitations:[]};
+ assert.equal(parseAiResult(JSON.stringify(base),e).focus.mode,"STOCK_REVIEW");
+ for(const focus of [
+   {...base.focus,mode:"HABITS"},
+   {...base.focus,items:[]},
+   {...base.focus,items:[{...base.focus.items[0],evidenceRefs:["UNKNOWN"]}]},
+ ]) assert.throws(()=>parseAiResult(JSON.stringify({...base,focus}),e));
+ const schema=aiRequestBody("test/model",e).response_format.json_schema.schema;
+ assert.ok(schema.required.includes("focus"));
+ assert.deepEqual(schema.properties.focus.properties.mode.enum,["STOCK_REVIEW"]);
+});

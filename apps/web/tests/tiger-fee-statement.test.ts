@@ -6,6 +6,7 @@ const alias="Tiger pilot ••••9999";
 const sample: TigerPersonalOrder={
  sourceRef:"a".repeat(64),symbol:"SAMPLE",side:"BUY",currency:"USD",
  status:"FILLED",filled:"5",price:"10.25",fee:"2.01",feeCurrency:null,
+ orderType:null,orderQuantity:null,auxPrice:null,limitPrice:null,timeInForce:null,outsideRth:null,
  at:String(Date.parse("2026-09-14T13:30:19Z")), // 09:30:19 US Eastern
 };
 const rows=Array.from({length:10},(_,i)=>({

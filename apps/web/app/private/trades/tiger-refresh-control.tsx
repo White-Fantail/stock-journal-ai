@@ -45,9 +45,9 @@ export function TigerRefreshControl(){
   };
   const busy=loading||status.state==="RUNNING";
   const cooling=!!status.nextAllowedAt && Date.parse(status.nextAllowedAt)>Date.now();
-  return <section className="state-panel" aria-label="Tiger 주문 기록 동기화">
-    <div className="dashboard-heading">
-      <h2>주문 기록 동기화</h2>
+  return <section className="state-panel" aria-label="Tiger 주문 기록 동기화" style={{padding:"12px 16px"}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+      <strong>Tiger 최신 주문 기록</strong>
       <button type="button" className="btn btn-primary" onClick={()=>void refresh()}
         disabled={busy||cooling}>{busy?"동기화 중…":"지금 동기화"}</button>
     </div>
@@ -64,7 +64,9 @@ export function TigerRefreshControl(){
       {status.state==="RUNNING"&&status.startedAt?" · 시작: "+when(status.startedAt):""}
       {cooling&&status.nextAllowedAt?" · 재요청 가능: "+when(status.nextAllowedAt):""}
     </p>
-    <p className="user-footnote">미국 정규장 중 약 1시간마다 최근 주문을 확인하고 하루 한 번 이력을 점검합니다.
-      동기화된 주문과 부분체결은 관측 정보이며 확정 손익 원장이 아닙니다.</p>
+    <details className="data-disclosure">
+      <summary>동기화 범위 안내</summary>
+      <p>미국 정규장 시간대에는 약 1시간마다 최근 30일 주문을 확인하고 하루 한 번 과거 이력을 점검합니다. 거래소 휴장일에도 점검이 실행될 수 있습니다. 동기화된 주문과 부분체결은 관측 정보이며 확정 손익 원장이 아닙니다.</p>
+    </details>
   </section>;
 }

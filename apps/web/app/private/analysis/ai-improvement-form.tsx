@@ -2,7 +2,8 @@
 
 import {useActionState,useState} from "react";
 import Link from "next/link";
-import {saveAiImprovement,initialAiImprovementSaveState} from "./save-improvement";
+import {saveAiImprovement,type AiImprovementSaveState} from "./save-improvement";
+const initialAiImprovementSaveState:AiImprovementSaveState={status:"idle",message:""};
 
 export function AiImprovementForm({suggestion,saveKey,preferredTicker,planRevisions}:{
   suggestion:string;saveKey:string;preferredTicker:string|null;

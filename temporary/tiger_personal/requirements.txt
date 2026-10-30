@@ -1,1 +1,2 @@
 tigeropen==3.8.0
+tzdata==2026.6

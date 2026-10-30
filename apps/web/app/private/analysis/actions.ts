@@ -6,6 +6,7 @@ import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis,fetchMonthlyProcessReport,fetchPlanCheckinContext,fetchReviewActions,type ReviewActionState} from "../../../lib/saas-trades-api";
 import {buildCoachingEvidence,monthlyCoachingScope,withAuthoredActionFollowup} from "../../../lib/coach-evidence";
+import {summarizeReviewHistory} from "../../../lib/ai-review-history";
 import {tigerPersonalRead} from "../../../lib/tiger-api";
 import {aiConfigured} from "../../../lib/ai-configuration";
 import {planNoteDifferences,type PlanNoteDifference} from "../../../lib/plan-note-differences";
@@ -16,6 +17,7 @@ import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
 export type AiCoachingProgress={
   monthly:{month:string;partial:boolean;notes:number;reviews:number;plans:number}[];
   latestAction:{checkinId:string;nextAction:string;state:ReviewActionState|null}|null;
+  history:ReturnType<typeof summarizeReviewHistory>;
 };
 export type AiState={
   status:"idle"|"error"|"success";message:string;result:AiResult|null;
@@ -74,6 +76,7 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
       // This is a descriptive activity timeline, never an adherence score.
       // The partial current month must not be scored against full months.
       coachingProgress={
+        history:summarizeReviewHistory(context),
         monthly:[...reportSet].reverse().map(item=>{
           const own=item.report.symbols.find(s=>s.ticker===symbol);
           return {month:item.month,partial:item.partial,

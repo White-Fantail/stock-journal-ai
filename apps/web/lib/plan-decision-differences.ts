@@ -62,7 +62,16 @@ export function planDecisionDifferences(
  for(const n of newer){
    if(result.length>=4)break;
    for(const rule of rules){
-     if(seen.has(rule.kind)||!rule.pattern.test(n.content.slice(0,6000)))continue;
+     if(seen.has(rule.kind))continue;
+     const text=n.content.slice(0,6000);
+     const matched=rule.pattern.exec(text);
+     if(!matched)continue;
+     // Explicitly negated proposals do not count as reversal candidates:
+     // "손절가 폐기하지 않겠다" must never be treated as a policy reversal.
+     const suffix=text.slice(matched.index+matched[0].length,
+       matched.index+matched[0].length+28);
+     if(/^(?:하지|할\s*(?:생각|계획|예정)(?:이|은|는)?\s*없|는\s*것은\s*아니|지\s*않)/.test(suffix))
+       continue;
      seen.add(rule.kind);
      result.push({ticker,kind:rule.kind,planDescription:rule.planDescription,
        mentionedDescription:rule.mentionedDescription,notedAt:n.createdAt,

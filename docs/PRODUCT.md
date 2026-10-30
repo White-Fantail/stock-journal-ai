@@ -77,3 +77,11 @@ user-authored records, not broker-verified indicators. Trade detail and ticker
 journal views show historical observations. Full JSON export and account deletion
 include both criteria history and indicator records. List history is bounded to
 200 entries and explicitly indicates more records.
+
+## 거래 이유와 투자일지의 단일 원본 (2026-10-31)
+
+- **거래 기록** (`/private/trades`)은 특정 Tiger 주문·부분체결과 그 매매 이유의 기본 화면이다. 각 목록에서 메모 유무/요약을 보여주고 `/private/trades/tiger/[sourceRef]`에서 원본 주문 조건, 체결 관측, 기존 이유 전체를 확인한다. 새 이유는 독립된 `.../note` 페이지에서만 작성한다. 미체결 스탑 주문에는 '주문 목적'이라고 표시하며 확정 체결로 다루지 않는다.
+- **투자일지** (`/private/journal`)는 종목의 투자 논리·전략·목표/손절·판단 변화 중심이다. 거래에 연결된 `TRADE_NOTE`의 전문을 다시 표시하지 않으며 최근 거래 요약과 거래 상세 링크만 제공한다. 미연결 과거 메모는 삭제하거나 거래에 임의 귀속하지 않는다.
+- 기존 `saas_journal_records`와 `saas_journal_tiger_observation_links`가 그대로 단일 저장 원본이다. 데이터 이동·복제·스키마 변경 없이, 조회와 작성의 진입점만 변경한다. 지우지 않는 추가형 이력·멱등성·실제 주인 소유 증거 확인이 그대로 적용된다.
+- 기존 `/private/journal/new?mode=observed` 주소는 거래 기록의 작성 화면으로 이동한다. 채팅 MCP에서 특정 거래의 이유 기록 요청은 `request_tiger_order_refresh` → `get_tiger_order_refresh_status` → `get_tiger_order_observations` → `add_tiger_order_note` 순서로 처리하며, 동일 종목의 다른 주문을 임의 선택하지 않는다.
+- AI 종목 투자 논리 비교에서는 거래-linked 메모를 별도 독립 투자전략 변경으로 취급하지 않는다. 거래 이유는 원본 한 건으로 보존하고, Tiger 주문 관측은 체결의 증거가 아닌 보조 사실로만 사용한다.

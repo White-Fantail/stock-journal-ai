@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
-import type {TigerPersonalRefreshState} from "../../../../lib/tiger-api";
+import type {TigerPersonalRefreshState} from "../../../lib/tiger-api";
 
 const when=(stamp?:string|null)=>stamp
   ?new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",
@@ -24,11 +24,11 @@ export function TigerRefreshControl(){
       setStatus({state:"UNAVAILABLE"});
     }
   },[router]);
+  useEffect(()=>{void poll();},[poll]);
   useEffect(()=>{
-    void poll();
-    const interval=setInterval(()=>{void poll();},5000);
+    const interval=setInterval(()=>{void poll();},status.state==="RUNNING"?5000:30000);
     return ()=>clearInterval(interval);
-  },[poll]);
+  },[poll,status.state]);
   const refresh=async()=>{
     setLoading(true);
     try {

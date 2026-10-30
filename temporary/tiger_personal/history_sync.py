@@ -138,7 +138,7 @@ def _pages(client,account,begin,end):
         kwargs["page_token"]=token
     return list(orders.values()),False
 
-def sync_history(env=None, client_factory=None):
+def sync_history(env=None, client_factory=None, recent_days=None):
     env=os.environ if env is None else env
     tiger_id,account,key=configuration(env)
     _endpoint(env)
@@ -150,6 +150,10 @@ def sync_history(env=None, client_factory=None):
         raise ValueError("INVALID_START")
     start=datetime.strptime(start_text,"%Y-%m-%d").replace(tzinfo=timezone.utc)
     now=datetime.now(timezone.utc)
+    if recent_days is not None:
+        if type(recent_days) is not int or not 1<=recent_days<=30:
+            raise ValueError("INVALID_RECENT_WINDOW")
+        start=now-timedelta(days=recent_days)
     if start>=now or start.year<2015:
         raise ValueError("INVALID_START")
     if client_factory is None:

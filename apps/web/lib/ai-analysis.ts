@@ -215,7 +215,7 @@ export function aiRequestBody(model:string,envelope:AnalysisEnvelope){
             properties:{
               mode:{type:"string",enum:[envelope.mode]},
               title:{type:"string"},
-              items:{type:"array",minItems:1,maxItems:3,items:{
+              items:{type:"array",items:{
                 type:"object",additionalProperties:false,
                 required:["subject","assessment","evidenceRefs"],
                 properties:{subject:{type:"string"},assessment:{type:"string"},

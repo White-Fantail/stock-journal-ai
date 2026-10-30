@@ -161,7 +161,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
                 <div className="mobile-data-card-meta">{o.side==="BUY"?"매수":"매도"} · {orderTypeLabel(o.orderType)} · {orderStatusLabel(o.status)}</div></div>
               <small>{when(o.at)}</small>
             </div>
-            {orderTerms(o).length>0&&<p className="mobile-data-card-meta">{orderTerms(o).join(" · ")} · {o.currency}</p>}
+            {orderTerms(o).length>0&&<p className="mobile-data-card-meta">{orderTerms(o).join(" · ")}</p>}
             <dl className="mobile-data-card-fields">
               <div><dt>평균 체결가</dt><dd>{executionPriceIsKnown(o)?viewNumber(o.price)+" "+o.currency:"체결 전 · 없음"}</dd></div>
               <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":formatQuantity(o.filled)+"주"}</dd></div>

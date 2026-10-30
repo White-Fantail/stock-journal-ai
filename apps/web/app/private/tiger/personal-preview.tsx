@@ -61,7 +61,6 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
                 <small>{p.currency} · Tiger 보유 관측</small></div>
               <strong>{formatQuantity(p.quantity)}주</strong>
             </div>
-            {orderTerms(o).length>0&&<p className="mobile-data-card-meta">{orderTerms(o).join(" · ")}</p>}
             <dl className="mobile-data-card-fields">
               <div><dt>평균 매입단가</dt><dd>{viewNumber(p.averageCost)} {p.currency}</dd></div>
               <div><dt>최근 관측 시세</dt><dd>{q?viewNumber(q.price)+" USD":"미확인"}</dd></div>

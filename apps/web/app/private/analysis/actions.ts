@@ -9,6 +9,7 @@ import {buildCoachingEvidence,monthlyCoachingScope,withAuthoredActionFollowup} f
 import {tigerPersonalRead} from "../../../lib/tiger-api";
 import {aiConfigured} from "../../../lib/ai-configuration";
 import {planNoteDifferences,type PlanNoteDifference} from "../../../lib/plan-note-differences";
+import {planDecisionDifferences,type PlanDecisionDifference} from "../../../lib/plan-decision-differences";
 import {aiRequestBody,evidenceForAnalysis,parseAiResult,safeAnalysisSymbol,
   type AiResult,type AnalysisEvidence,type AnalysisMode,type AnalysisEnvelope} from "../../../lib/ai-analysis";
 
@@ -21,11 +22,11 @@ export type AiState={
   evidence:AnalysisEvidence[];asOf:string|null;model:string|null;
   remainingDay:number|null;mode:AnalysisMode|null;symbol:string|null;
   saveKeys:string[];coachingProgress:AiCoachingProgress|null;
-  planSignals:PlanNoteDifference[];
+  planSignals:PlanNoteDifference[];decisionSignals:PlanDecisionDifference[];
 };
 const initialAiState:AiState={
   status:"idle",message:"",result:null,evidence:[],asOf:null,
-  model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[],
+  model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[],decisionSignals:[],
 };
 
 const error=(message:string):AiState=>({...initialAiState,status:"error",message});
@@ -49,6 +50,7 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
   let envelope:AnalysisEnvelope;
   let coachingProgress:AiCoachingProgress|null=null;
   let planSignals:PlanNoteDifference[]=[];
+  let decisionSignals:PlanDecisionDifference[]=[];
   if(mode==="COACHING"){
     // Only author-scoped monthly aggregates + this ticker's authored checkins.
     // No Tiger data, order snapshots or unbounded private note history is sent.
@@ -99,8 +101,10 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
       return error("투자일지를 온전히 불러오지 못해 분석을 중단했습니다.");
     // Deliberately NOT part of the AI request envelope: numeric comparisons
     // stay inside our server and the authenticated result page.
-    if(mode==="STOCK_REVIEW")
+    if(mode==="STOCK_REVIEW"){
       planSignals=planNoteDifferences(symbol as string,notes.value,plans.value);
+      decisionSignals=planDecisionDifferences(symbol as string,notes.value,plans.value);
+    }
     const orders=personal.status==="fulfilled"&&personal.value
       ? personal.value.accounts.flatMap(a=>a.orders):[];
     envelope=evidenceForAnalysis(mode,
@@ -133,7 +137,7 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
       result,evidence:envelope.evidence,asOf:envelope.asOf,
       model:process.env.OPENROUTER_MODEL!,remainingDay:claim.remainingDay,
       mode:mode as AnalysisMode,symbol:mode==="HABITS"?null:symbol as string,
-      saveKeys:result.findings.map(()=>randomUUID()),coachingProgress,planSignals};
+      saveKeys:result.findings.map(()=>randomUUID()),coachingProgress,planSignals,decisionSignals};
   }catch{
     // Never log provider response, private note content or API credentials.
     return error("분석 요청을 완료할 수 없었습니다. 전송 오류나 제공자 응답 형식을 확인해 주세요. 요청 한도는 차감될 수 있습니다.");

@@ -7,7 +7,6 @@ import {fetchPlanCheckinContext,submitPlanCheckin,type PlanSelfAssessment} from 
 export type AiImprovementSaveState=Readonly<{
   status:"idle"|"error"|"saved";message:string;
 }>;
-export const initialAiImprovementSaveState:AiImprovementSaveState={status:"idle",message:""};
 const error=(message:string):AiImprovementSaveState=>({status:"error",message});
 const field=(form:FormData,name:string)=>{
   const value=form.get(name);

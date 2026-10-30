@@ -54,6 +54,11 @@ on:
       - 'tests/test_tiger_financial_coverage.py'
       - 'tests/test_performance_math.py'
       - 'tests/test_tiger_personal_fund_probe.py'
+      - 'tests/test_tiger_personal_refresh.py'
+      - 'temporary/tiger_personal/refresh_worker.py'
+      - 'temporary/tiger_personal/refresh_proxy.py'
+      - 'temporary/tiger_personal/history_sync.py'
+      - 'temporary/tiger_personal/Dockerfile'
       - 'temporary/tiger_personal/fund_probe_worker.py'
       - 'tests/test_saas_dispatcher.py'
       - 'services/broker_connectors/**'
@@ -167,6 +172,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_tiger_financial_coverage.py' -v
       - name: Validate owner-only RSA funding shape probe and strict account scoping
         run: python -m unittest discover -s tests -p 'test_tiger_personal_fund_probe.py' -v
+      - name: Validate personal RSA manual refresh security and market schedule
+        run: python -m unittest discover -s tests -p 'test_tiger_personal_refresh.py' -v
       - name: Validate sync processing progress never certifies portfolio history
         run: python -m unittest discover -s tests -p 'test_saas_sync_status.py' -v
       - name: Guard complete tenant deletion and JSON export before release

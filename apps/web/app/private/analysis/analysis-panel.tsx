@@ -137,6 +137,35 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
             실행 여부 직접 확인·정정 →
           </Link>
         </div>:<p className="user-footnote">이 종목에는 확인 가능한 최근 자기평가의 다음 행동이 없습니다.</p>}
+        <details className="data-disclosure" style={{marginTop:16}}>
+          <summary>이전 자기평가와 개선 행동 기록 {state.coachingProgress.history.items.length}건 보기</summary>
+          <p className="user-footnote">{state.coachingProgress.history.coverage}
+            과거 행동의 실제 실행 상태는 이번 목록만으로 확인할 수 없습니다.</p>
+          {state.coachingProgress.history.distribution&&<div style={{overflowX:"auto"}}>
+            <h4>최근 4회와 그 이전 4회의 자기평가 분포</h4>
+            <p className="user-footnote">동일한 건수끼리 비교한 주관적 기록이며 동일 기간 비교나 객관적 개선 점수가 아닙니다.</p>
+            <table style={{width:"100%"}}>
+              <thead><tr><th scope="col">내가 표시한 평가</th><th scope="col">이전 4회</th><th scope="col">최근 4회</th></tr></thead>
+              <tbody>{([
+                ["FOLLOWED","원칙을 지켰음"],["PARTIAL","일부만 지켰음"],
+                ["DEVIATED","원칙에서 벗어남"],["UNCERTAIN","판단 유보"],
+              ] as const).map(([status,label])=><tr key={status}>
+                <th scope="row">{label}</th>
+                <td>{state.coachingProgress!.history.distribution!.previous[status]}건</td>
+                <td>{state.coachingProgress!.history.distribution!.recent[status]}건</td>
+              </tr>)}</tbody>
+            </table>
+          </div>}
+          <div className="user-list">{state.coachingProgress.history.items.map(item=>
+            <div className="user-list-row" key={item.id}>
+              <div><strong>{item.createdAt.slice(0,10)} · {({
+                FOLLOWED:"지켰다고 평가",PARTIAL:"일부만 지켰다고 평가",
+                DEVIATED:"벗어났다고 평가",UNCERTAIN:"판단 유보",
+              } as Record<string,string>)[item.selfAssessment]}</strong>
+                <p>당시 작성한 다음 행동: {item.nextAction}</p></div>
+            </div>)}</div>
+          <Link href="/private/review">현재 확인 가능한 행동 상태 점검 →</Link>
+        </details>
       </section>}
       <section className="state-panel" style={{padding:16,marginBottom:16}} aria-label="목적별 핵심 분석">
         <h3>{mode==="STOCK_REVIEW"?"종목 판단과 계획 점검":

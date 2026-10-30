@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatMoney,formatPercent,formatQuantity } from "../../../lib/format-decimal";
 import { groupTigerOrderObservations } from "../../../lib/tiger-order-groups";
 import {tradeLinked,notesForObserved,tigerTradeHref} from "../../../lib/trade-reasons";
+import {orderJournalSymbols,journalLastRecordedAt} from "../../../lib/journal-symbol-order";
 import {orderStatusLabel} from "../../../lib/tiger-order-display";
 import Link from "next/link";
 import {decisionGuide} from "../../../lib/journal-decision-guide";
@@ -36,7 +37,7 @@ type View="activity"|"trades"|"observed"|"broker";
 type Summary={
   ticker:string;latest:JournalEntry|null;thesis:JournalEntry|null;
   plan:JournalPlan|null;review:JournalEntry|null;
-  watched:boolean;count:number;
+  watched:boolean;count:number;lastRecordedAt:number|null;
 };
 type Props={
   enabled:boolean;
@@ -91,9 +92,7 @@ export function JournalWorkspace({
     for(const p of personalPositions) names.add(p.symbol);
     for(const p of personalOrders) names.add(p.symbol);
     for(const p of personalFills) names.add(p.symbol);
-    return [...names].sort((a,b)=>
-      Number(personalPositions.some(p=>p.symbol===b))-
-      Number(personalPositions.some(p=>p.symbol===a))||a.localeCompare(b));
+    return orderJournalSymbols([...names],entries,plans,personalPositions.map(p=>p.symbol));
   },[entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,indicatorHistory]);
   const [selected,setSelected]=useState(initialTicker&&symbols.includes(initialTicker)?initialTicker:symbols[0]??"");
   useEffect(()=>{if(initialTicker&&symbols.includes(initialTicker))setSelected(initialTicker);},[initialTicker,symbols]);
@@ -110,6 +109,7 @@ export function JournalWorkspace({
         ticker,latest:per[0]??null,thesis:per.find(e=>e.kind==="THESIS")??null,
         review:per.find(e=>e.kind==="REVIEW")??null,plan:p,
         watched:mark?.kind==="WATCHLIST_ADD",count:per.length+plans.filter(x=>x.ticker===ticker).length,
+        lastRecordedAt:journalLastRecordedAt(ticker,investmentEntries,plans),
       };
     });
   },[symbols,investmentEntries,plans]);
@@ -175,7 +175,7 @@ export function JournalWorkspace({
     </section> : <div className="journal-layout">
       <aside className="journal-sidebar" aria-label="종목별 투자일지">
         <div className="journal-sidebar-top">
-          <div><span className="journal-kicker">MY SYMBOLS</span><h2>종목별 일지</h2></div>
+          <div><span className="journal-kicker">MY SYMBOLS</span><h2>종목별 일지</h2><small className="user-muted">최근 투자 기록순</small></div>
           <Link className="journal-new-btn btn btn-outline" href="/private/journal/new">+ 새 기록</Link>
         </div>
         <label className="journal-search-label" htmlFor="journal-stock-search">종목 검색</label>
@@ -193,7 +193,7 @@ export function JournalWorkspace({
               <span className="journal-symbol-avatar">{s.ticker.slice(0,2)}</span>
               <span className="journal-symbol-main">
                 <strong>{s.ticker}</strong>
-                <small>{personalPositions.some(p=>p.symbol===s.ticker)?"보유 관측 · ":""}{s.watched?"관심 · ":""}{s.count}건 기록
+                <small>{personalPositions.some(p=>p.symbol===s.ticker)?"보유 관측 · ":""}{s.watched?"관심 · ":""}{s.count}건 기록{s.lastRecordedAt!==null?` · 최근 ${new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",year:"2-digit",month:"2-digit",day:"2-digit"}).format(s.lastRecordedAt)}`:""}
                   {brokerRead?.readEnabled ? ` · 확인된 체결 ${brokerRead.executions.filter(e=>e.symbol===s.ticker).length}건` : ""}</small>
               </span><span aria-hidden="true" className="journal-symbol-arrow">›</span>
             </button>)

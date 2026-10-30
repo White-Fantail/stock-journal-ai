@@ -25,6 +25,28 @@ def _enum(value):
         value=value.value
     return str(value).upper() if value is not None else "UNKNOWN"
 
+_ORDER_TYPES={"MKT","LMT","STP","STP_LMT","TRAIL","AL","AM"}
+_TIFS={"DAY","GTC","GTD","IOC","FOK","OPG"}
+
+def _positive_price(raw):
+    try:
+        value=amount(raw)
+        return value if value is not None and Decimal(value)>0 else None
+    except (ValueError,TypeError):
+        return None
+
+def _ordered_quantity(item):
+    # Do not guess the share quantity without a source-defined scale.
+    scale=getattr(item,"quantity_scale",None)
+    try:
+        value=amount(getattr(item,"quantity",None))
+        if (type(scale) is int and 0<=scale<=12 and value is not None and
+                Decimal(value)>0 and Decimal(value)==Decimal(value).to_integral_value()):
+            return amount(Decimal(value).scaleb(-scale))
+    except (ValueError,TypeError):
+        pass
+    return None
+
 def _order(item,account):
     observed=getattr(item,"account",None)
     if observed is not None and str(observed)!=account:
@@ -60,11 +82,22 @@ def _order(item,account):
     if commission_currency is not None and (not isinstance(commission_currency,str)
         or not re.fullmatch(r"[A-Z]{3}",commission_currency)):
         raise ValueError("INVALID_COMMISSION_CURRENCY")
+    order_type=_enum(getattr(item,"order_type",None))
+    tif=_enum(getattr(item,"time_in_force",None))
+    outside=getattr(item,"outside_rth",None)
     return {"id":str(ident),"symbol":str(symbol),"currency":currency,"side":side,
             "status":status,"filled":filled,"filledScale":scale,
             "price":amount(getattr(item,"avg_fill_price",None)),
             "fee":amount(getattr(item,"commission",None)),
             "feeCurrency":commission_currency,
+            "orderType":order_type if order_type in _ORDER_TYPES else None,
+            "orderQuantity":_ordered_quantity(item),
+            # Tiger aux_price is the stop trigger for STP/STP_LMT, not a fill price.
+            # For TRAIL it represents the trailing amount, NOT a stop trigger.
+            "auxPrice":_positive_price(getattr(item,"aux_price",None)),
+            "limitPrice":_positive_price(getattr(item,"limit_price",None)),
+            "timeInForce":tif if tif in _TIFS else None,
+            "outsideRth":outside if type(outside) is bool else None,
             "at":at}
 
 def _send(subject,account,begin,end,part,parts,complete,orders,env):

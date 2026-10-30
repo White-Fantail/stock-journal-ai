@@ -1,7 +1,7 @@
 /** Conservative presentation of Tiger order observations (not executed trades). */
 import type {TigerPersonalOrder} from "./tiger-api";
 type Order=Pick<TigerPersonalOrder,
-  "status"|"filled"|"price"|"fee"|"orderType"|"orderQuantity"|
+  "status"|"filled"|"price"|"fee"|"currency"|"orderType"|"orderQuantity"|
   "auxPrice"|"limitPrice"|"timeInForce"|"outsideRth">;
 const positive=(value:string|null)=>value!==null && /^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value) &&
   /[1-9]/.test(value);
@@ -30,11 +30,11 @@ export function orderTerms(order:Order):string[]{
   const parts:string[]=[];
   if(order.orderQuantity!==null)parts.push("주문 "+order.orderQuantity+"주");
   if((order.orderType==="STP"||order.orderType==="STP_LMT") && order.auxPrice!==null)
-    parts.push("스탑 발동가 "+order.auxPrice);
+    parts.push("스탑 발동가 "+order.auxPrice+" "+order.currency);
   if(order.orderType==="TRAIL" && order.auxPrice!==null)
-    parts.push("추적 가격차 "+order.auxPrice);
+    parts.push("추적 가격차 "+order.auxPrice+" "+order.currency);
   if(["LMT","STP_LMT","AL"].includes(order.orderType??"") && order.limitPrice!==null)
-    parts.push("지정가 "+order.limitPrice);
+    parts.push("지정가 "+order.limitPrice+" "+order.currency);
   if(order.timeInForce)parts.push("유효기간 "+order.timeInForce);
   if(order.outsideRth!==null)
     parts.push(order.outsideRth?"정규장 외 거래 허용":"정규장 외 거래 미허용");

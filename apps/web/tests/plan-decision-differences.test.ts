@@ -36,3 +36,10 @@ test("decision candidates remain entirely outside external AI evidence and have 
  assert.ok(!action.includes("submitJournalPlan("));
  assert.ok(view.includes("문맥이나 실제 의사결정은 검증하지 않았으므로"));
 });
+
+test("negated statements do not become confirmed or suspected policy reversals",()=>{
+ const result=planDecisionDifferences("RKLB",[
+   note("손절가를 폐기하지 않기로 했다. 목표가를 삭제하지 않는다."),
+ ],[plan]);
+ assert.equal(result.length,0);
+});

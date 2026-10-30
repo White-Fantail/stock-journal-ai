@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import json
 import os
+import socket
 import threading
 import time
 from datetime import datetime, timezone
@@ -213,6 +214,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(400,{"error":"INVALID_BODY"})
 
 
+class PrivateServer(ThreadingHTTPServer):
+    # Railway private DNS can resolve to IPv6; accept both families on Linux.
+    address_family=socket.AF_INET6
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6,socket.IPV6_V6ONLY,0)
+        super().server_bind()
+
+
 def main():
     from temporary.tiger_personal.runner import configuration
     configuration(os.environ)  # Fail closed if RSA is not enabled.
@@ -221,7 +231,7 @@ def main():
     threading.Thread(target=_scheduler,daemon=True).start()
     port=int(os.environ.get("PORT",str(_PORT)))
     print("PERSONAL_REFRESH_COORDINATOR_READY",flush=True)
-    ThreadingHTTPServer(("0.0.0.0",port),Handler).serve_forever()
+    PrivateServer(("::",port),Handler).serve_forever()
 
 
 if __name__=="__main__":

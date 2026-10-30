@@ -21,11 +21,14 @@ test("trade and journal editing use independent pages, no forms in list workspac
   assert.ok(create.includes("currentWorkspace()"));
   assert.ok(create.includes("tigerLedgerRead()"));
   assert.ok(!ui.includes("&accountId="));
-  // Opaque observed broker sourceRef is permitted only for a dedicated
-  // authenticated note form; source must be revalidated server-side.
-  assert.ok(ui.includes("&sourceRef="));
-  assert.ok(create.includes("submitTigerObservationNote("));
-  assert.ok(create.includes("tigerPersonalRead("));
+  // Journal links to transaction detail rather than composing a second note.
+  const tradeDetail=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
+  const tradeEditor=read("../app/private/trades/tiger/[sourceRef]/note/page.tsx");
+  assert.ok(ui.includes("tigerTradeHref("));
+  assert.ok(tradeDetail.includes("notesForObserved("));
+  assert.ok(tradeEditor.includes("submitTigerObservationNote("));
+  assert.ok(tradeEditor.includes("tigerPersonalRead("));
+  assert.ok(create.includes("redirectLegacyObserved("));
   assert.ok(!ui.includes("brokerGrant="));
 });
 test("account currency comes from Tiger summary rather than stock currencies",()=>{

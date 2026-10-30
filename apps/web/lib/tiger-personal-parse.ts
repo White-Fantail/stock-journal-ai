@@ -13,6 +13,8 @@ const object=(x:unknown):x is Obj=>!!x && typeof x==="object" && !Array.isArray(
 const decimal=(x:unknown):x is string=>typeof x==="string" &&
   /^-?(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(x);
 const nullableDecimal=(x:unknown):x is string|null=>x===null || decimal(x);
+const positiveOrderTerm=(x:unknown):x is string|null=>x===null ||
+  (decimal(x) && Number(x)>0);
 const moneyCurrency=(x:unknown):x is string=>typeof x==="string" && /^[A-Z]{3}$/.test(x);
 const symbol=(x:unknown):x is string=>typeof x==="string" && /^[A-Z0-9.:-]{1,32}$/.test(x);
 const hash=(x:unknown):x is string=>typeof x==="string" && /^[a-f0-9]{64}$/.test(x);
@@ -33,7 +35,7 @@ function order(x:unknown):x is TigerPersonalOrder {
     (x.orderType===undefined || x.orderType===null ||
       ["MKT","LMT","STP","STP_LMT","TRAIL","AL","AM"].includes(x.orderType as string)) &&
     ["orderQuantity","auxPrice","limitPrice"].every(k=>
-      x[k]===undefined || nullableDecimal(x[k])) &&
+      x[k]===undefined || positiveOrderTerm(x[k])) &&
     (x.timeInForce===undefined || x.timeInForce===null ||
       ["DAY","GTC","GTD","IOC","FOK","OPG"].includes(x.timeInForce as string)) &&
     (x.outsideRth===undefined || x.outsideRth===null || typeof x.outsideRth==="boolean") &&

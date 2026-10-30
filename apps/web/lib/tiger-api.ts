@@ -200,7 +200,10 @@ export type TigerPersonalPosition = Readonly<{
 export type TigerPersonalOrder = Readonly<{
   sourceRef:string;symbol:string;currency:string;side:"BUY"|"SELL";
   status:string;filled:string|null;price:string|null;fee:string|null;
-  feeCurrency:string|null;at:string|null
+  feeCurrency:string|null;at:string|null;
+  orderType:"MKT"|"LMT"|"STP"|"STP_LMT"|"TRAIL"|"AL"|"AM"|null;
+  orderQuantity:string|null;auxPrice:string|null;limitPrice:string|null;
+  timeInForce:string|null;outsideRth:boolean|null
 }>;
 export type TigerPersonalFill = Readonly<{
   sourceRef:string;orderSourceRef?:string;symbol:string;currency:string;side:"BUY"|"SELL";

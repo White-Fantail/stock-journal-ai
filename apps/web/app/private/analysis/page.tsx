@@ -27,6 +27,16 @@ export default async function AnalysisPage({searchParams}:{searchParams:Promise<
     for(const o of a.orders)symbols.add(o.symbol);
   }
   const safe=[...symbols].filter(x=>/^[A-Z0-9.:-]{1,32}$/.test(x)).sort().slice(0,150);
+  // A suggested follow-up must be attached to an existing, authored plan.
+  // Pass only the current version ID; the saving action revalidates it.
+  const currentPlans=new Map<string,{id:string;createdAt:string}>();
+  if(data[1].status==="fulfilled")for(const p of data[1].value){
+    const prior=currentPlans.get(p.ticker);
+    if(!prior||p.createdAt>prior.createdAt||
+       (p.createdAt===prior.createdAt&&p.id>prior.id))
+      currentPlans.set(p.ticker,{id:p.id,createdAt:p.createdAt});
+  }
+  const planRevisions=Object.fromEntries([...currentPlans].map(([ticker,p])=>[ticker,p.id]));
   const initialTicker=safe.includes(params.ticker??"")?params.ticker:"";
   return <main style={{maxWidth:860,margin:"2rem auto",padding:"0 1rem"}}>
     <div className="page-intro">
@@ -35,7 +45,7 @@ export default async function AnalysisPage({searchParams}:{searchParams:Promise<
       <p>어떤 판단을 했는지, 지난 점검의 다음 행동을 다시 확인했는지, 반복되는 습관은 무엇인지 돌아봅니다.</p>
     </div>
     <AnalysisPanel key={(params.mode??"")+":"+(params.ticker??"")} available={aiConfigured()} symbols={safe}
-      initialSymbol={initialTicker}
+      initialSymbol={initialTicker} planRevisions={planRevisions}
       initialMode={params.mode==="COACHING"?"COACHING":params.mode==="HABITS"?"HABITS":"STOCK_REVIEW"}/>
   </main>;
 }

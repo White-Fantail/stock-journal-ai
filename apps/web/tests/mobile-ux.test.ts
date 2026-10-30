@@ -9,7 +9,7 @@ test("private navigation keeps all destinations accessible on a narrow phone",()
   const layout=read("../app/private/layout.tsx");
   const css=read("../app/globals.css");
   for(const route of ["/private","/private/portfolio","/private/journal","/private/review","/private/principles",
-    "/private/trades","/private/journal/new?mode=plan","/private/analysis","/private/analysis?mode=COACHING",
+    "/private/trades","/private/journal/new?mode=plan","/private/indicators","/private/analysis",
     "/private/alerts","/private/reports/weekly","/private/reports/monthly","/private/performance",
     "/private/brokers","/private/settings"]){
     assert.ok(layout.includes('href="'+route+'"'),route);
@@ -57,7 +57,7 @@ test("long-horizon mobile workflows and tablet navigation remain reachable",()=>
   assert.ok(css.includes(".app-mobile-nav :is(a,summary):focus-visible"));
   assert.ok(css.includes("font-size:16px"));
   assert.ok(layout.includes('href="/private/performance"'));
-  assert.ok(layout.includes('href="/private/analysis?mode=COACHING"'));
+  assert.ok(layout.includes('href="/private/analysis"'));
   assert.ok(review.includes('name="selfAssessment"'));
   assert.ok(review.includes('name="expectedPlanRevisionId"'));
   assert.ok(perf.includes('className="performance-period-links"'));

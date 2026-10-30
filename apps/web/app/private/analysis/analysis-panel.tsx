@@ -3,10 +3,11 @@
 import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null};
+import {AiImprovementForm} from "./ai-improvement-form";
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[]};
 
-export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",initialSymbol}:{
-  available:boolean;symbols:readonly string[];initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
+export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOCK_REVIEW",initialSymbol}:{
+  available:boolean;symbols:readonly string[];planRevisions:Readonly<Record<string,string>>;initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
 }){
   const [mode,setMode]=useState<"STOCK_REVIEW"|"HABITS"|"COACHING">(initialMode);
   const [consented,setConsented]=useState(false);
@@ -77,7 +78,7 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
     {state.status==="success"&&state.result&&state.mode===mode&&
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
-      <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 적용할 내용은 투자일지에서 직접 검토한 뒤 기록하세요.</p>
+      <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 개선 행동은 직접 검토·수정하고 승인한 경우에만 기존 자기평가와 다음 점검에 기록할 수 있습니다.</p>
       {state.evidence.some(e=>e.kind==="PLAN_CHANGE")&&
         <div className="state-panel" style={{padding:16,marginBottom:16}}>
           <h3>투자계획 변경 기록</h3>
@@ -93,6 +94,11 @@ export function AnalysisPanel({available,symbols,initialMode="STOCK_REVIEW",init
         <h3>{f.type==="strength"?"잘한 점":f.type==="risk"?"보완할 점":"반복 습관"} · {f.title}</h3>
         <p>{f.explanation}</p>
         <p><strong>다음에 해볼 것:</strong> {f.nextStep}</p>
+        {f.type!=="strength"&&state.saveKeys[i]&&
+          <AiImprovementForm key={state.saveKeys[i]}
+            suggestion={f.nextStep} saveKey={state.saveKeys[i]}
+            preferredTicker={mode==="HABITS"?null:selected}
+            planRevisions={planRevisions}/>}
         <small>근거: {f.evidenceRefs.map(ref=>{
           const ev=selectedEvidence.get(ref);
           return <span key={ref} style={{marginRight:12}}>{ref} {ev?.ticker} · {ev?.on} ({ev?.source})</span>;

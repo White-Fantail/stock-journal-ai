@@ -39,3 +39,28 @@ test("AI does not automatically save investment plans or evaluate trades",()=>{
  assert.ok(panel.includes("state.mode===mode"));
  assert.ok(panel.includes("state.symbol===selected"));
 });
+
+test("AI improvement is persisted only through a user-approved immutable self-checkin",()=>{
+ const page=read("../app/private/analysis/page.tsx");
+ const action=read("../app/private/analysis/save-improvement.ts");
+ const form=read("../app/private/analysis/ai-improvement-form.tsx");
+ const panel=read("../app/private/analysis/analysis-panel.tsx");
+ const analysis=read("../app/private/analysis/actions.ts");
+ assert.ok(page.includes("planRevisions={planRevisions}"));
+ assert.ok(action.includes('field(form,"approval")!=="USER_REVIEWED_AND_APPROVED"'));
+ assert.ok(action.includes("currentWorkspace()")&&action.includes("auth()"));
+ assert.ok(action.includes("fetchPlanCheckinContext(subject,ticker)"));
+ assert.ok(action.includes("context.currentPlan.id!==planId"));
+ assert.ok(action.includes("submitPlanCheckin(subject"));
+ assert.ok(!action.includes("submitJournalPlan"));
+ assert.ok(!action.includes("submitReviewAction"));
+ assert.ok(!action.includes("openrouter.ai"));
+ assert.ok(form.includes('name="selfAssessment" required defaultValue=""'));
+ assert.ok(form.includes('name="content"'));
+ assert.ok(form.includes('name="nextAction"'));
+ assert.ok(form.includes('name="approval" required'));
+ assert.ok(form.includes("onChange={e=>setTicker(e.target.value)}"));
+ assert.ok(form.includes("value={planRevisions[ticker]"));
+ assert.ok(panel.includes("<AiImprovementForm"));
+ assert.ok(analysis.includes("saveKeys:result.findings.map(()=>randomUUID())"));
+});

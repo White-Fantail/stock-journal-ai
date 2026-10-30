@@ -1,5 +1,7 @@
 "use server";
 
+import {randomUUID} from "node:crypto";
+
 import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {fetchJournal,fetchJournalPlans,fetchManualTrades,claimAiAnalysis,fetchMonthlyProcessReport,fetchPlanCheckinContext,fetchReviewActions} from "../../../lib/saas-trades-api";
@@ -13,10 +15,11 @@ export type AiState={
   status:"idle"|"error"|"success";message:string;result:AiResult|null;
   evidence:AnalysisEvidence[];asOf:string|null;model:string|null;
   remainingDay:number|null;mode:AnalysisMode|null;symbol:string|null;
+  saveKeys:string[];
 };
 const initialAiState:AiState={
   status:"idle",message:"",result:null,evidence:[],asOf:null,
-  model:null,remainingDay:null,mode:null,symbol:null,
+  model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],
 };
 
 const error=(message:string):AiState=>({...initialAiState,status:"error",message});
@@ -101,7 +104,8 @@ export async function runAiAnalysis(_previous:AiState,form:FormData):Promise<AiS
     return {status:"success",message:"AI 분석 결과 · 자동 저장하지 않음",
       result,evidence:envelope.evidence,asOf:envelope.asOf,
       model:process.env.OPENROUTER_MODEL!,remainingDay:claim.remainingDay,
-      mode:mode as AnalysisMode,symbol:mode==="HABITS"?null:symbol as string};
+      mode:mode as AnalysisMode,symbol:mode==="HABITS"?null:symbol as string,
+      saveKeys:result.findings.map(()=>randomUUID())};
   }catch{
     // Never log provider response, private note content or API credentials.
     return error("분석 요청을 완료할 수 없었습니다. 전송 오류나 제공자 응답 형식을 확인해 주세요. 요청 한도는 차감될 수 있습니다.");

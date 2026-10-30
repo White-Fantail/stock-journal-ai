@@ -148,5 +148,42 @@ class TigerOwnerHistoryPolicy(unittest.TestCase):
         self.assertEqual(len(rows),100)
         self.assertFalse(complete)
 
+    def test_stop_sell_is_pending_order_with_trigger_not_zero_execution(self):
+        stop=SimpleNamespace(account="12345678",id=333,action="SELL",
+            status="SUBMITTED",order_type="STP",quantity=3,quantity_scale=0,
+            aux_price=609,limit_price=0,time_in_force="GTC",outside_rth=False,
+            filled=0,filled_scale=0,avg_fill_price=0,commission=0,
+            order_time=1764547200000,
+            contract=SimpleNamespace(symbol="META",currency="USD"))
+        observed=_order(stop,"12345678")
+        self.assertEqual(observed["status"],"SUBMITTED")
+        self.assertEqual(observed["orderType"],"STP")
+        self.assertEqual(observed["orderQuantity"],"3")
+        self.assertEqual(observed["auxPrice"],"609")
+        self.assertIsNone(observed["limitPrice"])
+        self.assertFalse(observed["outsideRth"])
+        self.assertEqual(observed["filled"],"0")
+        self.assertNotIn("isFill",observed)
+        with patch.dict(os.environ,_ENV,clear=True):
+            req=self.example()
+            req["orders"]=[observed]
+            cleaned=_payload(req)[-1][0]
+            self.assertEqual(cleaned["auxPrice"],"609")
+            self.assertEqual(cleaned["orderType"],"STP")
+            for change in ({"orderType":"PLACE"},{"outsideRth":"false"},
+                           {"orderQuantity":"-1"},{"auxPrice":"0"}):
+                with self.subTest(change=change),self.assertRaises(PilotError):
+                    _payload({**req,"orders":[{**observed,**change}]})
+
+    def test_trailing_aux_is_not_mislabeled_stop_trigger(self):
+        trail=SimpleNamespace(account="12345678",id=444,action="SELL",
+            status="SUBMITTED",order_type="TRAIL",quantity=3,quantity_scale=0,
+            aux_price=1.25,trailing_percent=None,outside_rth=False,
+            filled=0,filled_scale=0,avg_fill_price=0,commission=0,
+            order_time=1764547200000,
+            contract=SimpleNamespace(symbol="META",currency="USD"))
+        self.assertEqual(_order(trail,"12345678")["auxPrice"],"1.25")
+        self.assertEqual(_order(trail,"12345678")["orderType"],"TRAIL")
+
 if __name__=="__main__":
     unittest.main()

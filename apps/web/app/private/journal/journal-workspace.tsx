@@ -5,6 +5,8 @@ import type {IndicatorRecord} from "../../../lib/indicators";
 import { useEffect, useMemo, useState } from "react";
 import { formatMoney,formatPercent,formatQuantity } from "../../../lib/format-decimal";
 import { groupTigerOrderObservations } from "../../../lib/tiger-order-groups";
+import {tradeLinked,notesForObserved,tigerTradeHref} from "../../../lib/trade-reasons";
+import {orderStatusLabel} from "../../../lib/tiger-order-display";
 import Link from "next/link";
 import {decisionGuide} from "../../../lib/journal-decision-guide";
 import type { TigerLedgerRead, TigerPersonalPosition, TigerPersonalOrder, TigerPersonalFill } from "../../../lib/tiger-api";
@@ -72,6 +74,8 @@ function latest<T extends {createdAt:string}>(rows:readonly T[]):T|null{
 export function JournalWorkspace({
   enabled,indicatorHistory,entries,plans,trades,brokerRead,personalPositions,personalOrders,personalFills,initialTicker,
 }:Props){
+  // A trade-linked TRADE_NOTE is part of that transaction, not a second thesis.
+  const investmentEntries=useMemo(()=>entries.filter(e=>!tradeLinked(e)),[entries]);
   const symbols=useMemo(()=>{
     const names=new Set<string>();
     for(const item of indicatorHistory?.records??[]) names.add(item.ticker);
@@ -98,7 +102,7 @@ export function JournalWorkspace({
 
   const summaries=useMemo(()=>{
     return symbols.map(ticker=>{
-      const per=entries.filter(e=>e.ticker===ticker)
+      const per=investmentEntries.filter(e=>e.ticker===ticker)
         .sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
       const p=latest(plans.filter(p=>p.ticker===ticker));
       const mark=per.find(e=>e.kind==="WATCHLIST_ADD"||e.kind==="WATCHLIST_REMOVE");
@@ -108,9 +112,9 @@ export function JournalWorkspace({
         watched:mark?.kind==="WATCHLIST_ADD",count:per.length+plans.filter(x=>x.ticker===ticker).length,
       };
     });
-  },[symbols,entries,plans]);
+  },[symbols,investmentEntries,plans]);
   const active:Summary|undefined=summaries.find(s=>s.ticker===selected);
-  const guide=active?decisionGuide(active.ticker,plans,entries):null;
+  const guide=active?decisionGuide(active.ticker,plans,investmentEntries):null;
   const authoredReason=active?.plan?.rationale.trim()||active?.thesis?.content.trim()||null;
   const authoredReasonAt=active?.plan?.rationale.trim()?active?.plan?.createdAt:active?.thesis?.createdAt;
   const shownSymbols=summaries.filter(s=>s.ticker.toUpperCase().includes(search.trim().toUpperCase()));
@@ -120,18 +124,23 @@ export function JournalWorkspace({
   const observedOrders=personalOrders.filter(o=>o.symbol===selected);
   const observedFills=personalFills.filter(f=>f.symbol===selected);
   const observedGroups=groupTigerOrderObservations(observedOrders,observedFills);
+  const recentTradeSummary=observedOrders.filter(o=>o.filled!==null && o.filled!=="0" ||
+     notesForObserved(entries,o.sourceRef,"ORDER").length>0)
+    .sort((a,b)=>Number(b.at??0)-Number(a.at??0)).slice(0,5);
+  const linkedNotVisible=entries.filter(e=>e.ticker===selected && tradeLinked(e) && e.observationRef?.kind==="ORDER" &&
+    !observedOrders.some(o=>o.sourceRef===e.observationRef?.sourceRef)).length;
   const brokerTrades=brokerRead?.readEnabled
     ? brokerRead.executions.filter(t=>t.symbol===selected) : [];
   const brokerAccountNames=new Map(brokerRead?.accounts.map(a=>[a.accountId,a.alias])??[]);
   const history=useMemo(()=>[
-    ...entries.filter(e=>e.ticker===selected).map(e=>({
+    ...investmentEntries.filter(e=>e.ticker===selected).map(e=>({
       type:"note" as const,id:e.id,timestamp:e.createdAt,value:e,
     })),
     ...plans.filter(p=>p.ticker===selected).map(p=>({
       type:"plan" as const,id:p.id,timestamp:p.createdAt,value:p,
     })),
-  ].sort((a,b)=>b.timestamp.localeCompare(a.timestamp)),[entries,plans,selected]);
-  const totalEntries=entries.length+plans.length;
+  ].sort((a,b)=>b.timestamp.localeCompare(a.timestamp)),[investmentEntries,plans,selected]);
+  const totalEntries=investmentEntries.length+plans.length;
   const listedPlans=summaries.filter(s=>s.plan!==null).length;
   const missingThesis=summaries.filter(s=>!s.thesis).length;
 
@@ -228,8 +237,21 @@ export function JournalWorkspace({
         {active&&<section className="journal-history">
           <div className="journal-section-heading">
             <div><span className="journal-kicker">기록 · 변경 이력</span><h2>{selected}의 판단 이력과 거래 출처</h2></div>
-            <span className="journal-history-count">최근 {history.length}개 기록</span>
+            <span className="journal-history-count">판단·계획 {history.length}개</span>
           </div>
+          {(recentTradeSummary.length>0||linkedNotVisible>0)&&<div className="state-panel" aria-label="이 종목의 최근 거래 요약" style={{marginBottom:16,padding:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+              <strong>최근 거래 · 상세 이유는 거래 기록에서 관리</strong>
+              <Link href="/private/trades">전체 거래 보기 →</Link>
+            </div>
+            {recentTradeSummary.map(o=><div className="journal-trade-row" key={o.sourceRef}>
+              <div><strong>{o.side==="BUY"?"매수":"매도"} · {formatQuantity(o.filled,"?")}주</strong>
+                <small>{orderStatusLabel(o.status)} · {notesForObserved(entries,o.sourceRef,"ORDER").length>0?"매매 이유 연결됨":"이유 미기록"}</small></div>
+              <Link href={tigerTradeHref(o.sourceRef,0)}>거래 상세 →</Link>
+            </div>)}
+            {linkedNotVisible>0&&<small className="user-muted">현재 불러온 주문 페이지에 없는 거래 연결 메모 {linkedNotVisible}건은 원본 기록으로 보존됩니다. 거래 기록에서 다른 페이지를 확인하세요.</small>}
+          </div>}
+          <p className="journal-limit">이곳은 투자 판단과 계획을 중심으로 보여줍니다. 특정 주문의 매매 이유는 거래 기록에서 한 번만 관리합니다.</p>
           <div className="journal-tabs" role="group" aria-label="기록 필터">
             <button type="button" aria-pressed={view==="activity"} onClick={()=>setView("activity")}
               className={`btn ${view==="activity"?"journal-tab-active":""}`}>투자 판단 · 계획</button>
@@ -309,9 +331,10 @@ export function JournalWorkspace({
                 {observedGroups.orders.map(({order:o,fills,reconciliation})=><article className="journal-trade-row" key={"order:"+o.sourceRef}>
                   <div>
                     <strong>{o.side==="BUY"?"매수":"매도"} · 체결 {formatQuantity(o.filled,"?")}주 · {formatMoney(o.price,"?")} {o.currency}</strong>
-                    <small>Tiger 주문 관측 · {o.status} · {fills.length>0?fills.length+"회 부분체결 관측":"개별 체결 미조회"}</small>
-                    {entries.filter(e=>e.observationRef?.sourceRef===o.sourceRef &&
-                        e.observationRef?.kind==="ORDER").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                    <small>Tiger 주문 관측 · {orderStatusLabel(o.status)} · {fills.length>0?fills.length+"회 부분체결 관측":"개별 체결 미조회"}</small>
+                    <small>{notesForObserved(entries,o.sourceRef,"ORDER").length>0
+                      ?"매매 이유 "+notesForObserved(entries,o.sourceRef,"ORDER").length+"건 · 거래 상세에서 확인"
+                      :"매매 이유 미기록"}</small>
                     {reconciliation==="PARTIAL_OR_DIFFERENT"&&<small role="status">주문 체결수량과 현재 조회한 개별 체결 합계가 다릅니다. 일부 조회일 수 있습니다.</small>}
                     {reconciliation==="QUANTITY_UNKNOWN"&&<small>주문 체결수량 확인 필요 · 개별 체결을 주문 합계로 확정하지 않습니다.</small>}
                     {fills.length>0&&<details className="data-disclosure">
@@ -320,11 +343,9 @@ export function JournalWorkspace({
                         {fills.map(f=><div className="journal-trade-row" key={f.sourceRef}>
                           <div><strong>{formatQuantity(f.quantity)}주 · {formatMoney(f.price)} {f.currency}</strong>
                             <small>원본 체결 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
-                            {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
-                                e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                            <small>{notesForObserved(entries,f.sourceRef,"FILL").length>0?"체결 메모 연결됨":"체결 메모 미기록"}</small>
                           </div>
-                          <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-                            "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link>
+                          <Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>체결 상세 →</Link>
                         </div>)}
                       </div>
                       <small>{reconciliation==="OBSERVED_SUM_MATCH"?
@@ -332,17 +353,14 @@ export function JournalWorkspace({
                         "부분체결 관측 자료 · 전체 체결 내역의 완전성은 확인되지 않았습니다."}</small>
                     </details>}
                   </div>
-                  <Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
-                    "&page=0&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link>
+                  <Link href={tigerTradeHref(o.sourceRef,0)}>거래 상세 · 이유 →</Link>
                 </article>)}
                 {observedGroups.unlinked.map(f=><article className="journal-trade-row" key={"unlinked:"+f.sourceRef}>
                   <div><strong>{f.side==="BUY"?"매수":"매도"} · {formatQuantity(f.quantity)}주 · {formatMoney(f.price)} {f.currency}</strong>
                     <small>개별 체결 관측 · 연결된 주문을 현재 조회 목록에서 확인할 수 없음 · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
-                    {entries.filter(e=>e.observationRef?.sourceRef===f.sourceRef &&
-                        e.observationRef?.kind==="FILL").map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+                    <small>{notesForObserved(entries,f.sourceRef,"FILL").length>0?"체결 메모 연결됨":"체결 메모 미기록"}</small>
                   </div>
-                  <Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-                    "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link>
+                  <Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>체결 상세 →</Link>
                 </article>)}
               </>}
             <p className="journal-limit">주문 ID로 연결된 부분체결은 한 주문 아래에 표시합니다. 연결되지 않은 관측은 임의로 합치지 않습니다.
@@ -361,16 +379,11 @@ export function JournalWorkspace({
                 <small>{displayTime(t.executedAt)} · {brokerAccountNames.get(t.accountId)??"Tiger 계좌"} ·
                   증권사 원본 검증 v{t.reviewVersion}</small>
                 <small>수수료 {formatMoney(t.fee)} {t.currency} · {t.provenance} · 이 체결은 직접 입력 거래와 별도입니다.</small>
-                {entries.filter(e=>e.brokerRef?.accountId===t.accountId &&
-                     e.brokerRef?.sourceRef===t.sourceRef &&
-                     e.brokerRef?.reviewVersion===t.reviewVersion).map(e=>
-                  <div key={e.id} className="journal-entry-content">
-                    <small>연결된 내 투자 메모 · {displayTime(e.createdAt)}</small>
-                    <p className="journal-entry-text">{e.content}</p>
-                  </div>)}
-                <Link className="btn btn-outline"
-                  href={"/private/journal/new?mode=broker&ticker="+encodeURIComponent(t.symbol)}>
-                  체결 복기 작성 →
+                <small>{entries.some(e=>e.brokerRef?.accountId===t.accountId &&
+                  e.brokerRef?.sourceRef===t.sourceRef && e.brokerRef?.reviewVersion===t.reviewVersion)
+                  ?"체결 이유 기록 연결됨 · 거래 기록에서 관리":"체결 이유 미기록"}</small>
+                <Link className="btn btn-outline" href="/private/trades">
+                  거래 기록 보기 →
                 </Link>
               </div>
             </article>)}

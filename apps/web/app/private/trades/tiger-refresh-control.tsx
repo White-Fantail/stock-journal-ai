@@ -44,8 +44,7 @@ export function TigerRefreshControl(){
     }
   };
   const busy=loading||status.state==="RUNNING";
-  const cooling=status.state==="COOLDOWN" &&
-    !!status.nextAllowedAt && Date.parse(status.nextAllowedAt)>Date.now();
+  const cooling=!!status.nextAllowedAt && Date.parse(status.nextAllowedAt)>Date.now();
   return <section className="state-panel" aria-label="Tiger 주문 기록 동기화">
     <div className="dashboard-heading">
       <h2>주문 기록 동기화</h2>

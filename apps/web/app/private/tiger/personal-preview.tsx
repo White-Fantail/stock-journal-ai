@@ -2,6 +2,7 @@ import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import {formatMoney,formatQuantity,formatPercent} from "../../../lib/format-decimal";
 import {groupTigerOrderObservations, type GroupedTigerOrder} from "../../../lib/tiger-order-groups";
+import {orderTypeLabel,orderStatusLabel,orderTerms,hasExecution,executionPriceIsKnown,feeIsKnown} from "../../../lib/tiger-order-display";
 import {parseStatementFeeEvidence,resolvedFeeCurrency,statementMatchesOrder} from "../../../lib/tiger-fee-statement";
 
 const when=(raw:string|null)=> {
@@ -60,6 +61,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
                 <small>{p.currency} · Tiger 보유 관측</small></div>
               <strong>{formatQuantity(p.quantity)}주</strong>
             </div>
+            {orderTerms(o).length>0&&<p className="mobile-data-card-meta">{orderTerms(o).join(" · ")} · {o.currency}</p>}
             <dl className="mobile-data-card-fields">
               <div><dt>평균 매입단가</dt><dd>{viewNumber(p.averageCost)} {p.currency}</dd></div>
               <div><dt>최근 관측 시세</dt><dd>{q?viewNumber(q.price)+" USD":"미확인"}</dd></div>
@@ -157,31 +159,34 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
           <article className="mobile-data-card" key={o.sourceRef+":"+i}>
             <div className="mobile-data-card-head">
               <div><strong><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></strong>
-                <div className="mobile-data-card-meta">{o.side==="BUY"?"매수":"매도"} · {o.status}</div></div>
+                <div className="mobile-data-card-meta">{o.side==="BUY"?"매수":"매도"} · {orderTypeLabel(o.orderType)} · {orderStatusLabel(o.status)}</div></div>
               <small>{when(o.at)}</small>
             </div>
+            {orderTerms(o).length>0&&<p className="mobile-data-card-meta">{orderTerms(o).join(" · ")} · {o.currency}</p>}
             <dl className="mobile-data-card-fields">
-              <div><dt>평균 체결가</dt><dd>{viewNumber(o.price)} {o.currency}</dd></div>
+              <div><dt>평균 체결가</dt><dd>{executionPriceIsKnown(o)?viewNumber(o.price)+" "+o.currency:"체결 전 · 없음"}</dd></div>
               <div><dt>체결 수량</dt><dd>{o.filled===null?"재수집 필요":formatQuantity(o.filled)+"주"}</dd></div>
-              <div><dt>주문 수수료</dt><dd>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</dd></div>
+              <div><dt>주문 수수료</dt><dd>{feeIsKnown(o)?viewNumber(o.fee)+" "+feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH"):"체결 전 · 미확정"}</dd></div>
               <div><dt>계좌</dt><dd>{o.alias}</dd></div>
             </dl>
-            <PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>
+            {hasExecution(o)?<PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>:<small className="user-muted">현재 체결 0주 · 개별 체결 없음</small>}
             <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></div>
           </article>)}
       </div>
       <div className="responsive-table desktop-data-table">
         <table>
-          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>부분체결</th><th>투자 기록</th></tr></thead>
+          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>주문 유형·조건</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>부분체결</th><th>투자 기록</th></tr></thead>
           <tbody>{groupedRows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
-            <td>{o.side==="BUY"?"매수":"매도"}</td><td>{o.status}</td>
+            <td>{o.side==="BUY"?"매수":"매도"}</td>
+            <td><strong>{orderTypeLabel(o.orderType)}</strong><small className="user-muted">{orderTerms(o).join(" · ")||"조건 미조회"}</small></td>
+            <td>{orderStatusLabel(o.status)}</td>
             <td>{o.filled===null?"수량 재수집 필요":formatQuantity(o.filled)}</td>
-            <td>{viewNumber(o.price)} {o.currency}</td>
-            <td>{viewNumber(o.fee)} {feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH")}</td>
-            <td><PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/></td>
+            <td>{executionPriceIsKnown(o)?viewNumber(o.price)+" "+o.currency:"체결 전 · 없음"}</td>
+            <td>{feeIsKnown(o)?viewNumber(o.fee)+" "+feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH"):"체결 전 · 미확정"}</td>
+            <td>{hasExecution(o)?<PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>:<small>미체결</small>}</td>
             <td><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
               "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
           </tr>)}</tbody>

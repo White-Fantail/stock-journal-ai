@@ -4,7 +4,7 @@ import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 import {AiImprovementForm} from "./ai-improvement-form";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null};
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[]};
 
 export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOCK_REVIEW",initialSymbol}:{
   available:boolean;symbols:readonly string[];planRevisions:Readonly<Record<string,string>>;initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
@@ -79,6 +79,21 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
       <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 개선 행동은 직접 검토·수정하고 승인한 경우에만 기존 자기평가와 다음 점검에 기록할 수 있습니다.</p>
+      {state.planSignals.length>0&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
+        <h3>최근 일지와 현재 계획의 가격 기준 차이 후보</h3>
+        <p className="user-footnote">내가 작성한 최근 일지에서 다른 가격이 언급된 부분입니다.
+          실제 계획 변경이나 원칙 위반을 확정하지 않으며, 매매 신호가 아닙니다.
+          수치는 외부 AI로 보내지 않고 이 화면에서만 비교했습니다.</p>
+        <ul>{state.planSignals.map((v,i)=><li key={v.kind+v.notedAt+i}>
+          <strong>{v.kind==="TARGET"?"목표가":v.kind==="STOP"?"손절가":"이탈 시 매도 조건"}</strong>
+          {" · 계획 "+v.planned+" / 일지 언급 "+v.mentioned+
+            " ("+(v.currency??"계획 통화 미설정")+")"}
+          <small style={{display:"block"}}>일지 작성일 {v.notedAt.slice(0,10)} · 사용자 작성 문장에 기반한 확인 후보</small>
+        </li>)}</ul>
+        {selected&&<Link href={"/private/journal?ticker="+encodeURIComponent(selected)}>
+          원본 일지와 현재 계획 직접 확인 →
+        </Link>}
+      </section>}
       {state.evidence.some(e=>e.kind==="PLAN_CHANGE")&&
         <div className="state-panel" style={{padding:16,marginBottom:16}}>
           <h3>투자계획 변경 기록</h3>

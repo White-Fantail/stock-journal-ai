@@ -138,6 +138,17 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
           </Link>
         </div>:<p className="user-footnote">이 종목에는 확인 가능한 최근 자기평가의 다음 행동이 없습니다.</p>}
       </section>}
+      <section className="state-panel" style={{padding:16,marginBottom:16}} aria-label="목적별 핵심 분석">
+        <h3>{mode==="STOCK_REVIEW"?"종목 판단과 계획 점검":
+          mode==="HABITS"?"내 기록에서 반복된 습관":"지난 행동과 개선 확인"} · {state.result.focus.title}</h3>
+        <p className="user-footnote">아래 판단은 인용된 기록 범위에 한정됩니다. 거래 결과나 심리 상태를 자동 검증하지 않습니다.</p>
+        {state.result.focus.items.map((item,i)=><article key={i} style={{marginTop:12}}>
+          <strong>{item.subject}</strong><p>{item.assessment}</p>
+          <small>근거: {item.evidenceRefs.map(ref=>{const ev=selectedEvidence.get(ref);
+            return <span key={ref} style={{marginRight:10}}>{ref} {ev?.ticker} · {ev?.on}</span>;
+          })}</small>
+        </article>)}
+      </section>
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>

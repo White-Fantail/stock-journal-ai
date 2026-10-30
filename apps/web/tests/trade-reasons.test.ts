@@ -43,6 +43,6 @@ test("trade list and detail share the SAME user-authored journal data, not a dup
  assert.ok(journal.includes("investmentEntries=useMemo(()=>entries.filter(e=>!tradeLinked(e))"));
  assert.ok(journal.includes("recentTradeSummary.map("));
  assert.ok(journal.includes("거래 상세 →"));
- assert.ok(legacy.includes("redirect(\"/private/trades/tiger/\"+sourceRef+\"/note"));
+ assert.ok(legacy.includes("redirect(\"/private/trades/tiger/\"+ref+\"/note"));
  assert.ok(!list.includes("매매 이유 기록 →"));
 });

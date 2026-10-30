@@ -20,18 +20,20 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
       <p>매매 기록과 내가 작성한 투자 논리를 근거로, 의사결정의 일관성과 반복되는 습관을 점검합니다.
         주가를 예측하거나 자동으로 주문하지 않습니다.</p>
       <form action={submit} style={{display:"grid",gap:16,maxWidth:680}}>
-        <fieldset style={{border:0,padding:0,margin:0,display:"grid",gap:12}}>
-          <legend style={{fontWeight:700,marginBottom:10}}>무엇을 점검하고 싶나요?</legend>
+        <fieldset className="analysis-mode-choices">
+          <legend>분석 목적 선택</legend>
           {([
             ["STOCK_REVIEW","종목별 투자 판단 검토","기존 투자 논리와 실제 기록이 일치하는지 확인합니다."],
             ["HABITS","내 투자 습관 분석","여러 종목에 걸친 최근 기록의 반복 패턴을 살펴봅니다."],
             ["COACHING","지난 점검과 개선 추적","최근 세 달과 이번 달의 자기평가 및 다음 행동을 비교합니다."],
           ] as const).map(([value,title,description])=><label key={value}
-            style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",border:"1px solid var(--border, #ddd)",
-              borderRadius:12,padding:14,background:mode===value?"var(--surface-raised, transparent)":"transparent"}}>
+            className={"analysis-mode-option"+(mode===value?" is-selected":"")}>
             <input type="radio" name="mode" value={value} checked={mode===value}
-              onChange={()=>{setMode(value);setConsented(false);}} style={{marginTop:4}}/>
-            <span><strong>{title}</strong><small style={{display:"block",marginTop:4}}>{description}</small></span>
+              onChange={()=>{setMode(value);setConsented(false);}}/>
+            <span className="analysis-mode-option-copy">
+              <strong>{title}</strong>
+              <small>{description}</small>
+            </span>
           </label>)}
         </fieldset>
         {mode!=="HABITS"&&<label>{mode==="COACHING"?"코칭할 종목":"분석 종목"}

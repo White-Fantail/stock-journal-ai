@@ -181,3 +181,18 @@ test("focus schema and parser reject cross-mode, ungrounded and empty model focu
  assert.ok(schema.required.includes("focus"));
  assert.deepEqual(schema.properties.focus.properties.mode.enum,["STOCK_REVIEW"]);
 });
+
+test("AI mode choices align radio beside copy without inheriting full-width input styles",()=>{
+ const panel=read("../app/private/analysis/analysis-panel.tsx");
+ const css=read("../app/globals.css");
+ assert.ok(panel.includes('className="analysis-mode-choices"'));
+ assert.ok(panel.includes('className={"analysis-mode-option"+(mode===value?" is-selected":"")}'));
+ assert.ok(panel.includes('className="analysis-mode-option-copy"'));
+ assert.ok(panel.includes('<input type="radio" name="mode" value={value} checked={mode===value}'));
+ assert.ok(css.includes("grid-template-columns:20px minmax(0,1fr)"));
+ assert.ok(css.includes('.app-shell .analysis-mode-option input[type="radio"]'));
+ assert.ok(css.includes("width:18px;height:18px;min-width:18px;min-height:18px"));
+ assert.ok(css.includes(".app-shell form label.analysis-mode-option.is-selected"));
+ const desktop=css.match(/\.app-shell input:not\(\[type=hidden\]\):not\(\[type=checkbox\]\):not\(\[type=radio\]\)/g);
+ assert.ok(desktop && desktop.length>=2,"all desktop and mobile inputs must exempt radios");
+});

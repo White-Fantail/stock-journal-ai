@@ -130,6 +130,14 @@ async function addPlan(form:FormData) {
 }
 
 
+/** Route old journal deep links without changing new journal mode narrowing. */
+function redirectLegacyObserved(mode:string,ticker:string,kind:string,ref:string,page:number):void{
+  if(mode!=="observed")return;
+  if(!ticker || !kind || !/^[0-9a-f]{64}$/.test(ref) ||
+     page<0 || (kind==="FILL" && page!==0))notFound();
+  redirect("/private/trades/tiger/"+ref+"/note?page="+page+"&kind="+kind);
+}
+
 export default async function JournalNewPage({searchParams}:{
   searchParams:Promise<{ticker?:string;mode?:string;kind?:string;error?:string;
     sourceRef?:string;sourceKind?:string;page?:string}>
@@ -144,13 +152,7 @@ export default async function JournalNewPage({searchParams}:{
   const sourceRef=params.sourceRef??"";
   const observedPage=/^(?:0|[1-9][0-9]?)$/.test(params.page??"0") &&
     Number(params.page??"0")<=20 ? Number(params.page??"0") : -1;
-  // Legacy deep links to a Tiger order now land in the trade-owned editor.
-  // Keep existing journal notes and server-side source verification unchanged.
-  if(mode==="observed"){
-    if(!safeTicker || !sourceKind || !/^[0-9a-f]{64}$/.test(sourceRef) ||
-       observedPage<0 || (sourceKind==="FILL" && observedPage!==0))notFound();
-    redirect("/private/trades/tiger/"+sourceRef+"/note?page="+observedPage+"&kind="+sourceKind);
-  }
+  redirectLegacyObserved(mode,safeTicker,sourceKind,sourceRef,observedPage);
   let brokerFills:Awaited<ReturnType<typeof tigerLedgerRead>>["executions"]=[];
   if(mode==="broker"){
     if(!safeTicker) notFound();

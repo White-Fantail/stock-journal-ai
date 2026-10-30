@@ -4,7 +4,7 @@ import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 import {AiImprovementForm} from "./ai-improvement-form";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[]};
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null,planSignals:[],decisionSignals:[]};
 
 export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOCK_REVIEW",initialSymbol}:{
   available:boolean;symbols:readonly string[];planRevisions:Readonly<Record<string,string>>;initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
@@ -79,6 +79,15 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
       (mode==="HABITS"||state.symbol===selected)&&<section className="state-panel" aria-live="polite">
       <h2>{mode==="COACHING"?"이번 투자 습관 코칭":"내 투자 기록 복기"}</h2>
       <p className="user-footnote">AI가 제시한 행동은 자동 저장하거나 투자계획에 적용하지 않습니다. 개선 행동은 직접 검토·수정하고 승인한 경우에만 기존 자기평가와 다음 점검에 기록할 수 있습니다.</p>
+      {mode==="STOCK_REVIEW"&&state.decisionSignals.length>0&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
+        <h3>투자 판단의 변경 표현 확인</h3>
+        <p className="user-footnote">현재 계획 이후 작성한 일지에서 계획과 다른 방향을 암시하는 명시적 표현을 발견했습니다. 문맥이나 실제 의사결정은 검증하지 않았으므로 변경·위반이라고 확정하지 않습니다. 원문은 외부 AI에 추가 전송하지 않습니다.</p>
+        <ul>{state.decisionSignals.map((v,i)=><li key={v.kind+v.notedAt+i}>
+          <strong>{v.planDescription}</strong> · {v.mentionedDescription}
+          <small style={{display:"block"}}>{v.notedAt.slice(0,10)} · 사용자 확인 필요</small>
+        </li>)}</ul>
+        <Link href={"/private/journal?ticker="+encodeURIComponent(selected)}>원본 일지와 계획 검토 →</Link>
+      </section>}
       {state.planSignals.length>0&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
         <h3>최근 일지와 현재 계획의 가격 기준 차이 후보</h3>
         <p className="user-footnote">내가 작성한 최근 일지에서 다른 가격이 언급된 부분입니다.

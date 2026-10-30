@@ -19,7 +19,7 @@ export type TigerSyncJob = {
 export type TigerSyncStatus = {
   provider:"TIGER"; syncEnabled:false; coverage:"UNVERIFIED"; jobs:TigerSyncJob[];
 };
-export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view" | "personal-health-view" | "personal-diagnostics";
+export type TigerAction = "ledger-read" | "review-status" | "sync-status" | "status" | "start" | "callback" | "bind" | "read" | "disconnect" | "personal-view" | "personal-health-view" | "personal-diagnostics" | "personal-refresh" | "personal-refresh-status";
 
 async function subjectForRequest(): Promise<string> {
   const [session, scope] = await Promise.all([auth(), currentWorkspace()]);
@@ -308,4 +308,23 @@ export async function tigerPersonalDiagnostics():Promise<TigerPersonalDiagnostic
          /^[A-Z_]{2,32}$/.test(x.kind) && count(x.count))) return null;
     return value;
   }catch{return null;}
+}
+
+
+/** Personal RSA refresh state; never carries an account reference or broker data. */
+export type TigerPersonalRefreshState = Readonly<{
+  state:"IDLE"|"RUNNING"|"COMPLETED"|"FAILED"|"COOLDOWN"|"UNAVAILABLE";
+  mode?:"MANUAL"|"HOURLY"|"DAILY"|null;
+  startedAt?:string|null;finishedAt?:string|null;
+  lastSuccessfulAt?:string|null;nextAllowedAt?:string|null;
+}>;
+export async function tigerPersonalRefresh(request=false):Promise<TigerPersonalRefreshState> {
+  const value=await tigerCall(request?"personal-refresh":"personal-refresh-status") as TigerPersonalRefreshState;
+  if(!value || !["IDLE","RUNNING","COMPLETED","FAILED","COOLDOWN","UNAVAILABLE"].includes(value.state))
+    throw new Error("INVALID_REFRESH_STATE");
+  const valid=(v:unknown)=>v===undefined || v===null ||
+    typeof v==="string" && v.length<=48 && Number.isFinite(Date.parse(v));
+  if(![value.startedAt,value.finishedAt,value.lastSuccessfulAt,value.nextAllowedAt].every(valid))
+    throw new Error("INVALID_REFRESH_TIMESTAMP");
+  return value;
 }

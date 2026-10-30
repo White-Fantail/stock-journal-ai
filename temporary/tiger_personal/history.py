@@ -19,6 +19,8 @@ _SYMBOL=re.compile(r"^[A-Z0-9.:-]{1,32}$")
 _STATUS=re.compile(r"^[A-Z_]{3,32}$")
 _ALLOWED={"FILLED","PARTIALLY_FILLED","CANCELLED","EXPIRED","REJECTED",
           "HELD","PENDING","NEW","SUBMITTED","INACTIVE","UNKNOWN"}
+_TYPES={"MKT","LMT","STP","STP_LMT","TRAIL","AL","AM"}
+_TIFS={"DAY","GTC","GTD","IOC","FOK","OPG"}
 
 def _payload(value):
     if not isinstance(value,dict) or set(value)!={"subject","account","from","to","part","parts","complete","orders"}:
@@ -45,7 +47,7 @@ def _payload(value):
     seen=set()
     expected={"id","symbol","currency","side","status","filled","price","fee","at"}
     for item in items:
-        if not isinstance(item,dict) or not expected.issubset(item) or set(item)-expected-{"filledScale","feeCurrency"}:
+        if not isinstance(item,dict) or not expected.issubset(item) or set(item)-expected-{"filledScale","feeCurrency","orderType","orderQuantity","auxPrice","limitPrice","timeInForce","outsideRth"}:
             raise PilotError("INVALID_ORDER")
         order_id=item["id"]
         if not isinstance(order_id,str) or not _ID.fullmatch(order_id) or order_id in seen:
@@ -72,6 +74,25 @@ def _payload(value):
         if fee_currency is not None and (not isinstance(fee_currency,str)
             or not re.fullmatch(r"[A-Z]{3}",fee_currency)):
             raise PilotError("INVALID_ORDER")
+        # Optional provider order metadata is strictly bounded and cannot
+        # turn a submitted order into a fabricated fill.
+        extras={"orderType","orderQuantity","auxPrice","limitPrice","timeInForce","outsideRth"}
+        if set(item)-expected-{"filledScale","feeCurrency"}-extras:
+            raise PilotError("INVALID_ORDER")
+        kind=item.get("orderType")
+        tif=item.get("timeInForce")
+        outside=item.get("outsideRth")
+        if (kind is not None and kind not in _TYPES or
+                tif is not None and tif not in _TIFS or
+                outside is not None and type(outside) is not bool):
+            raise PilotError("INVALID_ORDER_TYPE")
+        qty=number(item.get("orderQuantity"),True)
+        aux=number(item.get("auxPrice"),True)
+        limit=number(item.get("limitPrice"),True)
+        if (qty is not None and Decimal(qty)<=0 or
+                aux is not None and Decimal(aux)<=0 or
+                limit is not None and Decimal(limit)<=0):
+            raise PilotError("INVALID_ORDER_TERMS")
         if float(filled)<0 or (price is not None and float(price)<0):
             raise PilotError("INVALID_ORDER")
         at=item["at"]
@@ -80,7 +101,9 @@ def _payload(value):
         result.append({"id":order_id,"symbol":item["symbol"],"currency":item["currency"],
                        "side":item["side"],"status":item["status"],"filled":filled,
                        **({"filledScale":scale} if "filledScale" in item else {}),
-                       "price":price,"fee":fee,"feeCurrency":fee_currency,"at":at})
+                       "price":price,"fee":fee,"feeCurrency":fee_currency,"at":at,
+                       "orderType":kind,"orderQuantity":qty,"auxPrice":aux,
+                       "limitPrice":limit,"timeInForce":tif,"outsideRth":outside})
     return account,begin,end,part,parts,value["complete"],result
 
 def import_orders(identity,broker,value):
@@ -100,7 +123,12 @@ def import_orders(identity,broker,value):
         envelope={"source":"PERSONAL_ORDER_OBSERVATION","from":begin,"to":end,
                   "part":part,"parts":parts,"complete":complete,"orders":orders}
         raw=json.dumps(envelope,sort_keys=True,separators=(",",":"),allow_nan=False).encode()
-        sha=hashlib.sha256(raw).hexdigest()
+        # Hourly recent-window fetches have moving from/to timestamps. Hash the
+        # actual source observations, not the moving clock, to prevent duplicate
+        # encrypted snapshots from burying older historical order evidence.
+        stable=json.dumps({"source":envelope["source"],"orders":orders,
+                           "complete":complete},sort_keys=True,separators=(",",":")).encode()
+        sha=hashlib.sha256(stable).hexdigest()
         existing=broker.execute("""SELECT 1 FROM saas_tiger_source_snapshots
           WHERE workspace_id=%s AND account_id=%s AND kind='TRANSACTIONS'
             AND evidence_sha256=%s LIMIT 1""",(wid,aid[0],sha)).fetchone()
@@ -148,7 +176,10 @@ def load_orders(broker,wid,aid,maximum=100,page=0):
                      # Missing currency means UNKNOWN, not zero fees or assumed USD.
                      # Normalize the read projection only; NEVER rewrite evidence.
                      "feeCurrency":item.get("feeCurrency"),
-                     "filled":_display_filled(item)}
+                     "filled":_display_filled(item),
+                     "orderType":item.get("orderType"),"orderQuantity":item.get("orderQuantity"),
+                     "auxPrice":item.get("auxPrice"),"limitPrice":item.get("limitPrice"),
+                     "timeInForce":item.get("timeInForce"),"outsideRth":item.get("outsideRth")}
     result=sorted(seen.values(),key=lambda x:int(x["at"] or 0),reverse=True)
     start=page*maximum
     return {"orders":result[start:start+maximum],"truncated":len(records)>=600,

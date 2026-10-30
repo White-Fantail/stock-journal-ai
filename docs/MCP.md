@@ -1,6 +1,6 @@
 # Positionary MCP — same Google workspace
 
-**Status:** implemented on dev, feature-gated; live OAuth/provider verification not yet established.
+**Status:** implemented on main, feature-gated; real account/connector permissions still require end-to-end verification.
 
 ## Endpoint and OAuth discovery
 
@@ -21,7 +21,11 @@ Membership is always resolved from verified Google numeric subject (never email 
 
 Read: Tiger connection status, owner account snapshots, paginated order/fill/fee observations, verified-only ledger, manual trades, journal, plans, investor principles, risk groups, manual indicators, check-ins/actions, weekly and monthly reviews.
 
+Owner-only RSA refresh: `request_tiger_order_refresh` queues a bounded recent-order read through the existing authenticated Railway API into the isolated personal worker; `get_tiger_order_refresh_status` reports `RUNNING`, `COMPLETED`, `FAILED` or `COOLDOWN`. This does **not** place orders, cancel orders, or verify any execution. Once `COMPLETED`, call `get_tiger_order_observations(page=0)` and identify the exact order using the observation's `sourceRef` alongside ticker, side, order type (`STP`/`STP_LMT` etc.), stop trigger `auxPrice`, order quantity, and status. `SUBMITTED` with 0 filled shares is pending; do not call it a sale. Older observations may lack type and trigger and must be treated as unknown until re-collected.
+
 Write: append journal notes, add immutable investment plan revisions (target, stop, strategy), save investor principles, record or void manually entered user-asserted executions, revise manual indicator rules, add manual indicator snapshots, revise user-assigned risk factors, create a plan check-in, mark a prior follow-up outcome. Same database and tenant RLS as web. Existing history is not overwritten.
+
+`add_tiger_order_note` attaches a user-approved, append-only trade rationale to the **exact** observed Tiger order by its 64-character `sourceRef` and page. It uses the existing `/internal/v1/journal/observation-note/create` tenant- and owner-validated route. Write scope, explicit `confirm:true`, a stable idempotency UUID and an unambiguous saved order are required. If a fresh refresh is still running, fails, is rate-limited, or multiple orders match the user's conversational description, return the status/candidates and request clarification rather than attaching to an arbitrary same-ticker record. ChatGPT cannot infer a real execution from the user's statement or a submitted stop order.
 
 **Not offered:** Tiger order placement/cancellation/amendment, funds transfer, automatic trading, quote polling/price alerts, or broker account impersonation. MCP tool confirmation must be paired with the MCP client's own user confirmation UI.
 

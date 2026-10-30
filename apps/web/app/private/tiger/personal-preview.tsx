@@ -2,6 +2,8 @@ import Link from "next/link";
 import type {TigerPersonalRead} from "../../../lib/tiger-api";
 import {formatMoney,formatQuantity,formatPercent} from "../../../lib/format-decimal";
 import {groupTigerOrderObservations, type GroupedTigerOrder} from "../../../lib/tiger-order-groups";
+import {notesForObserved,reasonPreview,tigerTradeHref} from "../../../lib/trade-reasons";
+import type {JournalEntry} from "../../../lib/saas-trades-api";
 import {orderTypeLabel,orderStatusLabel,orderTerms,hasExecution,executionPriceIsKnown,feeIsKnown} from "../../../lib/tiger-order-display";
 import {parseStatementFeeEvidence,resolvedFeeCurrency,statementMatchesOrder} from "../../../lib/tiger-fee-statement";
 
@@ -106,7 +108,7 @@ export function PersonalPortfolioBlock({data}:{data:TigerPersonalRead}){
   </div>;
 }
 
-export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPersonalRead,compact?:boolean,page?:number}){
+export function PersonalOrderHistory({data,compact=false,page=0,reasons=[],reasonsAvailable=false}:{data:TigerPersonalRead,compact?:boolean,page?:number,reasons?:readonly JournalEntry[],reasonsAvailable?:boolean}){
   // Private owner-supplied statement facts live in server-only configuration,
   // never hardcoded in Git or copied into client-side caches. No other Tiger
   // account, date, amount or symbol can inherit statement-validated USD.
@@ -119,6 +121,8 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
      }))).sort((a,b)=>Number(b.at??0)-Number(a.at??0));
   const groups=groupTigerOrderObservations(rows,data.accounts.flatMap(a=>a.fillObservations));
   const groupedRows=groups.orders.map((g,i)=>({...rows[i],fills:g.fills,reconciliation:g.reconciliation}));
+  const attached=(ref:string,kind:"ORDER"|"FILL"="ORDER")=>notesForObserved(reasons,ref,kind);
+  const statusLabel=(ref:string,kind:"ORDER"|"FILL"="ORDER")=>!reasonsAvailable?"메모 조회 불가":attached(ref,kind).length>0?"이유 "+attached(ref,kind).length+"건":"이유 미기록";
   const feeRows=data.accounts.flatMap(account=>account.feeObservations.map(f=>{
     const order=account.orders.find(o=>o.sourceRef===f.sourceRef &&
       o.symbol===f.symbol && o.fee!==null && f.total===o.fee);
@@ -169,13 +173,17 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
               <div><dt>계좌</dt><dd>{o.alias}</dd></div>
             </dl>
             {hasExecution(o)?<PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>:<small className="user-muted">현재 체결 0주 · 개별 체결 없음</small>}
-            <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
-              "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></div>
+            <div className="mobile-data-card-action" style={{display:"grid",gap:6}}>
+              <strong>{statusLabel(o.sourceRef)}</strong>
+              {reasonsAvailable&&reasonPreview(attached(o.sourceRef))&&
+                <small className="user-muted">{reasonPreview(attached(o.sourceRef))}</small>}
+              <Link href={tigerTradeHref(o.sourceRef,page)}>거래 상세 · 이유 {attached(o.sourceRef).length?"확인":"기록"} →</Link>
+            </div>
           </article>)}
       </div>
       <div className="responsive-table desktop-data-table">
         <table>
-          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>주문 유형·조건</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>부분체결</th><th>투자 기록</th></tr></thead>
+          <thead><tr><th>시간 (NZ)</th><th>종목</th><th>방향</th><th>주문 유형·조건</th><th>상태</th><th>체결 수량</th><th>평균 체결가</th><th>주문 수수료</th><th>부분체결</th><th>매매 이유</th></tr></thead>
           <tbody>{groupedRows.slice(0,compact?12:120).map((o,i)=><tr key={o.sourceRef+":"+i}>
             <td>{when(o.at)}</td>
             <td><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>{o.symbol}</Link></td>
@@ -186,8 +194,9 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{executionPriceIsKnown(o)?viewNumber(o.price)+" "+o.currency:"체결 전 · 없음"}</td>
             <td>{feeIsKnown(o)?viewNumber(o.fee)+" "+feeLabel(o.feeView.currency,o.feeView.basis==="STATEMENT_MATCH"):"체결 전 · 미확정"}</td>
             <td>{hasExecution(o)?<PartialFillDetails fills={o.fills} reconciliation={o.reconciliation}/>:<small>미체결</small>}</td>
-            <td><Link href={"/private/journal/new?mode=observed&sourceKind=ORDER&sourceRef="+o.sourceRef+
-              "&page="+page+"&ticker="+encodeURIComponent(o.symbol)}>매매 이유 기록 →</Link></td>
+            <td><strong>{statusLabel(o.sourceRef)}</strong>
+             {reasonsAvailable&&reasonPreview(attached(o.sourceRef),65)&&<small className="user-muted">{reasonPreview(attached(o.sourceRef),65)}</small>}
+             <Link href={tigerTradeHref(o.sourceRef,page)}>상세 보기 →</Link></td>
           </tr>)}</tbody>
         </table>
       </div></>}
@@ -200,8 +209,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
           {groups.unlinked.map(f=><article className="mobile-data-card" key={f.sourceRef}>
             <strong>{f.symbol} · {f.side==="BUY"?"매수":"매도"} · {formatQuantity(f.quantity)}주</strong>
             <small>{viewNumber(f.price)} {f.currency} · 원본 시각 {f.timeRaw??"미확인"} (시간대 미검증)</small>
-            <div className="mobile-data-card-action"><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-              "&page=0&ticker="+encodeURIComponent(f.symbol)}>기존 체결 메모 보기·작성 →</Link></div>
+            <div className="mobile-data-card-action"><Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>체결 상세 · 이유 →</Link></div>
           </article>)}
         </div>
         <div className="responsive-table desktop-data-table"><table>
@@ -210,8 +218,7 @@ export function PersonalOrderHistory({data,compact=false,page=0}:{data:TigerPers
             <td>{f.symbol}</td><td>{f.side==="BUY"?"매수":"매도"}</td>
             <td>{formatQuantity(f.quantity)}</td><td>{viewNumber(f.price)} {f.currency}</td>
             <td>{f.timeRaw??"미확인"}</td>
-            <td><Link href={"/private/journal/new?mode=observed&sourceKind=FILL&sourceRef="+f.sourceRef+
-              "&page=0&ticker="+encodeURIComponent(f.symbol)}>체결 메모 →</Link></td>
+            <td><Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>체결 상세 · 이유 →</Link></td>
           </tr>)}</tbody>
         </table></div>
       </section>}

@@ -5,7 +5,8 @@ import type {TigerPersonalFill,TigerPersonalOrder} from "../lib/tiger-api";
 
 function order(sourceRef:string,filled:string|null):TigerPersonalOrder{
   return {sourceRef,symbol:"DEMO",currency:"USD",side:"BUY",status:"FILLED",
-    filled,price:"7.25",fee:null,feeCurrency:null,at:"1792700000000"};
+    filled,price:"7.25",fee:null,feeCurrency:null,at:"1792700000000",
+    orderType:null,orderQuantity:null,auxPrice:null,limitPrice:null,timeInForce:null,outsideRth:null};
 }
 function fill(sourceRef:string,quantity:string,orderSourceRef?:string):TigerPersonalFill{
   return {sourceRef,orderSourceRef,symbol:"DEMO",currency:"USD",side:"BUY",

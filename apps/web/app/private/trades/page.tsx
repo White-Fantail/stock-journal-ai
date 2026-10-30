@@ -1,5 +1,7 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
+import {auth} from "../../../auth";
+import {fetchJournal} from "../../../lib/saas-trades-api";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {tigerPersonalRead,tigerPersonalDiagnostics} from "../../../lib/tiger-api";
 import {PersonalOrderHistory} from "../tiger/personal-preview";
@@ -11,22 +13,23 @@ export const dynamic="force-dynamic";
 export default async function TradesPage({
   searchParams,
 }: {searchParams:Promise<{page?:string}>}) {
-  if(!await currentWorkspace()) redirect("/login");
+  const [workspace,session]=await Promise.all([currentWorkspace(),auth()]);
+  if(!workspace||!session?.user?.id) redirect("/login");
   const query=await searchParams;
   const page=/^(?:0|[1-9][0-9]?)$/.test(query.page??"0")
     ?Math.min(20,Number(query.page??"0")):0;
-  const personal=await tigerPersonalRead(page);
+  const [personal,notesResult]=await Promise.all([tigerPersonalRead(page),fetchJournal(session.user.id).then(value=>({available:true as const,value})).catch(()=>({available:false as const,value:[]}))]);
   const diagnosis=personal?.accounts.length ? null : await tigerPersonalDiagnostics();
   const hadTigerData=Boolean(diagnosis && (diagnosis.accountCount>0 || diagnosis.snapshotCounts.length>0));
   return <main style={{maxWidth:900,margin:"2rem auto",padding:"0 1rem"}}>
     <p><Link href="/private">← 대시보드</Link></p>
     <h1>거래 기록</h1>
-    <p>Tiger에서 수집한 주문 관측 정보와 사용자가 직접 입력한 체결 기록은 출처가 다르므로 별도 화면에서 관리합니다.</p>
+    <p>주문과 체결, 그때의 매매 이유를 거래별로 확인합니다. 투자 논리와 목표·손절 계획은 투자일지에서 별도로 관리합니다.</p>
     <p><Link className="btn btn-outline" href="/private/trades/manual">직접 입력한 거래 보기 →</Link>{" "}
        <Link className="btn btn-primary" href="/private/trades/new">+ 거래 직접 추가</Link></p>
     {personal && personal.accounts.length>0 && <TigerRefreshControl/>}
     {personal && personal.accounts.length>0
-      ? <PersonalOrderHistory data={personal} page={page}/>
+      ? <PersonalOrderHistory data={personal} page={page} reasons={notesResult.value} reasonsAvailable={notesResult.available}/>
       : <section className="state-panel">
           <h2>Tiger 주문 관측 이력</h2>
           <p>{hadTigerData

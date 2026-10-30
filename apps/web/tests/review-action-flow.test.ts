@@ -64,3 +64,17 @@ test("AI improvement is persisted only through a user-approved immutable self-ch
  assert.ok(panel.includes("<AiImprovementForm"));
  assert.ok(analysis.includes("saveKeys:result.findings.map(()=>randomUUID())"));
 });
+
+test("AI coaching progress separates partial months and keeps action status owner-reported",()=>{
+ const actions=read("../app/private/analysis/actions.ts");
+ const panel=read("../app/private/analysis/analysis-panel.tsx");
+ assert.ok(actions.includes("monthly:[...reportSet].reverse()"));
+ assert.ok(actions.includes("partial:item.partial"));
+ assert.ok(actions.includes("notes:own?.notes??0"));
+ assert.ok(actions.includes("followup?.state??null"));
+ assert.ok(panel.includes('p.partial?" (진행 중)":""'));
+ assert.ok(panel.includes("투자 성과나 원칙 준수율이 아니며"));
+ assert.ok(panel.includes("실행 여부 미확인"));
+ assert.ok(panel.includes("/private/review/action/new?checkin="));
+ assert.ok(!actions.includes("submitReviewAction("));
+});

@@ -4,7 +4,7 @@ import {useActionState,useState} from "react";
 import Link from "next/link";
 import {runAiAnalysis,type AiState} from "./actions";
 import {AiImprovementForm} from "./ai-improvement-form";
-const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[]};
+const initialAiState:AiState={status:"idle",message:"",result:null,evidence:[],asOf:null,model:null,remainingDay:null,mode:null,symbol:null,saveKeys:[],coachingProgress:null};
 
 export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOCK_REVIEW",initialSymbol}:{
   available:boolean;symbols:readonly string[];planRevisions:Readonly<Record<string,string>>;initialMode?:"STOCK_REVIEW"|"HABITS"|"COACHING";initialSymbol?:string;
@@ -87,6 +87,33 @@ export function AnalysisPanel({available,symbols,planRevisions,initialMode="STOC
             <p key={e.ref}><strong>{e.ticker} · {e.on}</strong> — {e.detail}</p>)}
           <p className="user-footnote">AI에는 목표가·손절가·비중의 구체적인 숫자를 전달하지 않았습니다.</p>
         </div>}
+      {mode==="COACHING"&&state.coachingProgress&&<section className="state-panel" style={{padding:16,marginBottom:16}}>
+        <h3>지난 3개월과 이번 달의 기록 변화</h3>
+        <p className="user-footnote">선택 종목에 사용자가 직접 작성한 활동 건수입니다.
+          투자 성과나 원칙 준수율이 아니며 진행 중인 달을 완료된 달과 직접 비교하지 않습니다.</p>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr><th scope="col">기간</th><th scope="col">일지</th>
+              <th scope="col">복기</th><th scope="col">계획 변경</th></tr></thead>
+            <tbody>{state.coachingProgress.monthly.map(p=><tr key={p.month}>
+              <th scope="row">{p.month}{p.partial?" (진행 중)":""}</th>
+              <td>{p.notes}건</td><td>{p.reviews}건</td><td>{p.plans}건</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        {state.coachingProgress.latestAction?<div style={{marginTop:14}}>
+          <h4>최근 자기평가에서 정한 다음 행동</h4>
+          <p>{state.coachingProgress.latestAction.nextAction}</p>
+          <p><strong>사용자가 기록한 상태:</strong> {({
+            DONE:"완료했다고 기록",NOT_DONE:"아직 하지 못함",
+            NOT_APPLICABLE:"현재는 해당 없음",UNCERTAIN:"판단 유보",
+          } as Record<string,string>)[state.coachingProgress.latestAction.state??""]??"실행 여부 미확인"}</p>
+          <Link href={"/private/review/action/new?checkin="+
+            encodeURIComponent(state.coachingProgress.latestAction.checkinId)}>
+            실행 여부 직접 확인·정정 →
+          </Link>
+        </div>:<p className="user-footnote">이 종목에는 확인 가능한 최근 자기평가의 다음 행동이 없습니다.</p>}
+      </section>}
       <p>{state.result.summary}</p>
       <small>기록 기준일 {state.asOf} · {state.model} · 오늘 남은 요청 {state.remainingDay}회 ·
         외부 AI 생성 결과이며, 실제 수익률이나 매매 체결을 검증한 자료가 아닙니다.</small>

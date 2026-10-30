@@ -1,6 +1,6 @@
 "use client";
 
-import {useActionState} from "react";
+import {useActionState,useState} from "react";
 import Link from "next/link";
 import {saveAiImprovement,initialAiImprovementSaveState} from "./save-improvement";
 
@@ -14,6 +14,7 @@ export function AiImprovementForm({suggestion,saveKey,preferredTicker,planRevisi
     /^[0-9a-f-]{36}$/i.test(id)).sort(([a],[b])=>a.localeCompare(b));
   const chosen=preferredTicker&&entries.some(([ticker])=>ticker===preferredTicker)
     ?preferredTicker:entries[0]?.[0]??"";
+  const [ticker,setTicker]=useState(chosen);
   // A revision is selected from existing, authored plans only. A stale version
   // is rejected again by the server before creating the immutable check-in.
   if(state.status==="saved")return <div className="state-panel" role="status" style={{marginTop:12,padding:12}}>
@@ -29,13 +30,13 @@ export function AiImprovementForm({suggestion,saveKey,preferredTicker,planRevisi
     <form action={save} style={{display:"grid",gap:12,marginTop:12}}>
       <input type="hidden" name="idempotencyKey" value={saveKey}/>
       <label>적용할 종목
-        <select name="ticker" defaultValue={chosen} required>
+        <select name="ticker" value={ticker} onChange={e=>setTicker(e.target.value)} required>
           {entries.map(([ticker])=><option key={ticker} value={ticker}>{ticker}</option>)}
         </select>
       </label>
       <p className="user-footnote">현재 종목의 투자계획 버전으로 저장됩니다. 계획이 바뀌면 저장을 중단합니다.</p>
       <input type="hidden" name="expectedPlanRevisionId"
-        value={planRevisions[chosen]??""}/>
+        value={planRevisions[ticker]??""}/>
       <label>현재 투자 원칙에 대한 내 평가
         <select name="selfAssessment" required defaultValue="">
           <option value="" disabled>내가 직접 판단해 선택</option>

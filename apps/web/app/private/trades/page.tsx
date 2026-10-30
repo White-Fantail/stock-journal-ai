@@ -3,6 +3,7 @@ import {redirect} from "next/navigation";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {tigerPersonalRead,tigerPersonalDiagnostics} from "../../../lib/tiger-api";
 import {PersonalOrderHistory} from "../tiger/personal-preview";
+import {TigerRefreshControl} from "./tiger-refresh-control";
 
 export const dynamic="force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function TradesPage({
     <p>Tiger에서 수집한 주문 관측 정보와 사용자가 직접 입력한 체결 기록은 출처가 다르므로 별도 화면에서 관리합니다.</p>
     <p><Link className="btn btn-outline" href="/private/trades/manual">직접 입력한 거래 보기 →</Link>{" "}
        <Link className="btn btn-primary" href="/private/trades/new">+ 거래 직접 추가</Link></p>
+    {personal && personal.accounts.length>0 && <TigerRefreshControl/>}
     {personal && personal.accounts.length>0
       ? <PersonalOrderHistory data={personal} page={page}/>
       : <section className="state-panel">

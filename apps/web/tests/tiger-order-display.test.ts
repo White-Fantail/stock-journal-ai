@@ -25,12 +25,12 @@ test("submitted META stop has trigger but no execution price or fee",()=>{
  assert.equal(orderStatusLabel(order.status),"접수 · 체결 대기");
  assert.equal(executionPriceIsKnown(order),false);
  assert.equal(feeIsKnown(order),false);
- assert.deepEqual(orderTerms(order),["주문 3주","스탑 발동가 609",
+ assert.deepEqual(orderTerms(order),["주문 3주","스탑 발동가 609 USD",
    "유효기간 GTC","정규장 외 거래 미허용"]);
 });
 test("trailing auxiliary amount is NOT displayed as stop trigger",()=>{
  const order=parse({...base,orderType:"TRAIL",auxPrice:"1.25"}).value!.accounts[0].orders[0];
- assert.ok(orderTerms(order).includes("추적 가격차 1.25"));
+ assert.ok(orderTerms(order).includes("추적 가격차 1.25 USD"));
  assert.ok(!orderTerms(order).some(v=>v.includes("스탑 발동가")));
 });
 test("legacy order type unknown is explicit; never guess an STP",()=>{

@@ -221,7 +221,7 @@ export default async function PortfolioPage() {
     // Only incomplete or capped broker holdings warrant interruption before the list.
     // Missing plans and optional risk classifications are follow-up work, not blockers.
     const immediate=portfolioReviewActions({personal,plans,factors:userFactors})
-      .find(a=>a.id==="partial"||a.id==="holdings-limit");
+      .find(a=>a.id==="partial"||a.id==="holdings-limit"||a.id==="holdings-stale");
     return <main className="portfolio-data">
       <div className="page-intro home-data-heading portfolio-page-heading">
         <div><h1>포트폴리오</h1><p>내 계좌에 관측된 보유 종목을 확인합니다.</p></div>

@@ -127,3 +127,21 @@ test("manual execution context uses authored timestamp rather than claimed execu
  assert.ok(detail.includes("실제 체결 시각이 아닌"));
  assert.ok(detail.includes("시점별 연결을 보류합니다"));
 });
+
+test("historical self assessment shows its own plan details or an explicit unknown",()=>{
+ const page=read("../app/private/journal/review/new/page.tsx");
+ assert.ok(page.includes("revisionById.get(item.planRevisionId)!"));
+ assert.ok(page.includes("revision.invalidationCondition"));
+ assert.ok(page.includes("revision.maxAllocationPct"));
+ assert.ok(page.includes("전체 투자계획 개정 이력을 확인할 수 없어"));
+ assert.ok(page.includes("현재 계획으로 대체하지 않습니다"));
+});
+test("journal compares plan revisions and manual rationale at authored times only",()=>{
+ const page=read("../app/private/journal/journal-workspace.tsx");
+ assert.ok(page.includes("계획 개정과 직접 입력 거래 이유를 작성 시각순으로 비교"));
+ assert.ok(page.includes('...plans.filter(p=>p.ticker===selected)'));
+ assert.ok(page.includes('...connectedTrades.map(t=>({'));
+ assert.ok(page.includes("at:t.createdAt"));
+ assert.ok(page.includes("Date.parse(b.at)-Date.parse(a.at)"));
+ assert.ok(page.includes("실제 체결 시각과 다를 수 있고"));
+});

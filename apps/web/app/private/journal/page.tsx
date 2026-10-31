@@ -59,6 +59,9 @@ export default async function JournalPage({
       <p>기존 기록은 변경되지 않았습니다. 서버가 정상인지 확인한 뒤 다시 시도해 주세요.</p>
       <Link href="/private/journal" className="btn btn-outline">다시 확인</Link>
     </div>}
+    {!unavailable && personal===null && <div className="state-panel" role="status">
+      <p>Tiger 보유·주문 자료를 현재 확인할 수 없습니다. 계좌 미연결 또는 일시적 조회 오류일 수 있으며, 내 투자일지와 계획 기록은 계속 표시됩니다.</p>
+    </div>}
     {!unavailable && tradesUnavailable && <div className="state-panel" role="alert">
       <p>직접 입력한 거래 기록을 현재 불러올 수 없습니다. 투자일지와 투자계획은 정상적으로 표시하며, 거래 연결 목록만 일부 누락될 수 있습니다.</p>
       <Link href="/private/trades/manual">직접 입력 거래 다시 확인</Link>

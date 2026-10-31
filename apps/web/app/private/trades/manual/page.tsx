@@ -40,7 +40,7 @@ export default async function ManualTradeList({searchParams}:{
             <dl className="mobile-data-card-fields">
               <div><dt>수량</dt><dd>{formatQuantity(e.quantity,"—")}</dd></div>
               <div><dt>체결가</dt><dd>{formatMoney(e.price,"—")} {e.currency??""}</dd></div>
-              <div><dt>수수료</dt><dd>{formatMoney(e.fee,"미확인")}</dd></div>
+              <div><dt>수수료</dt><dd>{e.fee===null?"미확인":formatMoney(e.fee)+" (통화 별도 미기록)"}</dd></div>
             </dl>
             <div className="mobile-data-card-action">
               <Link href={"/private/trades/"+e.id}>상세 및 정정 보기 →</Link>
@@ -56,7 +56,7 @@ export default async function ManualTradeList({searchParams}:{
             <td>{e.side==="BUY"?"매수":e.side==="SELL"?"매도":"—"}</td>
             <td>{formatQuantity(e.quantity,"—")}</td>
             <td>{formatMoney(e.price,"—")} {e.currency??""}</td>
-            <td>{formatMoney(e.fee,"미확인")}</td>
+            <td>{e.fee===null?"미확인":formatMoney(e.fee)+" (통화 별도 미기록)"}</td>
             <td>{e.executedAt??e.createdAt}</td>
             <td><Link href={"/private/trades/"+e.id}>상세 / 정정 →</Link></td>
           </tr>)}</tbody>

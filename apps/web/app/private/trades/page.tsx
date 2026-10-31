@@ -25,8 +25,12 @@ export default async function TradesPage({
     <p><Link href="/private">← 대시보드</Link></p>
     <h1>거래 기록</h1>
     <p>주문과 체결, 그때의 매매 이유를 거래별로 확인합니다. 투자 논리와 목표·손절 계획은 투자일지에서 별도로 관리합니다.</p>
-    <p><Link className="btn btn-outline" href="/private/trades/manual">직접 입력한 거래 보기 →</Link>{" "}
-       <Link className="btn btn-primary" href="/private/trades/new">+ 거래 직접 추가</Link></p>
+    <nav aria-label="거래 기록 메뉴" style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"center",margin:"1rem 0 1.5rem"}}>
+      <Link className="btn btn-outline" href="/private/trades/manual">직접 입력 거래</Link>
+      <Link className="btn btn-outline" href="/private/journal">투자일지·계획</Link>
+      <Link className="btn btn-primary" href="/private/trades/new">+ 거래 직접 추가</Link>
+    </nav>
+    <p className="user-muted" style={{fontSize:"0.9rem"}}>Tiger 주문은 증권사에서 관측한 자료입니다. 직접 입력 거래와 합산하지 않으며, 부분체결과 수수료는 확인된 범위에서만 표시합니다.</p>
     {personal && personal.accounts.length>0 && <TigerRefreshControl/>}
     {personal && personal.accounts.length>0
       ? <PersonalOrderHistory data={personal} page={page} reasons={notesResult.value} reasonsAvailable={notesResult.available}/>

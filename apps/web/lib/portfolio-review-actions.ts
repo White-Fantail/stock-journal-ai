@@ -25,12 +25,12 @@ const POSITIVE=/^(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/;
 const missing=(value:string|null|undefined)=>!value||!value.trim();
 const priorityOrder={FIRST:0,NEXT:1,OPTIONAL:2};
 
-export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInput):PortfolioReviewQueue{
+export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInput,at=new Date()):PortfolioReviewQueue{
  const holdings=[...new Set(personal.accounts.flatMap(a=>a.positions)
    .filter(p=>SAFE_TICKER.test(p.symbol)&&POSITIVE.test(p.quantity)&&
      p.quantity.split(".").some(part=>/[1-9]/.test(part)))
    .map(p=>p.symbol))].sort();
- const now=Date.now();
+ const now=at.getTime();
  const stale=personal.accounts.some(a=>{
    const observed=a.asOf===null?NaN:Date.parse(a.asOf);
    return !Number.isFinite(observed)||observed>now||
@@ -51,7 +51,7 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
    if(!latest.has(plan.ticker))latest.set(plan.ticker,plan);
  }
  const factorMap=new Map(factorReady?factors.map(f=>[f.ticker,f.factors] as const):[]);
- const risk=blocked?null:assessPortfolioOverviewRisk(personal,planReady?plans:null);
+ const risk=blocked?null:assessPortfolioOverviewRisk(personal,planReady?plans:null,at);
  const comparable=risk?.state==="READY"?risk:null;
  const exposures=new Map(comparable?.positions.map((p,index)=>[p.ticker,{...p,index}])??[]);
  const actions:PortfolioReviewAction[]=[];

@@ -118,6 +118,7 @@ test("missing plans and review conditions take priority over optional classifica
 
 test("unknown source scope never invents missing plans or classifications",()=>{
  const q=portfolioReviewQueue({personal:data(),plans:null,factors:null});
+ assert.equal(q.holdingCount,null);
  assert.equal(q.plannedCount,null);
  assert.equal(q.classifiedCount,null);
  assert.equal(q.comparisonReady,false);
@@ -157,6 +158,7 @@ test("stale or undated holdings cannot create false missing-plan or risk labels"
    const personal={...data(),accounts:[{...data().accounts[0],asOf}]};
    const q=portfolioReviewQueue({personal,plans:[],factors:[]});
    assert.deepEqual(q.actions.map(a=>a.id),["holdings-stale"]);
+   assert.equal(q.holdingCount,null);
    assert.equal(q.plannedCount,null);
    assert.equal(q.classifiedCount,null);
    assert.equal(q.comparisonReady,false);
@@ -188,4 +190,9 @@ test("missing, duplicate or ambiguous Tiger account scope does not fabricate por
    assert.equal(q.comparisonReady,false);
    assert.ok(!q.actions.some(a=>a.kind==="PLAN"||a.kind==="FACTOR"));
  }
+});
+
+test("portfolio displays unknown rather than numeric holdings for incomplete snapshots",()=>{
+ const page=readFileSync(new URL("../app/private/portfolio/portfolio-attention.tsx",import.meta.url),"utf8");
+ assert.match(page,/queue\.holdingCount===null\?"조회 확인 필요"/);
 });

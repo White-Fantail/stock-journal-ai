@@ -3,7 +3,8 @@ import {notFound,redirect} from "next/navigation";
 import {auth} from "../../../../../auth";
 import {currentWorkspace} from "../../../../../lib/require-workspace";
 import {tigerPersonalRead} from "../../../../../lib/tiger-api";
-import {fetchJournal} from "../../../../../lib/saas-trades-api";
+import {fetchJournal,fetchJournalPlans} from "../../../../../lib/saas-trades-api";
+import {planAtAuthoredTime} from "../../../../../lib/plan-revision-context";
 import {formatMoney,formatQuantity} from "../../../../../lib/format-decimal";
 import {groupTigerOrderObservations} from "../../../../../lib/tiger-order-groups";
 import {orderStatusLabel,orderTypeLabel,orderTerms,executionPriceIsKnown,feeIsKnown} from "../../../../../lib/tiger-order-display";
@@ -42,7 +43,8 @@ export default async function TigerTradeDetail({params,searchParams}:{
  if(matches.length!==1)notFound();
  const {o,account}=matches[0];
  const recordKind=kind as "ORDER"|"FILL";
- const [notesResult]=await Promise.allSettled([fetchJournal(session.user.id)]);
+ const [notesResult,plansResult]=await Promise.allSettled([fetchJournal(session.user.id),fetchJournalPlans(session.user.id)]);
+ const plans=plansResult.status==="fulfilled"&&plansResult.value.length<200?plansResult.value:null;
  const notesAvailable=notesResult.status==="fulfilled";
  const notes=notesAvailable?notesForObserved(notesResult.value,p.sourceRef,recordKind):[];
  const activeReasons=latestObservedReasons(notes);
@@ -110,6 +112,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
           <small>{new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(new Date(n.createdAt))}
             {" · "}사용자 작성 기록</small>
           <p className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(n)?.content??n.content}</p>
+          <p className="user-footnote">메모 작성 시점의 투자계획: {plans===null?"계획 이력 조회 확인 필요":(()=>{const associated=planAtAuthoredTime(plans,o.symbol,n.createdAt);return associated?"당시까지 작성된 계획 개정 "+associated.id.slice(0,8)+" · "+associated.rationale:"해당 시점 이전에 작성된 계획 미확인";})()} · 시간순 참고 관계이며 거래 당시 실제 적용한 계획을 증명하지 않습니다.</p>
           <p><Link href={noteLink+"&correct="+encodeURIComponent(n.id)}>이유 정정</Link></p>
           {history.length>1&&<details className="data-disclosure"><summary>정정 전 기록 {history.length-1}건</summary>{history.slice(1).map(old=><p key={old.id} className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(old)?.content??old.content}</p>)}</details>}
         </article>)}

@@ -177,7 +177,7 @@ test("missing, duplicate or ambiguous Tiger account scope does not fabricate por
    {...base,accounts:[]},
    duplicate,
    {...base,coverage:"NONE" as TigerPersonalRead["coverage"]},
-   {...base,verified:true},
+   {...base,verified:true as unknown as false},
    {...base,accounts:[{...base.accounts[0],alias:""}]},
  ];
  for(const personal of cases){

@@ -56,3 +56,9 @@ test("trade reason server action rechecks the broker source and ticker before wr
  assert.ok(action.indexOf("if(!matchingRecord) redirect(")<action.indexOf("await submitTigerObservationNote("));
  assert.ok(action.includes("if(!matchingRecord) redirect(back+"));
 });
+
+test("Tiger order detail does not append share unit to an unknown filled quantity",()=>{
+ const detail=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
+ assert.ok(detail.includes('order.filled===null?"체결 수량 미확인":formatQuantity(order.filled)+"주"'));
+ assert.ok(!detail.includes('formatQuantity(order.filled,"확인 필요")+"주"'));
+});

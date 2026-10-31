@@ -117,3 +117,13 @@ test("historical checkins retain revision identity and can navigate to plan hist
  assert.ok(editor.includes('종목별 계획 변경 이력 확인'));
  assert.ok(editor.includes('name="expectedPlanRevisionId" value={plan.id}'));
 });
+
+test("manual execution context uses authored timestamp rather than claimed execution time",()=>{
+ const detail=read("../app/private/trades/[id]/page.tsx");
+ assert.ok(detail.includes("fetchJournalPlans(session.user.id)"));
+ assert.ok(detail.includes("plans.length<200"));
+ assert.ok(detail.includes("planAtAuthoredTime(completePlans,trade.ticker,trade.createdAt)"));
+ assert.ok(detail.includes('trade.kind==="EXECUTION"'));
+ assert.ok(detail.includes("실제 체결 시각이 아닌"));
+ assert.ok(detail.includes("시점별 연결을 보류합니다"));
+});

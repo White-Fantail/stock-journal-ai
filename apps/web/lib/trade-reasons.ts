@@ -46,7 +46,8 @@ export function latestObservedReasons(notes:readonly JournalEntry[]):{
     const correction=correctionOf(note);
     if(!correction||!byId.has(correction.parentId)||correction.parentId===note.id.toLowerCase())continue;
     const parent=byId.get(correction.parentId)!;
-    if(parent.ticker!==note.ticker||parent.observationRef?.sourceRef!==note.observationRef?.sourceRef||
+    if(parent.ticker!==note.ticker||parent.observationRef?.accountId!==note.observationRef?.accountId||
+       parent.observationRef?.sourceRef!==note.observationRef?.sourceRef||
        parent.observationRef?.kind!==note.observationRef?.kind)continue;
     children.set(correction.parentId,[...(children.get(correction.parentId)??[]),note]);
   }

@@ -61,3 +61,22 @@ test("failure, stale schedule, and partial orders never certify brokerage return
   assert.ok(alerts.some(x=>x.kind==="HISTORY_PARTIAL"));
   assert.equal(derivePersonalAlerts(null,null,[],now)[0].kind,"SYNC_UNREPORTED");
 });
+
+test("check centre and portfolio suppress missing-plan claims on ambiguous scope",()=>{
+ const base=personal();
+ for(const accounts of [[],[base.accounts[0],base.accounts[0]]]){
+   const snapshot={...base,accounts};
+   const alerts=derivePersonalAlerts(snapshot,health(),[],now);
+   assert.equal(alerts.some(a=>a.kind==="PLAN_MISSING"||a.kind==="PLAN_INCOMPLETE"),false);
+   assert.ok(alerts.some(a=>a.id==="holdings-check"));
+ }
+});
+test("a future or stale Tiger snapshot does not generate missing-plan claims",()=>{
+ for(const asOf of [new Date(now.getTime()+60000).toISOString(),iso(8*24*60)]){
+   const source=personal();
+   const snapshot={...source,accounts:source.accounts.map(a=>({...a,asOf}))};
+   const alerts=derivePersonalAlerts(snapshot,health(),[],now);
+   assert.equal(alerts.some(a=>a.kind==="PLAN_MISSING"),false);
+   assert.ok(alerts.some(a=>a.id==="holdings-check"));
+ }
+});

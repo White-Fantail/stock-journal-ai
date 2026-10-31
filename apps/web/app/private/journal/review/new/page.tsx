@@ -3,7 +3,7 @@ import {randomUUID} from "node:crypto";
 import {redirect} from "next/navigation";
 import {auth} from "../../../../../auth";
 import {currentWorkspace} from "../../../../../lib/require-workspace";
-import {fetchPlanCheckinContext,submitPlanCheckin,type PlanSelfAssessment} from "../../../../../lib/saas-trades-api";
+import {fetchPlanCheckinContext,fetchJournalPlans,submitPlanCheckin,type PlanSelfAssessment} from "../../../../../lib/saas-trades-api";
 
 export const dynamic="force-dynamic";
 export const metadata={title:"투자 원칙 자기평가 · Positionary"};
@@ -54,6 +54,9 @@ export default async function PlanCheckinPage({searchParams}:{
  const valid=TICKER.test(ticker);
  const context=valid?await fetchPlanCheckinContext(session.user.id,ticker).catch(()=>null):null;
  const plan=context?.currentPlan??null;
+ const revisions=valid&&context?await fetchJournalPlans(session.user.id).catch(()=>null):null;
+ const fullRevisions=revisions!==null&&revisions.length<200?revisions:null;
+ const revisionById=new Map(fullRevisions?.filter(p=>p.ticker===ticker).map(p=>[p.id,p])??[]);
  return <main className="journal-page">
   <div className="page-intro journal-page-heading">
     <div><span className="breadcrumb"><Link href="/private/journal">← 투자일지</Link></span>
@@ -123,6 +126,21 @@ export default async function PlanCheckinPage({searchParams}:{
             <div><strong>{judgement[item.selfAssessment]}</strong>
               <small>{stamp(item.createdAt)} · {item.planRevisionId===plan.id?"현 계획":"이전 계획"} 기준 · 계획 개정 ID {item.planRevisionId.slice(0,8)}</small>
               {item.planRevisionId!==plan.id&&<p className="user-footnote">현재 계획과 다른 개정 버전에 연결된 평가입니다. <Link href={"/private/journal?ticker="+encodeURIComponent(ticker)}>종목별 계획 변경 이력 확인 →</Link></p>}
+              {item.planRevisionId!==plan.id&&<details className="data-disclosure">
+                <summary>해당 자기평가의 과거 투자계획 상세 보기</summary>
+                {fullRevisions===null?<p role="alert">전체 투자계획 개정 이력을 확인할 수 없어 세부 내용을 표시하지 않습니다.</p>:
+                  revisionById.has(item.planRevisionId)?(()=>{
+                    const revision=revisionById.get(item.planRevisionId)!;
+                    return <div>
+                      <p>개정 시각: {stamp(revision.createdAt)} · 개정 ID: {revision.id}</p>
+                      <p><strong>투자 근거:</strong> {revision.rationale}</p>
+                      <p><strong>전략:</strong> {revision.strategyType??"미설정"} · <strong>투자 기간:</strong> {revision.investmentHorizon??"미설정"}</p>
+                      <p><strong>무효화 조건:</strong> {revision.invalidationCondition??"미기록"}</p>
+                      <p><strong>목표가 / 손절가:</strong> {revision.targetPrice??"미설정"} / {revision.stopPrice??"미설정"} {revision.priceCurrency??""}</p>
+                      <p><strong>최대 비중:</strong> {revision.maxAllocationPct??"미설정"} · <strong>점검 주기:</strong> {revision.reviewCadence??"미설정"}</p>
+                    </div>;
+                  })():<p>이 자기평가가 참조하는 계획 개정을 현재 조회 목록에서 확인할 수 없습니다. 현재 계획으로 대체하지 않습니다.</p>}
+              </details>}
               <p>{item.content}</p>
               <small>다음 행동: {item.nextAction}</small>
             </div>

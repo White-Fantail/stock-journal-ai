@@ -169,3 +169,23 @@ test("manual and Tiger trade details link to a dedicated ticker review",()=>{
    assert.match(source,/\/private\/journal\/review\/new\?ticker=/);
  }
 });
+
+test("missing, duplicate or ambiguous Tiger account scope does not fabricate portfolio follow-ups",()=>{
+ const base=data();
+ const duplicate={...base,accounts:[base.accounts[0],base.accounts[0]]};
+ const cases: TigerPersonalRead[]=[
+   {...base,accounts:[]},
+   duplicate,
+   {...base,coverage:"NONE" as TigerPersonalRead["coverage"]},
+   {...base,verified:true},
+   {...base,accounts:[{...base.accounts[0],alias:""}]},
+ ];
+ for(const personal of cases){
+   const q=portfolioReviewQueue({personal,plans:[],factors:[]});
+   assert.deepEqual(q.actions.map(a=>a.id),["holdings-scope"]);
+   assert.equal(q.plannedCount,null);
+   assert.equal(q.classifiedCount,null);
+   assert.equal(q.comparisonReady,false);
+   assert.ok(!q.actions.some(a=>a.kind==="PLAN"||a.kind==="FACTOR"));
+ }
+});

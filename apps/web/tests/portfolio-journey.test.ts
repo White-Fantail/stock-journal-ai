@@ -6,7 +6,7 @@ import type {TigerPersonalRead} from "../lib/tiger-api";
 
 const data=(warnings:string[]=[],partial=false):TigerPersonalRead=>({
  coverage:"SNAPSHOT_ONLY",verified:false,readWarnings:warnings,
- accounts:[{alias:"Synthetic",asOf:"2026-10-27T00:00:00Z",
+ accounts:[{alias:"Synthetic",asOf:new Date(Date.now()-12*60*60*1000).toISOString(),
  assets:{currency:"USD",netLiquidation:"1000",cashBalance:"500"},
  positions:[{symbol:"TSLA",currency:"USD",quantity:"1",averageCost:null,marketValue:"500",unrealizedPnl:null}],
  marketObservations:[],orders:[],fillObservations:[],feeObservations:[],
@@ -118,7 +118,8 @@ test("missing plans and review conditions take priority over optional classifica
 
 test("unknown source scope never invents missing plans or classifications",()=>{
  const q=portfolioReviewQueue({personal:data(),plans:null,factors:null});
- assert.equal(q.holdingCount,null);
+ // The observed holding count is independent of an unavailable plan/factor feed.
+ assert.equal(q.holdingCount,1);
  assert.equal(q.plannedCount,null);
  assert.equal(q.classifiedCount,null);
  assert.equal(q.comparisonReady,false);

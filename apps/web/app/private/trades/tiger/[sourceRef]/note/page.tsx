@@ -57,6 +57,10 @@ async function addReason(form:FormData){
  if(correctionId){
    const target=latestObservedReasons(sameTrade).find(group=>group.current.id===correctionId&&group.current.ticker===ticker)?.current;
    if(!target)redirect(back+"&error=source");
+   // Reject no-op corrections based on the visible reason, not the internal
+   // append-only prefix. Old entries remain immutable.
+   if((correctionOf(target)?.content??target.content).trim()===content)
+     redirect(back+"&error=duplicate");
    content="정정 ("+correctionId+"): "+content;
    if(content.length>6000)redirect(back+"&error=invalid");
  }
@@ -89,8 +93,9 @@ export default async function TigerReasonNew({params,searchParams}:{
  const previous=await fetchJournal(session.user.id).catch(()=>null);
  const notes=previous?notesForObserved(previous,p.sourceRef,kind):[];
  const back=tigerTradeHref(p.sourceRef,page,kind);
- const correction=notes.find(n=>n.id===q.correct&&n.ticker===row.symbol);
  const activeReasons=latestObservedReasons(notes);
+ // A bookmarked correction URL must not offer to edit superseded history.
+ const correction=activeReasons.find(group=>group.current.id===q.correct&&group.current.ticker===row.symbol)?.current;
  return <main className="journal-page" style={{maxWidth:750,margin:"1.5rem auto",padding:"0 1rem"}}>
   <p><Link href={back}>← 거래 상세</Link></p>
   <div className="page-intro"><div><h1>{row.symbol} · {kind==="ORDER"?"주문":"체결"} 이유 추가</h1>

@@ -7,7 +7,7 @@ import {fetchJournal} from "../../../../../lib/saas-trades-api";
 import {formatMoney,formatQuantity} from "../../../../../lib/format-decimal";
 import {groupTigerOrderObservations} from "../../../../../lib/tiger-order-groups";
 import {orderStatusLabel,orderTypeLabel,orderTerms,executionPriceIsKnown,feeIsKnown} from "../../../../../lib/tiger-order-display";
-import {notesForObserved,tigerTradeHref} from "../../../../../lib/trade-reasons";
+import {notesForObserved,tigerTradeHref,latestObservedReasons,correctionOf} from "../../../../../lib/trade-reasons";
 import {parseStatementFeeEvidence,resolvedFeeCurrency} from "../../../../../lib/tiger-fee-statement";
 
 export const dynamic="force-dynamic";
@@ -45,6 +45,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
  const [notesResult]=await Promise.allSettled([fetchJournal(session.user.id)]);
  const notesAvailable=notesResult.status==="fulfilled";
  const notes=notesAvailable?notesForObserved(notesResult.value,p.sourceRef,recordKind):[];
+ const activeReasons=latestObservedReasons(notes);
  const isOrder=recordKind==="ORDER";
  const order=isOrder?account.orders.find(o=>o.sourceRef===p.sourceRef):null;
  const fill=!isOrder?account.fillObservations.find(f=>f.sourceRef===p.sourceRef):null;
@@ -105,10 +106,12 @@ export default async function TigerTradeDetail({params,searchParams}:{
     {!notesAvailable?<p role="alert">메모를 불러올 수 없습니다. 기록을 삭제하거나 새로 작성하기 전에 다시 조회하세요.</p>:
       notes.length===0?<p>이 {isOrder?"주문":"체결"}에 연결된 이유가 아직 없습니다.</p>:
       <div style={{display:"grid",gap:14}}>
-        {notes.map(n=><article className="journal-entry" key={n.id}>
+        {activeReasons.map(({current:n,history})=><article className="journal-entry" key={n.id}>
           <small>{new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(new Date(n.createdAt))}
             {" · "}사용자 작성 기록</small>
-          <p className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{n.content}</p>
+          <p className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(n)?.content??n.content}</p>
+          <p><Link href={noteLink+"&correct="+encodeURIComponent(n.id)}>이유 정정</Link></p>
+          {history.length>1&&<details className="data-disclosure"><summary>정정 전 기록 {history.length-1}건</summary>{history.slice(1).map(old=><p key={old.id} className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(old)?.content??old.content}</p>)}</details>}
         </article>)}
       </div>}
     <p className="user-footnote">기존 메모를 덮어쓰지 않고 새로운 기록을 추가합니다. 투자일지에는 매매 사실을 요약해 연결합니다.</p>

@@ -4,6 +4,7 @@ import {auth} from "../../../auth";
 import {currentWorkspace} from "../../../lib/require-workspace";
 import {fetchReviewActions,fetchWeeklyProcessReport} from "../../../lib/saas-trades-api";
 import {nzRecentWeeks} from "../../../lib/weekly-periods";
+import {isOlderReviewAction} from "../../../lib/review-action-age";
 import type {Metadata} from "next";
 export const metadata:Metadata={title:"투자 점검 · Positionary"};
 export const dynamic="force-dynamic";
@@ -28,6 +29,8 @@ export default async function ReviewHub({searchParams}:{
  const report=weekResult.status==="fulfilled"?weekResult.value:null;
  const open=actions?.filter(a=>!done(a.state))??[];
  const closed=actions?.filter(a=>done(a.state))??[];
+ const older=open.filter(a=>isOlderReviewAction(a.checkinAt));
+ const currentOpen=open.filter(a=>!isOlderReviewAction(a.checkinAt));
  return <main className="journal-page review-hub">
    <div className="page-intro journal-page-heading">
      <div><span className="breadcrumb"><Link href="/private">← 홈</Link></span>
@@ -46,7 +49,7 @@ export default async function ReviewHub({searchParams}:{
        actions.length===0?<p>구조화된 투자 자기평가에서 아직 다음 행동을 기록하지 않았습니다.
          종목별 계획을 작성하고 자기평가를 남기면 이곳에서 다시 확인할 수 있습니다.</p>:<>
          {open.length>0?<div className="review-action-list">
-           {open.map(a=><article className="review-action-item" key={a.checkinId}>
+           {currentOpen.map(a=><article className="review-action-item" key={a.checkinId}>
              <div><strong>{a.ticker} · {a.state?desc[a.state]:"실행 여부 미확인"}</strong>
                <p>{a.nextAction}</p>
                <small>내가 작성한 행동 · {fmt(a.checkinAt)} ·
@@ -55,8 +58,17 @@ export default async function ReviewHub({searchParams}:{
                {a.state?"상태 다시 기록":"실행 여부 기록"} →
              </Link>
            </article>)}
-         </div>:<p>현재 조회된 최신 자기평가에서 확인이 필요한 행동이 없습니다.
+         </div>:<p>현재 확인할 최근 행동이 없습니다. 90일 넘은 미확인 행동은 별도 목록에서 확인하세요.
             다른 종목이나 투자 위험이 없다는 뜻은 아닙니다.</p>}
+         {older.length>0&&<details className="data-disclosure">
+           <summary>90일 넘게 지난 미확인 행동 {older.length}건 확인</summary>
+           <p className="user-footnote">시간이 오래 지났어도 자동 완료하지 않습니다. 당시 행동이 지금도 필요한지 직접 확인하고 상태를 기록하세요.</p>
+           <div className="review-action-list">{older.map(a=><article className="review-action-item" key={a.checkinId}>
+             <div><strong>{a.ticker} · {a.state?desc[a.state]:"실행 여부 미확인"}</strong>
+               <p>{a.nextAction}</p><small>작성 {fmt(a.checkinAt)} · 기존 상태 보존</small></div>
+             <Link href={"/private/review/action/new?checkin="+encodeURIComponent(a.checkinId)}>상태 확인 →</Link>
+           </article>)}</div>
+         </details>}
          {closed.length>0&&<details className="data-disclosure">
            <summary>완료 또는 해당 없음으로 기록한 행동 {closed.length}개 보기</summary>
            <div className="review-action-list">{closed.map(a=><article className="review-action-item" key={a.checkinId}>

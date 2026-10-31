@@ -46,6 +46,14 @@ async function addReason(form:FormData){
    // Fail closed when Tiger observation evidence is unavailable.
  }
  if(!matchingRecord) redirect(back+"&error=source");
+ // Recheck existing authored reasons on submission, not only at form render.
+ // A failed journal read must never result in an accidental duplicate write.
+ let existing;
+ try { existing=await fetchJournal(session.user.id); }
+ catch { redirect(back+"&error=notes-unavailable"); }
+ const sameTrade=notesForObserved(existing,ref,kind as "ORDER"|"FILL");
+ if(sameTrade.some(note=>note.content.trim()===content))
+   redirect(back+"&error=duplicate");
  try{
    await submitTigerObservationNote(session.user.id,{
      idempotencyKey:get("idempotencyKey"),sourceRef:ref,page,

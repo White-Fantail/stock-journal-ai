@@ -162,3 +162,10 @@ test("stale or undated holdings cannot create false missing-plan or risk labels"
    assert.equal(q.comparisonReady,false);
  }
 });
+
+test("manual and Tiger trade details link to a dedicated ticker review",()=>{
+ for(const path of ["../app/private/trades/[id]/page.tsx","../app/private/trades/tiger/[sourceRef]/page.tsx"]){
+   const source=readFileSync(new URL(path,import.meta.url),"utf8");
+   assert.match(source,/\/private\/journal\/review\/new\?ticker=/);
+ }
+});

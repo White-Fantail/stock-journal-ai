@@ -116,7 +116,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
       </div>}
     <p className="user-footnote">기존 메모를 덮어쓰지 않고 새로운 기록을 추가합니다. 투자일지에는 매매 사실을 요약해 연결합니다.</p>
   </section>
-  <p><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>이 종목의 투자 판단·계획 보기</Link></p>
+  <p><Link href={"/private/journal?ticker="+encodeURIComponent(o.symbol)}>이 종목의 투자 판단·계획 보기</Link>{" · "}<Link href={"/private/journal/review/new?ticker="+encodeURIComponent(o.symbol)}>이 종목의 투자 판단 복기 작성</Link></p>
   <p className="user-footnote">연결 기준: Tiger 관측 원본 식별자 · 저장된 메모는 투자일지의 단일 데이터 원본을 재사용합니다.</p>
  </main>;
 }

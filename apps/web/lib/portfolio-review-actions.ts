@@ -36,7 +36,11 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
    return !Number.isFinite(observed)||observed>now||
      now-observed>7*24*60*60*1000;
  });
- const blocked=hasHoldingsReadWarnings(personal.readWarnings)||
+ const missingScope=personal.coverage!=="SNAPSHOT_ONLY"||personal.verified!==false||
+   personal.accounts.length===0||personal.accounts.length>5||
+   new Set(personal.accounts.map(a=>a.alias)).size!==personal.accounts.length||
+   personal.accounts.some(a=>!a.alias);
+ const blocked=missingScope||hasHoldingsReadWarnings(personal.readWarnings)||
    personal.accounts.some(a=>a.positions.length>=100)||stale;
  const planReady=plans!==null&&plans.length<200;
  const factorReady=factors!==null&&factors.length<=100&&
@@ -57,9 +61,9 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
      personalMaxAllocationPct:exposure?.personalMaxAllocationPct??null});
  };
  if(blocked){
-   add({id:hasHoldingsReadWarnings(personal.readWarnings)?"partial":stale?"holdings-stale":"holdings-limit",
+   add({id:missingScope?"holdings-scope":hasHoldingsReadWarnings(personal.readWarnings)?"partial":stale?"holdings-stale":"holdings-limit",
      kind:"CHECK",priority:"FIRST",ticker:null,title:"보유종목 조회 범위를 먼저 확인하세요",
-     description:stale?"보유종목 관측 시각이 없거나 7일을 초과했거나 미래 시각입니다. 최신 보유 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.":"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
+     description:missingScope?"계좌 스냅샷의 범위·계좌 식별 또는 출처를 확인할 수 없습니다. 보유 종목이 없거나 투자계획이 누락됐다고 판단하지 않습니다.":stale?"보유종목 관측 시각이 없거나 7일을 초과했거나 미래 시각입니다. 최신 보유 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.":"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
      href:"/private/brokers",actionLabel:"계좌 연결 점검"});
    return {actions,holdingCount:holdings.length,plannedCount:null,classifiedCount:null,
      comparisonReady:false,asOf:null,currency:null};

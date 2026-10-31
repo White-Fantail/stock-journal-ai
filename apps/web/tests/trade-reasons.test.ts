@@ -120,3 +120,15 @@ test("detail page shows the latest correction and correction history",()=>{
  assert.ok(detail.includes("history.slice(1).map("));
  assert.ok(detail.includes("이유 정정"));
 });
+
+test("Tiger corrections cannot cross account boundaries even with matching order hashes",()=>{
+ const original=entry("10000000-0000-4000-8000-000000000011",REF,"account A reason");
+ const foreign={...entry("10000000-0000-4000-8000-000000000012",REF,
+   "정정 ("+original.id+"): foreign correction"),
+   observationRef:{...original.observationRef!,accountId:"owner-b"}};
+ const groups=latestObservedReasons([original,foreign]);
+ assert.equal(groups.length,2);
+ assert.ok(groups.every(x=>x.history.length===1));
+ assert.deepEqual(new Set(groups.map(x=>x.current.observationRef?.accountId)),
+   new Set(["owner-a","owner-b"]));
+});

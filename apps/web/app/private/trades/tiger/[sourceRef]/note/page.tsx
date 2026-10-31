@@ -33,6 +33,19 @@ async function addReason(form:FormData){
    !content||content.length>6000)
    redirect("/private/trades?error=invalid");
  const back=tigerTradeHref(ref,page,kind as "ORDER"|"FILL");
+ // Form fields can be altered independently of the displayed broker record.
+ // Re-read owner-scoped evidence immediately before writing a trade reason.
+ let matchingRecord=false;
+ try{
+   const current=await tigerPersonalRead(page);
+   const matches=current?.accounts.flatMap(account=>
+     (kind==="ORDER"?account.orders:account.fillObservations)
+       .filter(record=>record.sourceRef===ref));
+   matchingRecord=matches?.length===1 && matches[0].symbol===ticker;
+ }catch{
+   // Fail closed when Tiger observation evidence is unavailable.
+ }
+ if(!matchingRecord) redirect(back+"&error=source");
  try{
    await submitTigerObservationNote(session.user.id,{
      idempotencyKey:get("idempotencyKey"),sourceRef:ref,page,

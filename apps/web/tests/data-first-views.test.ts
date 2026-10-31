@@ -134,7 +134,7 @@ test("portfolio shows observed holdings before optional analysis and prompts",()
  assert.ok(page.includes('a.id==="partial"||a.id==="holdings-limit"'));
  assert.ok(page.indexOf('portfolio-priority" role="alert"')<holding);
  assert.ok(page.includes("<summary>비중·공통 위험 분석 보기</summary>"));
- assert.ok(page.includes("<summary>투자계획·위험 분류 보완 제안 보기</summary>"));
+ assert.ok(page.includes("<PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>"));
  assert.ok(!page.slice(0,holding).includes("<PortfolioAttention personal={personal}"));
  assert.ok(!page.slice(0,holding).includes("<PortfolioOverview personal={personal}"));
 });

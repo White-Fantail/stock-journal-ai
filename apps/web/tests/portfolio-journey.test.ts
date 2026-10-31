@@ -151,3 +151,14 @@ test("portfolio surfaces investment-plan and risk follow-ups without an extra di
  assert.doesNotMatch(page,/<summary>투자계획·위험 분류 보완 제안 보기<\/summary>/);
  assert.match(page,/<summary>비중·공통 위험 분석 보기<\/summary>/);
 });
+
+test("stale or undated holdings cannot create false missing-plan or risk labels",()=>{
+ for(const asOf of ["2025-01-01T00:00:00Z",null,"invalid"]){
+   const personal={...data(),accounts:[{...data().accounts[0],asOf}]};
+   const q=portfolioReviewQueue({personal,plans:[],factors:[]});
+   assert.deepEqual(q.actions.map(a=>a.id),["holdings-stale"]);
+   assert.equal(q.plannedCount,null);
+   assert.equal(q.classifiedCount,null);
+   assert.equal(q.comparisonReady,false);
+ }
+});

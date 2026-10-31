@@ -5,7 +5,7 @@ import {auth} from "../../../../../../auth";
 import {currentWorkspace} from "../../../../../../lib/require-workspace";
 import {tigerPersonalRead} from "../../../../../../lib/tiger-api";
 import {submitTigerObservationNote,fetchJournal} from "../../../../../../lib/saas-trades-api";
-import {notesForObserved,tigerTradeHref,reasonPreview} from "../../../../../../lib/trade-reasons";
+import {notesForObserved,tigerTradeHref,reasonPreview,correctionOf,latestObservedReasons} from "../../../../../../lib/trade-reasons";
 
 export const dynamic="force-dynamic";
 const REF=/^[a-f0-9]{64}$/;
@@ -55,7 +55,7 @@ async function addReason(form:FormData){
  catch { redirect(back+"&error=notes-unavailable"); }
  const sameTrade=notesForObserved(existing,ref,kind as "ORDER"|"FILL");
  if(correctionId){
-   const target=sameTrade.find(note=>note.id===correctionId&&note.ticker===ticker);
+   const target=latestObservedReasons(sameTrade).find(group=>group.current.id===correctionId&&group.current.ticker===ticker)?.current;
    if(!target)redirect(back+"&error=source");
    content="정정 ("+correctionId+"): "+content;
    if(content.length>6000)redirect(back+"&error=invalid");
@@ -90,6 +90,7 @@ export default async function TigerReasonNew({params,searchParams}:{
  const notes=previous?notesForObserved(previous,p.sourceRef,kind):[];
  const back=tigerTradeHref(p.sourceRef,page,kind);
  const correction=notes.find(n=>n.id===q.correct&&n.ticker===row.symbol);
+ const activeReasons=latestObservedReasons(notes);
  return <main className="journal-page" style={{maxWidth:750,margin:"1.5rem auto",padding:"0 1rem"}}>
   <p><Link href={back}>← 거래 상세</Link></p>
   <div className="page-intro"><div><h1>{row.symbol} · {kind==="ORDER"?"주문":"체결"} 이유 추가</h1>
@@ -102,7 +103,7 @@ export default async function TigerReasonNew({params,searchParams}:{
     <>
      {notes.length>0&&<details className="data-disclosure">
        <summary>이미 연결된 매매 이유 {notes.length}건 확인</summary>
-       {notes.map(n=><p key={n.id} style={{whiteSpace:"pre-wrap"}}>{reasonPreview([n],220)}{" · "}<Link href={back.replace("?","/note?")+"&correct="+encodeURIComponent(n.id)}>정정하기</Link></p>)}
+       {activeReasons.map(group=><div key={group.current.id}><p style={{whiteSpace:"pre-wrap"}}>{reasonPreview([{...group.current,content:correctionOf(group.current)?.content??group.current.content}],220)}{" · "}<Link href={back.replace("?","/note?")+"&correct="+encodeURIComponent(group.current.id)}>정정하기</Link></p>{group.history.length>1&&<details><summary>이전 기록 {group.history.length-1}건</summary>{group.history.slice(1).map(n=><p key={n.id} style={{whiteSpace:"pre-wrap"}}>{correctionOf(n)?.content??n.content}</p>)}</details>}</div>)}
      </details>}
      <form action={addReason} className="journal-compose-form">
       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
@@ -113,7 +114,7 @@ export default async function TigerReasonNew({params,searchParams}:{
       <input type="hidden" name="ticker" value={row.symbol}/>
       <label>{kind==="ORDER"&&"filled" in row&&row.filled==="0"?"주문 목적 · 미체결 판단":"매매 이유 · 실행 복기"}
         <textarea required name="content" rows={8} maxLength={6000}
-          defaultValue={correction?.content??""}
+          defaultValue={correction?(correctionOf(correction)?.content??correction.content):""}
           placeholder="왜 이 주문을 냈나요? 당초 계획과 실제 결과, 위험 관리 판단을 기록하세요."/>
       </label>
       <p className="journal-form-hint">새 메모만 추가하고 이전 기록은 보존합니다. 원본 계좌·주문 식별자는 서버에서 다시 확인합니다. 실제 증권사 주문을 실행하지 않습니다.</p>

@@ -121,7 +121,8 @@ export default async function PlanCheckinPage({searchParams}:{
         <div className="user-list">{context.recent.map(item=>
           <div key={item.id} className="user-list-row">
             <div><strong>{judgement[item.selfAssessment]}</strong>
-              <small>{stamp(item.createdAt)} · {item.planRevisionId===plan.id?"현 계획":"이전 계획"} 기준</small>
+              <small>{stamp(item.createdAt)} · {item.planRevisionId===plan.id?"현 계획":"이전 계획"} 기준 · 계획 개정 ID {item.planRevisionId.slice(0,8)}</small>
+              {item.planRevisionId!==plan.id&&<p className="user-footnote">현재 계획과 다른 개정 버전에 연결된 평가입니다. <Link href={"/private/journal?ticker="+encodeURIComponent(ticker)}>종목별 계획 변경 이력 확인 →</Link></p>}
               <p>{item.content}</p>
               <small>다음 행동: {item.nextAction}</small>
             </div>

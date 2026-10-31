@@ -1,6 +1,7 @@
 import type {JournalPlan,JournalEntry,InvestorPrinciples,ReviewAction} from "./saas-trades-api";
 import type {TigerPersonalRead} from "./tiger-api";
 import {dueInvestmentReviews} from "./review-schedule";
+import {portfolioReviewQueue} from "./portfolio-review-actions";
 
 export type NextReviewAction=Readonly<{id:string;title:string;detail:string;href:string;priority:number}>;
 export type NextReviewInput=Readonly<{
@@ -46,20 +47,34 @@ export function deriveNextReviewActions(input:NextReviewInput):NextReviewAction[
         detail:"내가 정한 정기 점검 주기가 도래했습니다. 투자 논리가 유효한지 직접 확인하세요.",
         href:"/private/journal/review/new?ticker="+encodeURIComponent(review.ticker)});
     }
-    if(input.personal?.readWarnings?.length){
-      actions.push({id:"broker-partial",priority:43,title:"계좌 조회에서 일부 정보가 제외됐습니다",
-        detail:"현재 자료가 불완전합니다. 잔고나 보유 종목 전체로 해석하지 마세요.",
-        href:"/private/tiger/diagnostics"});
-    }else if(input.personal?.accounts?.length){
-      const planned=new Set(input.plans.map(x=>x.ticker));
-      const unplanned=[...new Set(input.personal.accounts.flatMap(a=>a.positions.map(p=>p.symbol)))]
-        .filter(symbol=>!planned.has(symbol)&&/^[A-Z0-9.:-]{1,32}$/.test(symbol))
-        .sort();
-      if(unplanned.length){
-        actions.push({id:"plan:"+unplanned[0],priority:20,
-          title:unplanned[0]+" 투자 계획을 기록해 보세요",
-          detail:"최근 관측된 보유 종목이지만 현재 조회한 투자 계획은 없습니다. 관측 자료는 확정 원장이 아닙니다.",
-          href:"/private/journal/new?mode=plan&ticker="+encodeURIComponent(unplanned[0])});
+    if(input.personal!==null){
+      // Use the SAME snapshot guard as the portfolio. Old, ambiguous or
+      // damaged holdings must not create a fabricated missing-plan task.
+      const queue=portfolioReviewQueue({
+        personal:input.personal,plans:input.plans,factors:null,
+      },now);
+      const blocked=queue.actions.find(a=>a.kind==="CHECK"&&
+        (a.id==="partial"||a.id.startsWith("holdings-")));
+      if(blocked){
+        actions.push({id:"holdings-unavailable",priority:43,
+          title:"보유 종목 조회 자료를 먼저 확인하세요",
+          detail:blocked.description,href:"/private/brokers"});
+      }else{
+        // A comparison is advisory: this is observed Tiger-only exposure,
+        // never a whole-portfolio limit breach or a signal to trade.
+        const comparison=queue.actions.find(a=>a.kind==="COMPARE");
+        if(comparison){
+          actions.push({id:"exposure:"+comparison.ticker,priority:18,
+            title:comparison.ticker+" · 내가 정한 비중 기준 확인",
+            detail:comparison.description,href:comparison.href});
+        }
+        const missingPlan=queue.actions.find(a=>a.id.startsWith("plan:")&&a.kind==="PLAN");
+        if(missingPlan){
+          actions.push({id:missingPlan.id,priority:20,
+            title:missingPlan.ticker+" 투자 계획을 기록해 보세요",
+            detail:"보유 종목 관측에 대응하는 투자 계획이 없습니다. 확정된 보유 원장이나 매매 신호는 아닙니다.",
+            href:missingPlan.href});
+        }
       }
     }
     if(!input.notes.length&&!input.plans.length&&!input.personal?.accounts?.length){

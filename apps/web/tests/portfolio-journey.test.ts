@@ -196,3 +196,20 @@ test("portfolio displays unknown rather than numeric holdings for incomplete sna
  const page=readFileSync(new URL("../app/private/portfolio/portfolio-attention.tsx",import.meta.url),"utf8");
  assert.match(page,/queue\.holdingCount===null\?"조회 확인 필요"/);
 });
+
+test("malformed holdings rows fail closed rather than silently dropping positions",()=>{
+ const base=data();
+ for(const positionRow of [
+  {...base.accounts[0].positions[0],symbol:"BAD TICKER"},
+  {...base.accounts[0].positions[0],quantity:"-1"},
+  {...base.accounts[0].positions[0],quantity:"1.0000000000000"},
+ ]){
+  const personal={...base,accounts:[{...base.accounts[0],
+   positions:[base.accounts[0].positions[0],positionRow]}]};
+  const queue=portfolioReviewQueue({personal,plans:[],factors:[]});
+  assert.deepEqual(queue.actions.map(a=>a.id),["holdings-invalid"]);
+  assert.equal(queue.holdingCount,null);
+  assert.equal(queue.plannedCount,null);
+  assert.equal(queue.classifiedCount,null);
+ }
+});

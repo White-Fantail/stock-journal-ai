@@ -40,8 +40,12 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
    personal.accounts.length===0||personal.accounts.length>5||
    new Set(personal.accounts.map(a=>a.alias)).size!==personal.accounts.length||
    personal.accounts.some(a=>!a.alias);
+ // Never silently discard malformed position rows and then claim the rest is
+ // the full holdings set. Zero quantity is valid but is not a held ticker.
+ const invalidPositions=personal.accounts.some(a=>a.positions.some(p=>
+   !SAFE_TICKER.test(p.symbol)||!POSITIVE.test(p.quantity)));
  const blocked=missingScope||hasHoldingsReadWarnings(personal.readWarnings)||
-   personal.accounts.some(a=>a.positions.length>=100)||stale;
+   personal.accounts.some(a=>a.positions.length>=100)||stale||invalidPositions;
  const planReady=plans!==null&&plans.length<200;
  const factorReady=factors!==null&&factors.length<=100&&
    new Set(factors.map(f=>f.ticker)).size===factors.length;
@@ -61,9 +65,9 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
      personalMaxAllocationPct:exposure?.personalMaxAllocationPct??null});
  };
  if(blocked){
-   add({id:missingScope?"holdings-scope":hasHoldingsReadWarnings(personal.readWarnings)?"partial":stale?"holdings-stale":"holdings-limit",
+   add({id:missingScope?"holdings-scope":hasHoldingsReadWarnings(personal.readWarnings)?"partial":stale?"holdings-stale":invalidPositions?"holdings-invalid":"holdings-limit",
      kind:"CHECK",priority:"FIRST",ticker:null,title:"보유종목 조회 범위를 먼저 확인하세요",
-     description:missingScope?"계좌 스냅샷의 범위·계좌 식별 또는 출처를 확인할 수 없습니다. 보유 종목이 없거나 투자계획이 누락됐다고 판단하지 않습니다.":stale?"보유종목 관측 시각이 없거나 7일을 초과했거나 미래 시각입니다. 최신 보유 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.":"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
+     description:missingScope?"계좌 스냅샷의 범위·계좌 식별 또는 출처를 확인할 수 없습니다. 보유 종목이 없거나 투자계획이 누락됐다고 판단하지 않습니다.":stale?"보유종목 관측 시각이 없거나 7일을 초과했거나 미래 시각입니다. 최신 보유 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.":invalidPositions?"관측된 종목코드 또는 보유수량에 잘못된 값이 있습니다. 해당 종목을 조용히 제외하고 나머지만으로 미작성 계획을 단정하지 않습니다.":"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
      href:"/private/brokers",actionLabel:"계좌 연결 점검"});
    return {actions,holdingCount:null,plannedCount:null,classifiedCount:null,
      comparisonReady:false,asOf:null,currency:null};

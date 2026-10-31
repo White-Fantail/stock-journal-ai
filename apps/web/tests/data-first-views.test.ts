@@ -112,7 +112,7 @@ test("portfolio follow-up panel prioritizes practical next actions over large ca
  const page=read("../app/private/portfolio/page.tsx");
  const panel=read("../app/private/portfolio/portfolio-attention.tsx");
  const css=read("../app/globals.css");
- assert.ok(page.includes("투자계획·위험 분류 보완 제안 보기"));
+ assert.ok(page.includes("<PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>"));
  assert.ok(panel.includes("portfolioReviewQueue({personal,plans,factors})"));
  assert.ok(panel.includes("다음에 확인할 투자 판단"));
  assert.ok(panel.includes("투자계획 작성"));

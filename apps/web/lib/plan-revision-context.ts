@@ -9,5 +9,5 @@ export function planAtAuthoredTime(
   if(!Number.isFinite(at))return null;
   return [...plans].filter(p=>p.ticker===ticker&&Number.isFinite(Date.parse(p.createdAt))&&
     Date.parse(p.createdAt)<=at).sort((a,b)=>
-    b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))[0]??null;
+    Date.parse(b.createdAt)-Date.parse(a.createdAt)||b.id.localeCompare(a.id))[0]??null;
 }

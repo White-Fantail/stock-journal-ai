@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
-import {notesForObserved,reasonPreview,tigerTradeHref,tradeLinked} from "../lib/trade-reasons";
+import {notesForObserved,reasonPreview,tigerTradeHref,tradeLinked,correctionOf,latestObservedReasons} from "../lib/trade-reasons";
 import type {JournalEntry} from "../lib/saas-trades-api";
 const REF="a".repeat(64);
 const OTHER="b".repeat(64);
@@ -95,4 +95,28 @@ test("manual trades never silently label an unrecorded fee currency as execution
  assert.ok(form.includes("수수료 통화를 별도로 저장하지 않습니다"));
  assert.equal(list.split("통화 별도 미기록").length-1,2);
  assert.ok(detail.includes("수수료 통화 별도 미기록"));
+});
+
+test("append-only Tiger corrections display only latest text while retaining history",()=>{
+ const first=entry("10000000-0000-4000-8000-000000000001",REF,"original reason");
+ const revised=entry("10000000-0000-4000-8000-000000000002",REF,"정정 ("+first.id+"): corrected reason");
+ const third=entry("10000000-0000-4000-8000-000000000003",REF,"정정 ("+revised.id+"): latest reason");
+ const groups=latestObservedReasons([first,revised,third]);
+ assert.equal(groups.length,1);
+ assert.equal(groups[0].current.id,third.id);
+ assert.deepEqual(groups[0].history.map(x=>x.id),[third.id,revised.id,first.id]);
+ assert.deepEqual(correctionOf(third),{parentId:revised.id,content:"latest reason"});
+});
+test("corrections cannot suppress history of a different Tiger order",()=>{
+ const first=entry("10000000-0000-4000-8000-000000000001",REF,"original");
+ const forged=entry("10000000-0000-4000-8000-000000000002",OTHER,"정정 ("+first.id+"): unrelated");
+ const groups=latestObservedReasons([first,forged]);
+ assert.equal(groups.length,2);
+ assert.ok(groups.every(x=>x.history.length===1));
+});
+test("detail page shows the latest correction and correction history",()=>{
+ const detail=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
+ assert.ok(detail.includes("latestObservedReasons(notes)"));
+ assert.ok(detail.includes("history.slice(1).map("));
+ assert.ok(detail.includes("이유 정정"));
 });

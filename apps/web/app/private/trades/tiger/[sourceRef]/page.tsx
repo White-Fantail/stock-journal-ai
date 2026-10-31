@@ -112,7 +112,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
           <small>{new Intl.DateTimeFormat("ko-KR",{timeZone:"Pacific/Auckland",dateStyle:"medium",timeStyle:"short"}).format(new Date(n.createdAt))}
             {" · "}사용자 작성 기록</small>
           <p className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(n)?.content??n.content}</p>
-          <p className="user-footnote">메모 작성 시점의 투자계획: {plans===null?"계획 이력 조회 확인 필요":(()=>{const associated=planAtAuthoredTime(plans,o.symbol,n.createdAt);return associated?"당시까지 작성된 계획 개정 "+associated.id.slice(0,8)+" · "+associated.rationale:"해당 시점 이전에 작성된 계획 미확인";})()} · 시간순 참고 관계이며 거래 당시 실제 적용한 계획을 증명하지 않습니다.</p>
+          <p className="user-footnote">메모 작성 시점의 투자계획: {plans===null?"계획 이력 조회 확인 필요":(()=>{const associated=planAtAuthoredTime(plans,o.symbol,n.createdAt);return associated?"개정 "+associated.id.slice(0,8)+" · 투자 근거: "+associated.rationale+" · 무효화 조건: "+(associated.invalidationCondition??"미기록")+" · 당시 목표/손절 메모: "+(associated.targetPrice??"미기록")+" / "+(associated.stopPrice??"미기록")+(associated.priceCurrency?" "+associated.priceCurrency:""):"해당 시점 이전에 작성된 계획 미확인";})()} · 시간순 참고 관계이며 거래 당시 실제 적용한 계획을 증명하지 않습니다.</p>
           <p><Link href={noteLink+"&correct="+encodeURIComponent(n.id)}>이유 정정</Link></p>
           {history.length>1&&<details className="data-disclosure"><summary>정정 전 기록 {history.length-1}건</summary>{history.slice(1).map(old=><p key={old.id} className="journal-entry-text" style={{whiteSpace:"pre-wrap"}}>{correctionOf(old)?.content??old.content}</p>)}</details>}
         </article>)}

@@ -102,7 +102,7 @@ export default async function TigerReasonNew({params,searchParams}:{
     <>
      {notes.length>0&&<details className="data-disclosure">
        <summary>이미 연결된 매매 이유 {notes.length}건 확인</summary>
-       {notes.map(n=><p key={n.id} style={{whiteSpace:"pre-wrap"}}>{reasonPreview([n],220)}</p>)}
+       {notes.map(n=><p key={n.id} style={{whiteSpace:"pre-wrap"}}>{reasonPreview([n],220)}{" · "}<Link href={back.replace("?","/note?")+"&correct="+encodeURIComponent(n.id)}>정정하기</Link></p>)}
      </details>}
      <form action={addReason} className="journal-compose-form">
       <input type="hidden" name="idempotencyKey" value={randomUUID()}/>

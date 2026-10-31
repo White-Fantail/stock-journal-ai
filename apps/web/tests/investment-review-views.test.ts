@@ -98,3 +98,13 @@ test("new investor reports are reachable from mobile and check center",()=>{
   assert.ok(alerts.includes("plans.value.length<200"));
   assert.ok(alerts.includes("notes.value.length<200"));
 });
+
+test("review authoring links back to trade rationale without treating observations as verified fills",()=>{
+ const review=read("../app/private/journal/review/new/page.tsx");
+ const manual=read("../app/private/trades/[id]/page.tsx");
+ const tiger=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
+ assert.ok(review.includes('href={"/private/trades"}'));
+ assert.ok(manual.includes('/private/journal/review/new?ticker='));
+ assert.ok(tiger.includes('/private/journal/review/new?ticker='));
+ assert.ok(review.includes("증권사 체결이나 수익률을 근거로 자동 채점하지 않습니다"));
+});

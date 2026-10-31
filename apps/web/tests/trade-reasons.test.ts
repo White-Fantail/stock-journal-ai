@@ -132,3 +132,10 @@ test("Tiger corrections cannot cross account boundaries even with matching order
  assert.deepEqual(new Set(groups.map(x=>x.current.observationRef?.accountId)),
    new Set(["owner-a","owner-b"]));
 });
+
+test("correction form only edits current revision and rejects unchanged reason",()=>{
+ const form=read("../app/private/trades/tiger/[sourceRef]/note/page.tsx");
+ assert.ok(form.includes("activeReasons.find(group=>group.current.id===q.correct"));
+ assert.ok(form.includes("(correctionOf(target)?.content??target.content).trim()===content"));
+ assert.ok(form.includes('redirect(back+"&error=duplicate")'));
+});

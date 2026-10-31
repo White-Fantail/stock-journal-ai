@@ -45,9 +45,9 @@ export function PortfolioAttention({personal,plans,factors}:{
      <Link href="/private/review">점검 센터 →</Link>
    </div>
    <div className="portfolio-review-progress" aria-label="보유종목별 작성 현황">
-     <div><small>관측 보유종목</small><strong>{queue.holdingCount}개</strong></div>
-     <div><small>투자계획 작성</small><strong>{queue.plannedCount===null?"조회 확인 필요":queue.plannedCount+" / "+queue.holdingCount}</strong></div>
-     <div><small>위험 요인 분류</small><strong>{queue.classifiedCount===null?"조회 확인 필요":queue.classifiedCount+" / "+queue.holdingCount}</strong></div>
+     <div><small>관측 보유종목</small><strong>{queue.holdingCount===null?"조회 확인 필요":queue.holdingCount+"개"}</strong></div>
+     <div><small>투자계획 작성</small><strong>{queue.plannedCount===null||queue.holdingCount===null?"조회 확인 필요":queue.plannedCount+" / "+queue.holdingCount}</strong></div>
+     <div><small>위험 요인 분류</small><strong>{queue.classifiedCount===null||queue.holdingCount===null?"조회 확인 필요":queue.classifiedCount+" / "+queue.holdingCount}</strong></div>
    </div>
    {top.length?<div className="portfolio-review-list">
      {top.map(item=><ReviewItem item={item} key={item.id}/>)}

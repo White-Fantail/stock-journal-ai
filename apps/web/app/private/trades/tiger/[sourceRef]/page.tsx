@@ -67,7 +67,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
       <div><dt>종목 / 방향</dt><dd>{o.symbol} · {direction}</dd></div>
       <div><dt>상태</dt><dd>{isOrder?orderStatusLabel(order?.status??"UNKNOWN"):"개별 체결 관측"}</dd></div>
       {order&&<div><dt>주문 유형</dt><dd>{orderTypeLabel(order.orderType)}</dd></div>}
-      <div><dt>수량</dt><dd>{order?formatQuantity(order.filled,"확인 필요")+"주":formatQuantity(fill?.quantity)+"주"}</dd></div>
+      <div><dt>수량</dt><dd>{order?order.filled===null?"체결 수량 미확인":formatQuantity(order.filled)+"주":formatQuantity(fill?.quantity)+"주"}</dd></div>
       <div><dt>가격</dt><dd>{order
        ?executionPriceIsKnown(order)?formatMoney(order.price)+" "+order.currency:"체결 전 · 없음"
        :formatMoney(fill?.price??null)+" "+fill?.currency}</dd></div>

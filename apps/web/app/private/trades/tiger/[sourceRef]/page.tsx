@@ -79,7 +79,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
        ?executionPriceIsKnown(order)?formatMoney(order.price)+" "+order.currency:"체결 전 · 없음"
        :formatMoney(fill?.price??null)+" "+fill?.currency}</dd></div>
       <div><dt>수수료</dt><dd>{order&&feeIsKnown(order)
-       ?feeView?.basis==="CONFLICT"?"통화 확인 필요 (원본·명세서 불일치)"
+       ?feeView?.basis==="CONFLICT"?formatMoney(order.fee)+" (통화 확인 필요: 원본·명세서 불일치)"
          :formatMoney(order.fee)+" "+(feeView?.currency??"통화 미확인")+
            (feeView?.basis==="STATEMENT_MATCH"?" (명세서 대조)":"")
        :"확정 정보 없음"}</dd></div>

@@ -60,6 +60,7 @@ export default async function PlanCheckinPage({searchParams}:{
       <h1>투자 원칙 자기평가</h1>
       <p>당시의 투자계획과 지금의 판단을 비교해 기록합니다. 사용자가 평가한 결과이며
         증권사 체결이나 수익률을 근거로 자동 채점하지 않습니다.</p>
+      {valid&&<p><Link href={"/private/trades"}>거래 기록에서 당시 매매 이유 확인 →</Link></p>}
     </div>
   </div>
   {!valid?<section className="state-panel">

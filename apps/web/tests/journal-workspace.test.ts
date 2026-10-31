@@ -58,3 +58,12 @@ test("trade and journal entry points never depend on retired S2 env flag",()=>{
   assert.ok(exportRoute.includes("currentWorkspace()"));
   assert.ok(exportRoute.includes("auth()"));
 });
+
+test("manual trade API failure does not hide readable investment notes and plans",()=>{
+  const page=source("../app/private/journal/page.tsx");
+  assert.ok(page.includes('if(notesResult.status==="fulfilled" && planResult.status==="fulfilled")'));
+  assert.ok(page.includes('else tradesUnavailable=true;'));
+  assert.ok(page.includes('!unavailable && tradesUnavailable'));
+  assert.ok(page.includes('enabled={!unavailable}'));
+  assert.ok(!page.includes('tradeResult.status==="fulfilled"){'));
+});

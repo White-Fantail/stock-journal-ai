@@ -8,6 +8,7 @@ import {formatMoney,formatQuantity} from "../../../../../lib/format-decimal";
 import {groupTigerOrderObservations} from "../../../../../lib/tiger-order-groups";
 import {orderStatusLabel,orderTypeLabel,orderTerms,executionPriceIsKnown,feeIsKnown} from "../../../../../lib/tiger-order-display";
 import {notesForObserved,tigerTradeHref} from "../../../../../lib/trade-reasons";
+import {parseStatementFeeEvidence,resolvedFeeCurrency} from "../../../../../lib/tiger-fee-statement";
 
 export const dynamic="force-dynamic";
 const REF=/^[a-f0-9]{64}$/;
@@ -48,6 +49,12 @@ export default async function TigerTradeDetail({params,searchParams}:{
  const order=isOrder?account.orders.find(o=>o.sourceRef===p.sourceRef):null;
  const fill=!isOrder?account.fillObservations.find(f=>f.sourceRef===p.sourceRef):null;
  const grouped=order?groupTigerOrderObservations([order],account.fillObservations).orders[0]:null;
+ // Match the list's strictly scoped fee-currency evidence. Never infer a
+ // fee currency from the stock or account currency alone.
+ const proof=data.accounts.length===1
+   ?parseStatementFeeEvidence(process.env.POSITIONARY_PERSONAL_FEE_STATEMENT_EVIDENCE)
+   :null;
+ const feeView=order?resolvedFeeCurrency(order,account.alias,account.assets?.currency??null,proof):null;
  const href=tigerTradeHref(p.sourceRef,page,recordKind);
  const direction=o.side==="BUY"?"매수":"매도";
  const heading=isOrder?(order?.filled==="0"?"주문 목적 · 매매 판단":"매매 이유 · 실행 복기"):"개별 체결 메모";
@@ -72,7 +79,9 @@ export default async function TigerTradeDetail({params,searchParams}:{
        ?executionPriceIsKnown(order)?formatMoney(order.price)+" "+order.currency:"체결 전 · 없음"
        :formatMoney(fill?.price??null)+" "+fill?.currency}</dd></div>
       <div><dt>수수료</dt><dd>{order&&feeIsKnown(order)
-       ?formatMoney(order.fee)+" "+(order.feeCurrency??"통화 미확인")
+       ?feeView?.basis==="CONFLICT"?"통화 확인 필요 (원본·명세서 불일치)"
+         :formatMoney(order.fee)+" "+(feeView?.currency??"통화 미확인")+
+           (feeView?.basis==="STATEMENT_MATCH"?" (명세서 대조)":"")
        :"확정 정보 없음"}</dd></div>
       <div><dt>계좌</dt><dd>{account.alias}</dd></div>
       <div><dt>원본 시각</dt><dd>{order?nzTime(order.at):fill?.timeRaw??"확인 필요 (시간대 미검증)"}</dd></div>
@@ -86,7 +95,7 @@ export default async function TigerTradeDetail({params,searchParams}:{
       </li>)}</ul>
       <p>{grouped.reconciliation==="OBSERVED_SUM_MATCH"?"조회된 수량 합계 일치 (완전성 미검증)":"체결 일부 조회 또는 수량 확인 필요"}</p>
     </details>}
-    <p className="user-footnote">이 정보는 Tiger 주문·체결 관측값이며 검증된 전체 거래 원장이나 손익 계산 자료가 아닙니다.</p>
+    <p className="user-footnote">이 정보는 Tiger 주문·체결 관측값이며 검증된 전체 거래 원장이나 손익 계산 자료가 아닙니다. 수수료 통화의 명세서 대조는 해당 주문에만 적용되며 개별 체결 수수료를 확정하지 않습니다.</p>
   </section>
   <section className="state-panel" aria-label={heading}>
     <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"center",flexWrap:"wrap"}}>

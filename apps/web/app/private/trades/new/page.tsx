@@ -62,6 +62,7 @@ export default async function NewTradePage({searchParams}:{
         <label>1주 체결가 <input required name="price" inputMode="decimal" placeholder="250.50" pattern="[0-9]+([.][0-9]+)?"/></label>
         <label>통화 <input required name="currency" defaultValue="USD" maxLength={3}/></label>
         <label>수수료 (모르면 비워두기) <input name="fee" inputMode="decimal" placeholder="미확인" pattern="[0-9]+([.][0-9]+)?"/></label>
+        <small>직접 입력 거래는 수수료 통화를 별도로 저장하지 않습니다. 체결가의 통화를 수수료 통화로 추정하지 않으며, 서로 다르다면 매매 이유에 원본 수수료 통화를 함께 기록하세요.</small>
         <label>체결 시각과 UTC 오프셋
           <input required name="executedAt" placeholder="2026-10-25T14:30:00-04:00" aria-describedby="timehelp"/>
         </label>

@@ -62,3 +62,37 @@ test("Tiger order detail does not append share unit to an unknown filled quantit
  assert.ok(detail.includes('order.filled===null?"체결 수량 미확인":formatQuantity(order.filled)+"주"'));
  assert.ok(!detail.includes('formatQuantity(order.filled,"확인 필요")+"주"'));
 });
+
+test("trade and journal pages distinguish unavailable broker data from genuinely empty history",()=>{
+ const trades=read("../app/private/trades/page.tsx");
+ const journal=read("../app/private/journal/page.tsx");
+ assert.ok(trades.includes("personal===null"));
+ assert.ok(trades.includes("기록이 없거나 삭제되었다는 뜻은 아닙니다"));
+ assert.ok(journal.includes("personal===null"));
+ assert.ok(journal.includes("내 투자일지와 계획 기록은 계속 표시됩니다"));
+ assert.ok(journal.includes("enabled={!unavailable}"));
+});
+
+test("Tiger order detail uses the same strict fee evidence as its list",()=>{
+ const list=read("../app/private/tiger/personal-preview.tsx");
+ const detail=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
+ for(const text of [
+   "parseStatementFeeEvidence(process.env.POSITIONARY_PERSONAL_FEE_STATEMENT_EVIDENCE)",
+   "data.accounts.length===1",
+   "resolvedFeeCurrency(",
+   'basis==="STATEMENT_MATCH"',
+ ]) {
+   assert.ok(list.includes(text), "list: "+text);
+   assert.ok(detail.includes(text), "detail: "+text);
+ }
+ assert.ok(detail.includes('basis==="CONFLICT"'));
+ assert.ok(!detail.includes('order.feeCurrency??"통화 미확인"'));
+});
+test("manual trades never silently label an unrecorded fee currency as execution currency",()=>{
+ const form=read("../app/private/trades/new/page.tsx");
+ const list=read("../app/private/trades/manual/page.tsx");
+ const detail=read("../app/private/trades/[id]/page.tsx");
+ assert.ok(form.includes("수수료 통화를 별도로 저장하지 않습니다"));
+ assert.equal(list.split("통화 별도 미기록").length-1,2);
+ assert.ok(detail.includes("수수료 통화 별도 미기록"));
+});

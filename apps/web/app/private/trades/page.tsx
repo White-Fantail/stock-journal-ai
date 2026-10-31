@@ -36,8 +36,10 @@ export default async function TradesPage({
       ? <PersonalOrderHistory data={personal} page={page} reasons={notesResult.value} reasonsAvailable={notesResult.available}/>
       : <section className="state-panel">
           <h2>Tiger 주문 관측 이력</h2>
-          <p>{hadTigerData
-            ? "기존 개인 Tiger 계좌의 저장 기록이 있지만 현재 주문 목록을 불러오지 못했습니다. 기존 거래 기록을 삭제하거나 재등록하지 마세요."
+          <p>{personal===null
+            ? hadTigerData
+              ? "기존 개인 Tiger 계좌의 저장 기록이 있지만 현재 주문 목록을 불러오지 못했습니다. 기존 거래 기록을 삭제하거나 재등록하지 마세요."
+              : "Tiger 주문 조회 상태를 확인할 수 없습니다. 계좌가 연결되지 않았거나 서비스가 일시적으로 응답하지 않을 수 있습니다. 기록이 없거나 삭제되었다는 뜻은 아닙니다."
             : "현재 이 계정에 표시 가능한 Tiger 주문 기록이 없습니다. 승인되지 않은 계정의 주문 정보는 표시되지 않습니다."}</p>
           {hadTigerData && <p><Link href="/private/tiger/diagnostics">기존 데이터 저장 상태 점검 →</Link></p>}
           <Link href="/private/brokers">증권사 연결 상태 확인 →</Link>

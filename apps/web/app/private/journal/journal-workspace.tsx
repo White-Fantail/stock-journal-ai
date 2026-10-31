@@ -263,6 +263,26 @@ export function JournalWorkspace({
               className={`btn ${view==="broker"?"journal-tab-active":""}`}>Tiger 검증 체결</button>
           </div>
 
+          {view==="activity"&&<details className="data-disclosure">
+            <summary>계획 개정과 직접 입력 거래 이유를 작성 시각순으로 비교</summary>
+            <p className="journal-limit">계획 개정 및 거래 기록의 작성 시각 기준입니다. 실제 체결 시각과 다를 수 있고 거래가 특정 계획에 따라 이루어졌다는 증거는 아닙니다.</p>
+            <div className="user-list">{[
+              ...plans.filter(p=>p.ticker===selected).map(p=>({
+                id:"plan:"+p.id,at:p.createdAt,kind:"계획 개정",
+                description:p.rationale,href:null as string|null,
+              })),
+              ...connectedTrades.map(t=>({
+                id:"trade:"+t.id,at:t.createdAt,kind:"직접 입력 거래 이유",
+                description:t.rationale??"이유 미기록",href:"/private/trades/"+t.id,
+              })),
+            ].sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id))
+              .map(item=><div key={item.id} className="user-list-row">
+                <div><strong>{item.kind} · {displayTime(item.at)}</strong>
+                  <p className="journal-entry-text">{item.description}</p></div>
+                {item.href&&<Link href={item.href}>거래 상세 →</Link>}
+              </div>)}</div>
+            <p className="journal-limit">직접 입력 거래는 현재 조회된 범위만 표시합니다. Tiger 주문 이유는 원본 거래 상세에서 확인하세요.</p>
+          </details>}
           {view==="activity" ? <div className="journal-timeline">
             {history.length===0 ?
               <div className="journal-empty">아직 투자 기록이 없습니다. <Link href={"/private/journal/new?ticker="+encodeURIComponent(selected)}>투자 판단 작성 →</Link> · <Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(selected)}>투자 전략·계획 작성 →</Link></div>:

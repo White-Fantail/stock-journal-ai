@@ -30,8 +30,14 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
    .filter(p=>SAFE_TICKER.test(p.symbol)&&POSITIVE.test(p.quantity)&&
      p.quantity.split(".").some(part=>/[1-9]/.test(part)))
    .map(p=>p.symbol))].sort();
+ const now=Date.now();
+ const stale=personal.accounts.some(a=>{
+   const observed=a.asOf===null?NaN:Date.parse(a.asOf);
+   return !Number.isFinite(observed)||observed>now||
+     now-observed>7*24*60*60*1000;
+ });
  const blocked=hasHoldingsReadWarnings(personal.readWarnings)||
-   personal.accounts.some(a=>a.positions.length>=100);
+   personal.accounts.some(a=>a.positions.length>=100)||stale;
  const planReady=plans!==null&&plans.length<200;
  const factorReady=factors!==null&&factors.length<=100&&
    new Set(factors.map(f=>f.ticker)).size===factors.length;
@@ -51,9 +57,9 @@ export function portfolioReviewQueue({personal,plans,factors}:PortfolioReviewInp
      personalMaxAllocationPct:exposure?.personalMaxAllocationPct??null});
  };
  if(blocked){
-   add({id:hasHoldingsReadWarnings(personal.readWarnings)?"partial":"holdings-limit",
+   add({id:hasHoldingsReadWarnings(personal.readWarnings)?"partial":stale?"holdings-stale":"holdings-limit",
      kind:"CHECK",priority:"FIRST",ticker:null,title:"보유종목 조회 범위를 먼저 확인하세요",
-     description:"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
+     description:stale?"보유종목 관측 시각이 없거나 7일을 초과했거나 미래 시각입니다. 최신 보유 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.":"보유자산 자료가 제외되었거나 종목 조회 상한에 도달했습니다. 누락 여부를 확인하기 전에는 미작성 계획이나 위험분류를 단정하지 않습니다.",
      href:"/private/brokers",actionLabel:"계좌 연결 점검"});
    return {actions,holdingCount:holdings.length,plannedCount:null,classifiedCount:null,
      comparisonReady:false,asOf:null,currency:null};

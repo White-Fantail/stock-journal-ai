@@ -26,3 +26,43 @@ export function tigerTradeHref(ref:string,page=0,kind:"ORDER"|"FILL"="ORDER"):st
     throw new Error("Invalid order reference");
   return "/private/trades/tiger/"+ref+"?page="+page+"&kind="+kind;
 }
+
+/** Legacy correction notes are append-only and explicitly reference their predecessor.
+ * This parser does not treat arbitrary user text as a correction unless it uses
+ * the exact generated prefix. The original journal entry is never overwritten.
+ */
+const CORRECTION=/^정정 \(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\): /i;
+export function correctionOf(note:JournalEntry):{parentId:string;content:string}|null {
+  if(note.kind!=="TRADE_NOTE")return null;
+  const match=CORRECTION.exec(note.content);
+  return match?{parentId:match[1].toLowerCase(),content:note.content.slice(match[0].length)}:null;
+}
+export function latestObservedReasons(notes:readonly JournalEntry[]):{
+  current:JournalEntry;history:readonly JournalEntry[];
+}[]{
+  const byId=new Map(notes.map(note=>[note.id.toLowerCase(),note]));
+  const children=new Map<string,JournalEntry[]>();
+  for(const note of notes){
+    const correction=correctionOf(note);
+    if(!correction||!byId.has(correction.parentId)||correction.parentId===note.id.toLowerCase())continue;
+    const parent=byId.get(correction.parentId)!;
+    if(parent.ticker!==note.ticker||parent.observationRef?.sourceRef!==note.observationRef?.sourceRef||
+       parent.observationRef?.kind!==note.observationRef?.kind)continue;
+    children.set(correction.parentId,[...(children.get(correction.parentId)??[]),note]);
+  }
+  const corrected=new Set([...children.keys()]);
+  return notes.filter(note=>!corrected.has(note.id.toLowerCase())).map(note=>{
+    const history:JournalEntry[]=[note];
+    const seen=new Set([note.id.toLowerCase()]);
+    let cursor=note;
+    while(true){
+      const parentId=correctionOf(cursor)?.parentId;
+      const parent=parentId?byId.get(parentId):null;
+      if(!parent||seen.has(parent.id.toLowerCase())||!children.get(parent.id.toLowerCase())?.includes(cursor))break;
+      history.push(parent);
+      seen.add(parent.id.toLowerCase());
+      cursor=parent;
+    }
+    return {current:note,history};
+  });
+}

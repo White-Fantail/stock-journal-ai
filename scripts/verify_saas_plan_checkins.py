@@ -3,6 +3,8 @@ import os
 import pathlib
 import sys
 from uuid import uuid4
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 import psycopg
@@ -80,13 +82,15 @@ def main():
    else:raise AssertionError("Database accepted forged plan/review ticker linkage")
   for state in ("PARTIAL","DEVIATED","UNCERTAIN"):
    create_checkin(identity,trade,a_subject,request(original["id"],state))
-  overview=monthly_process(identity,trade,a_subject,"2026-10")
+  # New check-ins belong to the current NZ reporting month, not a fixed fixture month.
+  report_month=datetime.now(ZoneInfo("Pacific/Auckland")).strftime("%Y-%m")
+  overview=monthly_process(identity,trade,a_subject,report_month)
   assert overview["selfReviewCount"]==4
   assert overview["selfReviewBreakdown"]=={
     "FOLLOWED":1,"PARTIAL":1,"DEVIATED":1,"UNCERTAIN":1}
   assert overview["adherenceBasis"]=="USER_SELF_ASSESSED_NOT_BROKER_VERIFIED"
   assert overview["reviewCount"]==4
-  assert monthly_process(identity,trade,b_subject,"2026-10")["selfReviewCount"]==0
+  assert monthly_process(identity,trade,b_subject,report_month)["selfReviewCount"]==0
   replacement=create_plan(identity,trade,a_subject,plan())
   assert replacement["id"]!=original["id"]
   try:

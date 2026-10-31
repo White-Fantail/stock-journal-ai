@@ -247,10 +247,7 @@ export default async function PortfolioPage() {
         <PortfolioOverview personal={personal} plans={plans} factors={userFactors}/>
         <PortfolioConcentration data={personal} plans={plans}/>
       </details>
-      <details className="portfolio-technical-details user-panel" aria-label="추가 점검 제안">
-        <summary>투자계획·위험 분류 보완 제안 보기</summary>
-        <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>
-      </details>
+      <PortfolioAttention personal={personal} plans={plans} factors={userFactors}/>
     </main>;
   }
   const [links,history,reviews,brokerLedger]=await Promise.allSettled([tigerStatus(),tigerSyncStatus(),tigerReviewStatus(),tigerLedgerRead()]);

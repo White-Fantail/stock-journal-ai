@@ -312,22 +312,29 @@ def main():
         assert code==400,code
         # Monthly reporting is a signed owner-only DB aggregate, not a capped
         # "latest trade" view or a brokerage performance computation.
+        # Authored plan/note rows above use DB insertion time. Query their actual
+        # NZ-local month rather than a hard-coded month that eventually expires.
+        from datetime import datetime,timezone
+        from zoneinfo import ZoneInfo
+        now_nz=datetime.now(timezone.utc).astimezone(ZoneInfo("Pacific/Auckland"))
+        month_key=now_nz.strftime("%Y-%m")
+        future_month=f"{now_nz.year+1}-01"
         code,month=request("/internal/v1/journal/monthly-process",
-                           {"subject":A,"month":"2026-10"})
+                           {"subject":A,"month":month_key})
         assert code==200 and month["complete"] is True,(code,month)
         assert month["source"]=="USER_AUTHORED_PROCESS_ONLY"
         assert month["coverage"]=="MONTH_WINDOW_DB_AGGREGATED"
         assert month["noteCount"]>=1 and month["planRevisionCount"]>=3
         assert month["userTradeRecordCount"]>=1
         code,other_month=request("/internal/v1/journal/monthly-process",
-                                 {"subject":B,"month":"2026-10"})
+                                 {"subject":B,"month":month_key})
         assert code==200 and other_month["noteCount"]==0,(code,other_month)
         assert other_month["planRevisionCount"]==0
         code,_=request("/internal/v1/journal/monthly-process",
-                       {"subject":A,"month":"2026-10","workspaceId":"forged"})
+                       {"subject":A,"month":month_key,"workspaceId":"forged"})
         assert code==400,code
         code,_=request("/internal/v1/journal/monthly-process",
-                       {"subject":A,"month":"2027-01"})
+                       {"subject":A,"month":future_month})
         assert code==400,code
         from datetime import datetime,timezone
         # The current NZ ISO week is determined by the service clock.

@@ -27,3 +27,25 @@ test("unfinished self-reported next actions appear on home, completed ones do no
  const done=deriveNextReviewActions({...base,followups:[{...row,state:"DONE"}]});
  assert.ok(!done.some(x=>x.id.startsWith("followup:")));
 });
+
+test("oldest unfinished authored follow-up is addressed first",()=>{
+ const base={principles:null,principlesAvailable:true,notes:[],plans:[],personal:null};
+ const row={checkinId:"00000000-0000-4000-8000-000000000001",ticker:"OLD",
+  nextAction:"Review old risk",selfAssessment:"PARTIAL" as const,
+  checkinAt:"2026-09-01T00:00:00Z",state:null,note:null,resolvedAt:null};
+ const newer={...row,checkinId:"00000000-0000-4000-8000-000000000002",
+  ticker:"NEW",checkinAt:"2026-10-01T00:00:00Z"};
+ const actions=deriveNextReviewActions({...base,followups:[newer,row]});
+ assert.ok(actions.some(a=>a.id==="followup:"+row.checkinId));
+ assert.ok(!actions.some(a=>a.id==="followup:"+newer.checkinId));
+});
+test("incomplete data still appears alongside actual next steps",()=>{
+ const row={checkinId:"00000000-0000-4000-8000-000000000001",ticker:"TEST",
+  nextAction:"Check thesis",selfAssessment:"PARTIAL" as const,
+  checkinAt:"2026-10-01T00:00:00Z",state:null,note:null,resolvedAt:null};
+ const actions=deriveNextReviewActions({principles:null,principlesAvailable:false,
+   notes:null,plans:null,personal:null,followups:[row]});
+ assert.ok(actions.some(a=>a.id.startsWith("followup:")));
+ assert.ok(actions.some(a=>a.id.endsWith("-unavailable")));
+ assert.ok(actions.length<=3);
+});

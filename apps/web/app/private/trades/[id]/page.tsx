@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "../../../../auth";
 import { currentWorkspace } from "../../../../lib/require-workspace";
-import { fetchTradeDetail } from "../../../../lib/saas-trades-api";
+import { fetchTradeDetail,fetchJournalPlans } from "../../../../lib/saas-trades-api";
+import {planAtAuthoredTime} from "../../../../lib/plan-revision-context";
 import { formatQuantity,formatMoney } from "../../../../lib/format-decimal";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,11 @@ export default async function TradeDetail({params}:{
   let trade;
   try {trade=await fetchTradeDetail(session.user.id,id);}
   catch {notFound();}
+  const plans=trade.kind==="EXECUTION"&&trade.ticker
+    ?await fetchJournalPlans(session.user.id).catch(()=>null):null;
+  const completePlans=plans!==null&&plans.length<200?plans:null;
+  const historicalPlan=trade.kind==="EXECUTION"&&trade.ticker
+    ?planAtAuthoredTime(completePlans,trade.ticker,trade.createdAt):null;
   return <main style={{maxWidth:700,margin:"2rem auto",padding:"0 1rem"}}>
     <p><Link href="/private/trades/manual">← 직접 입력 거래</Link></p>
     <h1>{trade.ticker ?? "거래 정정"} · {trade.kind === "EXECUTION" ? "체결 기록" : "취소 기록"}</h1>
@@ -31,6 +37,16 @@ export default async function TradeDetail({params}:{
       <dt>변경 이력</dt><dd>{trade.voidsEventId ? <Link href={"/private/trades/" + trade.voidsEventId}>취소 대상 원본 보기</Link> : "원본 기록"}</dd>
       <dt>매매 이유/정정 사유</dt><dd style={{whiteSpace:"pre-wrap"}}>{trade.rationale ?? "미기록"}</dd>
     </dl>
+    {trade.kind==="EXECUTION" && trade.ticker && <section className="state-panel">
+      <h2>거래 기록 작성 시점의 투자계획 참고</h2>
+      {completePlans===null?<p role="alert">투자계획 이력을 완전하게 조회하지 못해 시점별 연결을 보류합니다.</p>:
+        historicalPlan?<><p><strong>계획 개정:</strong> {historicalPlan.id.slice(0,8)} · {historicalPlan.createdAt}</p>
+          <p><strong>투자 근거:</strong> {historicalPlan.rationale}</p>
+          <p><strong>논리 무효화 조건:</strong> {historicalPlan.invalidationCondition??"미기록"}</p>
+          <p><strong>목표/손절 메모:</strong> {historicalPlan.targetPrice??"미기록"} / {historicalPlan.stopPrice??"미기록"} {historicalPlan.priceCurrency??""}</p></>:
+        <p>이 거래 기록 작성 시점 이전에 작성된 계획을 확인하지 못했습니다.</p>}
+      <p className="user-footnote">비교 기준은 실제 체결 시각이 아닌 사용자가 거래 기록을 작성한 시각입니다. 시간순 참고 정보이며 당시 계획을 따랐다는 증거는 아닙니다.</p>
+    </section>}
     {trade.kind==="EXECUTION" && trade.ticker && <p><Link className="btn btn-outline" href={"/private/journal?ticker="+encodeURIComponent(trade.ticker)}>투자 일지에서 종목 전략과 계획 보기 →</Link>{" "}<Link className="btn btn-outline" href={"/private/journal/review/new?ticker="+encodeURIComponent(trade.ticker)}>이 종목의 투자 판단 복기 →</Link></p>}
     {trade.kind==="EXECUTION"&&<p><Link className="btn btn-outline" href={"/private/trades/"+trade.id+"/correct"}>이 체결 정정하기 →</Link></p>}
     {trade.kind==="EXECUTION"&&<>

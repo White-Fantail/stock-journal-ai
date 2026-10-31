@@ -1,3 +1,4 @@
+import {readFileSync} from "node:fs";
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {portfolioReviewActions,portfolioReviewQueue} from "../lib/portfolio-review-actions";
@@ -142,4 +143,11 @@ test("all held symbols remain reachable and suggestions are deterministic",()=>{
  assert.equal(q.actions.filter(a=>a.kind==="FACTOR").length,10);
  const second=portfolioReviewQueue({personal,plans:[],factors:[]});
  assert.deepEqual(q.actions.map(a=>a.id),second.actions.map(a=>a.id));
+});
+
+test("portfolio surfaces investment-plan and risk follow-ups without an extra disclosure click",()=>{
+ const page=readFileSync(new URL("../app/private/portfolio/page.tsx",import.meta.url),"utf8");
+ assert.match(page,/<PortfolioAttention personal=\{personal\} plans=\{plans\} factors=\{userFactors\}\s*\/>/);
+ assert.doesNotMatch(page,/<summary>투자계획·위험 분류 보완 제안 보기<\/summary>/);
+ assert.match(page,/<summary>비중·공통 위험 분석 보기<\/summary>/);
 });

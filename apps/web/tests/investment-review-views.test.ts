@@ -108,3 +108,12 @@ test("review authoring links back to trade rationale without treating observatio
  assert.ok(tiger.includes('/private/journal/review/new?ticker='));
  assert.ok(review.includes("증권사 체결이나 수익률을 근거로 자동 채점하지 않습니다"));
 });
+
+test("historical checkins retain revision identity and can navigate to plan history",()=>{
+ const editor=read("../app/private/journal/review/new/page.tsx");
+ assert.ok(editor.includes('item.planRevisionId===plan.id'));
+ assert.ok(editor.includes('item.planRevisionId.slice(0,8)'));
+ assert.ok(editor.includes('item.planRevisionId!==plan.id'));
+ assert.ok(editor.includes('종목별 계획 변경 이력 확인'));
+ assert.ok(editor.includes('name="expectedPlanRevisionId" value={plan.id}'));
+});

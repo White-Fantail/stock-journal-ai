@@ -46,3 +46,13 @@ test("trade list and detail share the SAME user-authored journal data, not a dup
  assert.ok(legacy.includes("redirect(\"/private/trades/tiger/\"+ref+\"/note"));
  assert.ok(!list.includes("매매 이유 기록 →"));
 });
+
+test("trade reason server action rechecks the broker source and ticker before writing",()=>{
+ const form=read("../app/private/trades/tiger/[sourceRef]/note/page.tsx");
+ const action=form.slice(form.indexOf("async function addReason("),form.indexOf("export default async function TigerReasonNew"));
+ assert.ok(action.includes("await tigerPersonalRead(page)"));
+ assert.ok(action.includes("record.sourceRef===ref"));
+ assert.ok(action.includes("matches?.length===1 && matches[0].symbol===ticker"));
+ assert.ok(action.indexOf("if(!matchingRecord) redirect(")<action.indexOf("await submitTigerObservationNote("));
+ assert.ok(action.includes("if(!matchingRecord) redirect(back+"));
+});

@@ -24,18 +24,22 @@ export default async function JournalPage({
   let plans:Awaited<ReturnType<typeof fetchJournalPlans>>=[];
   let trades:Awaited<ReturnType<typeof fetchManualTrades>>["events"]=[];
   let unavailable=false;
+  let tradesUnavailable=false;
   let brokerRead:TigerLedgerRead|null=null;
   {
     const [notesResult,planResult,tradeResult]=await Promise.allSettled([
       fetchJournal(session.user.id),fetchJournalPlans(session.user.id),
       fetchManualTrades(session.user.id),
     ]);
-    if(notesResult.status==="fulfilled" && planResult.status==="fulfilled" &&
-       tradeResult.status==="fulfilled"){
+    // A manual-trade outage must not erase otherwise readable investment notes.
+    // Keep notes and plans together so missing investment records are never shown
+    // as a genuine empty history.
+    if(notesResult.status==="fulfilled" && planResult.status==="fulfilled"){
       entries=notesResult.value;
       plans=planResult.value;
-      trades=tradeResult.value.events;
     }else unavailable=true;
+    if(tradeResult.status==="fulfilled") trades=tradeResult.value.events;
+    else tradesUnavailable=true;
   }
   // Broker readability is independent: an unavailable Tiger service must never
   // hide the user-authored journal, nor supply example trades.
@@ -54,6 +58,10 @@ export default async function JournalPage({
       <h2>비공개 투자일지를 불러올 수 없습니다.</h2>
       <p>기존 기록은 변경되지 않았습니다. 서버가 정상인지 확인한 뒤 다시 시도해 주세요.</p>
       <Link href="/private/journal" className="btn btn-outline">다시 확인</Link>
+    </div>}
+    {!unavailable && tradesUnavailable && <div className="state-panel" role="alert">
+      <p>직접 입력한 거래 기록을 현재 불러올 수 없습니다. 투자일지와 투자계획은 정상적으로 표시하며, 거래 연결 목록만 일부 누락될 수 있습니다.</p>
+      <Link href="/private/trades/manual">직접 입력 거래 다시 확인</Link>
     </div>}
     {!unavailable && params.saved && <p role="status">
       {params.saved==="plan"?"새 투자 계획의 변경 이력을 저장했습니다.":

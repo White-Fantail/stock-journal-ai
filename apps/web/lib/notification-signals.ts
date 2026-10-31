@@ -62,7 +62,7 @@ export function derivePersonalAlerts(
  if(personal===null)return signals.slice(0,30);
  // The portfolio and the check centre must use the same account-scope,
  // staleness and capped-plan rules before claiming a missing plan.
- const reviewQueue=portfolioReviewQueue({personal,plans,factors:null});
+ const reviewQueue=portfolioReviewQueue({personal,plans,factors:null},now);
  for(const account of personal.accounts){
    if(account.partial||account.truncated||account.hasMore){
      signals.push({id:account.alias+":history-partial",kind:"HISTORY_PARTIAL",

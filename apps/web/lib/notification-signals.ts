@@ -4,6 +4,7 @@
  */
 import type {TigerPersonalRead,TigerPersonalHealth} from "./tiger-api";
 import type {JournalPlan} from "./saas-trades-api";
+import {portfolioReviewQueue} from "./portfolio-review-actions";
 
 export type SyncSignal={id:string;
   kind:"SYNC_FAILED"|"SYNC_DELAYED"|"SYNC_UNREPORTED"|"HISTORY_PARTIAL"|"PLAN_MISSING"|"PLAN_INCOMPLETE";
@@ -59,11 +60,9 @@ export function derivePersonalAlerts(
    }
  }
  if(personal===null)return signals.slice(0,30);
- const latestPlans=new Map<string,JournalPlan>();
- for(const plan of [...(plans??[])].sort((a,b)=>b.createdAt.localeCompare(a.createdAt))){
-   if(!latestPlans.has(plan.ticker))latestPlans.set(plan.ticker,plan);
- }
- const seenSymbols=new Set<string>();
+ // The portfolio and the check centre must use the same account-scope,
+ // staleness and capped-plan rules before claiming a missing plan.
+ const reviewQueue=portfolioReviewQueue({personal,plans,factors:null});
  for(const account of personal.accounts){
    if(account.partial||account.truncated||account.hasMore){
      signals.push({id:account.alias+":history-partial",kind:"HISTORY_PARTIAL",
@@ -71,28 +70,22 @@ export function derivePersonalAlerts(
        detail:"주문·체결 조회 구간이 불완전할 수 있습니다. 이 기록으로 전체 거래내역이나 확정 손익을 계산하지 마세요.",
        observedAt:account.asOf});
    }
-   // Only prompt for an investment plan if a reasonably fresh, positive observed
-   // holding is available. No quotation is consulted, fetched, or compared.
-   if(ageMs(account.asOf,nowMs)<0||ageMs(account.asOf,nowMs)>7*86400000)continue;
-   for(const position of account.positions){
-     if(!MONEY.test(position.quantity)||
-        compareAmounts(position.quantity,"0")<=0||
-        seenSymbols.has(position.symbol))continue;
-     seenSymbols.add(position.symbol);
-     if(plans===null)continue; // Do not infer missing records from an API failure.
-     const plan=latestPlans.get(position.symbol);
-     if(!plan){
-       signals.push({id:"plan:"+position.symbol,kind:"PLAN_MISSING",severity:"info",
-         title:position.symbol+" · 투자 계획 미작성",
-         detail:"보유가 관측된 종목입니다. 투자 기간, 판단을 바꿀 조건과 위험 한도를 투자일지에 기록해 보세요. 가격 알림이나 매매 신호가 아닙니다.",
-         observedAt:account.asOf});
-     }else if(!plan.strategyType || !plan.investmentHorizon ||
-               !plan.invalidationCondition || !plan.reviewCadence ||
-               !plan.maxAllocationPct){
-       signals.push({id:"plan-incomplete:"+position.symbol,kind:"PLAN_INCOMPLETE",
-         severity:"info",title:position.symbol+" · 투자 전략 보완 권장",
-         detail:"보유 종목의 투자 전략 유형·기간·논리 무효화 조건·최대 비중·점검 주기를 살펴보세요. 미설정 항목은 의도적으로 비워 둘 수 있으며 매매 신호가 아닙니다.",
-         observedAt:plan.createdAt});
+ }
+ if(reviewQueue.holdingCount===null){
+   signals.push({id:"holdings-check",kind:"SYNC_UNREPORTED",severity:"info",
+     title:"보유종목 관측 범위 확인 필요",
+     detail:"계좌 관측 시각·범위·식별자를 먼저 확인하세요. 불완전한 자료로 투자계획 누락을 판단하지 않습니다.",
+     observedAt:null});
+ }else{
+   for(const action of reviewQueue.actions){
+     if(action.id.startsWith("plan:")){
+       signals.push({id:action.id,kind:"PLAN_MISSING",severity:"info",
+         title:action.ticker+" · 투자 계획 미작성",detail:action.description,
+         observedAt:reviewQueue.asOf});
+     }else if(action.id.startsWith("condition:")){
+       signals.push({id:"plan-incomplete:"+action.ticker,kind:"PLAN_INCOMPLETE",severity:"info",
+         title:action.ticker+" · 투자 판단 재검토 조건 확인",detail:action.description,
+         observedAt:reviewQueue.asOf});
      }
    }
  }

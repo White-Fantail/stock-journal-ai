@@ -90,3 +90,11 @@ include both criteria history and indicator records. List history is bounded to
 ## Investment price level timeline (2026-11-02)
 
 The dedicated authoring page now supports up to four ENTRY and four CONFIRM annotations per append-only plan revision, with short user-authored notes. The existing TARGET and STOP columns remain canonical. The ticker journal shows a responsive dated horizontal-level visualization, optional historical revisions, and source-labeled manual/observed/independently verified transaction markers in the same currency. These horizontal levels are **authored decisions, not market OHLCV**. No candlestick history is invented or fetched without authorized historical data. No price alerts or order effects.
+
+
+## 통합 투자 기록 흐름 (2026-11-02, dev)
+
+- 투자일지 경로 /private/journal 은 종목별 계획·판단·실제 거래의 단일 조회 진입점이다. 기본 화면은 전체 흐름이며 계획·판단 / 실제 거래 필터가 있다. 계획 작성, 복기, 직접 거래 작성, Tiger 상세 이유 작성은 각 전용 화면을 계속 사용한다.
+- 카드별 근거를 USER_AUTHORED 계획·메모, USER_ASSERTED 수동 거래, 미검증 Tiger 관측 주문·개별 체결, 독립 검증된 체결로 구분한다. 주문 상태와 주문 지정가는 확정 체결을 뜻하지 않는다. 관측된 개별 체결은 해당 주문의 출처 ID가 일치할 때만 아래에 표시한다. 취소된 직접 입력 거래는 통합 활동에서 제외하지만 원본 이벤트를 지우지 않는다.
+- 거래 시각보다 이전에 작성된 가장 최근 계획을 거래 카드에서 선택적으로 확인한다. 거래 이후 개정된 계획을 과거에 소급 적용하지 않으며, 계획 준수나 손익을 자동 판정하지 않는다. 유효한 시간 정보가 없는 Tiger 체결 관측은 날짜를 만들어내지 않고 마지막에 표시한다.
+- 조회는 최근 수동 거래·현재 Tiger 관측 페이지·공개 가능한 검증 원장 범위로 한정된다. 서로 다른 출처의 기록을 합치거나 중복 제거하여 전체 거래 수로 오인하지 않는다. 거래 원본 /private/trades 와 저장소의 원본 테이블은 그대로 둔다. 인증, 출처, 불완전성, 실거래 금지 조건도 그대로 유지한다.

@@ -24,7 +24,7 @@ test("trade and journal editing use independent pages, no forms in list workspac
   // Journal links to transaction detail rather than composing a second note.
   const tradeDetail=read("../app/private/trades/tiger/[sourceRef]/page.tsx");
   const tradeEditor=read("../app/private/trades/tiger/[sourceRef]/note/page.tsx");
-  assert.ok(ui.includes("tigerTradeHref("));
+  assert.ok(read("../app/private/journal/investment-activity-feed.tsx").includes("tigerTradeHref("));
   assert.ok(tradeDetail.includes("notesForObserved("));
   assert.ok(tradeEditor.includes("submitTigerObservationNote("));
   assert.ok(tradeEditor.includes("tigerPersonalRead("));
@@ -73,24 +73,24 @@ test("a selected stock displays actionable target and stop controls",()=>{
   assert.ok(pricing.includes('name="maxAllocationPct"'));
   assert.ok(create.includes('name="reviewCadence"'));
   assert.ok(create.includes('name="investmentHorizon"'));
-  assert.ok(ui.includes("e.value.invalidationCondition"));
+  assert.ok(read("../app/private/journal/investment-activity-feed.tsx").includes("p.invalidationCondition"));
   assert.ok(!ui.includes("<form"));
 });
 
-test("journal shows investment notes and target-stop plan revisions in one chronological timeline",()=>{
+test("journal shows plans and transactions together with distinct source labels",()=>{
   const ui=read("../app/private/journal/journal-workspace.tsx");
-  assert.ok(ui.includes('type View="activity"|"trades"|"observed"|"broker"'));
-  assert.ok(ui.includes("투자 판단 · 계획"));
-  assert.ok(!ui.includes('setView("plans")'));
-  assert.ok(!ui.includes('view==="plans"'));
-  assert.ok(ui.includes("history.map(e=>"));
-  assert.ok(ui.includes('type:"note" as const'));
-  assert.ok(ui.includes('type:"plan" as const'));
-  assert.ok(ui.includes("b.timestamp.localeCompare(a.timestamp)"));
-  assert.ok(ui.includes("e.type===\"plan\"?\"투자 전략·계획 변경\""));
-  assert.ok(ui.includes("e.value.rationale"));
-  assert.ok(ui.includes('href={"/private/journal/new?mode=plan&ticker="'));
-  assert.ok(!ui.includes("<form"));
+  const feed=read("../app/private/journal/investment-activity-feed.tsx");
+  const model=read("../lib/investment-activity.ts");
+  assert.ok(ui.includes("<InvestmentActivityFeed"));
+  assert.ok(feed.includes('type Filter="ALL"|"PLAN"|"TRADE"'));
+  assert.ok(feed.includes("전체 흐름"));
+  assert.ok(feed.includes("계획·판단"));
+  assert.ok(feed.includes("실제 거래"));
+  assert.ok(feed.includes("planBeforeTrade("));
+  assert.ok(model.includes('category:"OBSERVED_ORDER"'));
+  assert.ok(model.includes('category:"UNLINKED_FILL"'));
+  assert.ok(model.includes('category:"VERIFIED"'));
+  assert.ok(!feed.includes("<form"));
 });
 
 
@@ -179,13 +179,13 @@ test("B4 plan editing retains all existing strategy fields as a new full immutab
  assert.ok(client.includes("journal-guided-workflow"));
  assert.ok(client.includes("journal-investment-details"));
  assert.ok(client.includes("useEffect(()=>{if(initialTicker"));
- assert.ok(client.includes("history.map(e=>"));
+ assert.ok(client.includes("<InvestmentActivityFeed"));
  assert.ok(api.includes("export type JournalPlan"));
 });
 
 test("stock journal prioritizes authored content and chronology over explanatory guides",()=>{
   const ui=read("../app/private/journal/journal-workspace.tsx");
-  const history=ui.indexOf('className="journal-history"');
+  const history=ui.indexOf("<InvestmentActivityFeed");
   assert.ok(ui.indexOf('className="journal-primary-reason"')<history);
   assert.ok(ui.indexOf('className="journal-plan-snapshot"')<history);
   assert.ok(ui.indexOf('className="journal-guided-workflow"')>history);

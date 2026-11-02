@@ -748,3 +748,30 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
 .plan-price-level[aria-pressed="true"]{outline:2px solid #3885cd;outline-offset:-2px}
 .plan-price-level small{overflow-wrap:anywhere;line-height:1.45}
 @media(max-width:680px){.plan-level-row,.plan-price-level-list{grid-template-columns:minmax(0,1fr)}.plan-price-chart{padding:10px}.plan-level-row button{justify-self:start}}
+
+
+/* Source-labelled, single chronological investment workspace. */
+.journal-unified-actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
+.journal-unified-actions .btn{font-size:.78rem}
+.journal-activity-filters .btn small{margin-left:5px;font-weight:600;opacity:.74}
+.journal-activity-stream{display:grid;gap:12px;margin:18px 0}
+.journal-activity-item{border:1px solid var(--line);border-radius:13px;padding:17px 19px;min-width:0;background:#fff;overflow-wrap:anywhere}
+.journal-activity-item.journal-activity-plan{border-left:4px solid #268c6c}
+.journal-activity-item.journal-activity-trade{border-left:4px solid #4d7da8}
+.journal-activity-item strong{font-size:.91rem}
+.journal-activity-item small{display:block;color:#627d77;font-size:.77rem;margin:6px 0}
+.journal-activity-item a{display:inline-block;margin-top:7px;font-size:.84rem;font-weight:750}
+.journal-activity-type{font-size:.78rem;font-weight:850;letter-spacing:.01em}
+.journal-activity-type.is-plan{color:#146c59}
+.journal-activity-type.is-trade{color:#245f94}
+.journal-activity-context{margin:13px 0 4px;padding:11px 12px;border:1px solid #dce7e9;border-radius:9px;background:#f8fbfa}
+.journal-activity-context summary{font-size:.83rem;font-weight:750;cursor:pointer}
+.journal-activity-context .journal-entry-text{margin:7px 0}
+.journal-activity-context .journal-trade-row{align-items:start;flex-wrap:wrap}
+.journal-activity-warning{margin:10px 0;color:#7d4c23;font-size:.84rem}
+@media(max-width:520px){
+ .journal-unified-actions .btn{flex:1 1 calc(50% - 8px);text-align:center;min-height:42px;display:flex;align-items:center;justify-content:center}
+ .journal-activity-item{padding:13px}
+ .journal-activity-item .journal-entry-meta{display:flex;align-items:start;gap:4px}
+ .journal-activity-item .journal-entry-meta time{margin:2px 0}
+}

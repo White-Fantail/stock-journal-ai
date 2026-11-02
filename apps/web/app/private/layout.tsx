@@ -17,14 +17,14 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
       <nav className="app-nav" aria-label="내 공간 메뉴">
         <a href="/private">홈</a>
         <a href="/private/portfolio">포트폴리오</a>
-        <a href="/private/journal">투자일지</a>
+        <a href="/private/journal">계획·거래</a>
         <a href="/private/review">점검</a>
         <details className="app-desktop-more">
           <summary>더보기 ▾</summary>
           <div className="app-desktop-more-panel">
             <a href="/private/principles">나의 투자 원칙</a>
             <a href="/private/indicators">나의 보조지표</a>
-            <a href="/private/trades">거래 기록</a>
+            <a href="/private/trades">거래 원본·상세</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
             <a href="/private/analysis">AI 투자 복기</a>
             <a href="/private/alerts">점검 센터</a>
@@ -39,14 +39,14 @@ export default async function PrivateLayout({children}: Readonly<{children: Reac
       <nav className="app-mobile-nav" aria-label="모바일 주 메뉴">
         <a href="/private">홈</a>
         <a href="/private/portfolio">포트폴리오</a>
-        <a href="/private/journal">투자일지</a>
+        <a href="/private/journal">계획·거래</a>
         <a href="/private/review">점검</a>
         <details className="app-mobile-more">
           <summary>더보기 <span aria-hidden="true">▾</span></summary>
           <div className="app-mobile-more-panel">
             <a href="/private/principles">나의 투자 원칙</a>
             <a href="/private/indicators">나의 보조지표</a>
-            <a href="/private/trades">거래 기록</a>
+            <a href="/private/trades">거래 원본·상세</a>
             <a href="/private/journal/new?mode=plan">매수 전 위험 점검</a>
             <a href="/private/analysis">AI 투자 복기</a>
             <a href="/private/alerts">점검 센터</a>

@@ -9,7 +9,7 @@ import { JournalWorkspace } from "./journal-workspace";
 import { tigerLedgerRead, tigerPersonalRead, type TigerLedgerRead } from "../../../lib/tiger-api";
 
 export const dynamic="force-dynamic";
-export const metadata={title:"투자 일지 · Positionary"};
+export const metadata={title:"투자 계획·거래 · Positionary"};
 export default async function JournalPage({
   searchParams,
 }:{searchParams:Promise<{saved?:string;error?:string;ticker?:string}>}) {
@@ -50,8 +50,8 @@ export default async function JournalPage({
   return <main className="journal-page">
     <div className="page-intro journal-intro journal-page-heading">
       <div><span className="breadcrumb"><Link href="/private">← 대시보드</Link></span>
-        <h1>투자 일지</h1>
-        <p>각 종목의 현재 계획과 판단 근거를 먼저 확인하고, 필요할 때 복기하거나 변경 이력을 살펴보세요.</p></div>
+        <h1>투자 계획·거래</h1>
+        <p>종목별 투자 계획과 실제 거래를 한 흐름에서 확인하세요. 계획·직접 입력·Tiger 관측·독립 검증 내역은 각각 명확하게 구분합니다.</p></div>
       <Link className="btn btn-primary" href="/private/journal/new">+ 일지 작성</Link>
     </div>
     {unavailable && <div className="state-panel" role="alert">
@@ -77,7 +77,7 @@ export default async function JournalPage({
     </p>}
     <p><a href="/private/indicators">나의 보조지표 · 기준 관리와 당시 값 기록 →</a></p>
     <JournalWorkspace enabled={!unavailable} initialTicker={params.ticker}
-      indicatorHistory={indicatorHistory} entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
+      manualAvailable={!tradesUnavailable} indicatorHistory={indicatorHistory} entries={entries} plans={plans} trades={trades} brokerRead={brokerRead}
       personalPositions={personal?.accounts.flatMap(a=>a.positions)??[]}
       personalOrders={personal?.accounts.flatMap(a=>a.orders)??[]}
       personalFills={personal?.accounts.flatMap(a=>a.fillObservations)??[]}/>

@@ -29,7 +29,7 @@ test("journal UX groups only the authenticated user's recorded symbols",()=>{
   assert.ok(app.includes("selected"));
   assert.ok(source("../app/private/journal/new/page.tsx").includes("tradeEventId"));
   assert.ok(app.includes("isBrokerOrder")===false);
-  assert.ok(app.includes("사용자 직접 작성"));
+  assert.ok(source("../app/private/journal/investment-activity-feed.tsx").includes("사용자 직접 작성"));
   assert.ok(app.includes("목표가"));
   assert.ok(app.includes("손절가"));
   assert.ok(!app.includes("mockPortfolio"));

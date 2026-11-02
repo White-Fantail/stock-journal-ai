@@ -142,7 +142,8 @@ test("journal compares only plans already authored before the transaction",()=>{
   const model=read("../lib/investment-activity.ts");
   assert.ok(page.includes("<InvestmentActivityFeed"));
   assert.ok(view.includes("planBeforeTrade(item,selectedPlans)"));
-  assert.ok(view.includes("거래 시각 이전의 가장 최근 작성본"));
+  assert.ok(view.includes("기록된 기준 시각 이전의 가장 최근 작성본"));
+   assert.ok(view.includes("Tiger 주문 관측 시각 기준이며 실제 체결 시각과 다를 수 있습니다."));
   assert.ok(view.includes("소급 적용하지 않습니다"));
   assert.ok(model.includes("isoTime(p.createdAt)"));
   assert.ok(model.includes("activity.at"));

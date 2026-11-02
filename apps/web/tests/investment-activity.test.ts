@@ -78,6 +78,15 @@ test("plan context never uses a revision made after execution",()=>{
   assert.equal(planBeforeTrade(noTime,[earlier]),null);
 });
 
+test("plan comparison orders timezone offsets by actual instant, not text",()=>{
+  const early=plan("early","2026-10-03T12:00:00+13:00");
+  const late=plan("late","2026-10-03T00:30:00Z");
+  const trade=activityForTicker(source({
+    plans:[early,late],trades:[manual("trade","2026-10-03T01:00:00Z")],
+  })).find(a=>a.category==="MANUAL")!;
+  assert.equal(planBeforeTrade(trade,[early,late])?.id,"late");
+});
+
 test("order observation is never labelled with a fabricated execution time",()=>{
   const unknown={...order("o1"),at:"not-a-number"};
   const rows=activityForTicker(source({orders:[unknown],fills:[fill("f1","o1")]}));

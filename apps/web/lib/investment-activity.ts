@@ -69,6 +69,7 @@ export function planBeforeTrade(
     activity.category==="OBSERVED_ORDER"?activity.value.order.symbol:
     activity.category==="VERIFIED"?activity.value.symbol:null;
   return plans.filter(p=>p.ticker===ticker&&isoTime(p.createdAt)!==null&&
-      isoTime(p.createdAt)!<=activity.at!)
-    .sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id))[0]??null;
+      (isoTime(p.createdAt)??Infinity)<=activity.at!)
+    .sort((a,b)=>(isoTime(b.createdAt)??0)-(isoTime(a.createdAt)??0)||
+      b.id.localeCompare(a.id))[0]??null;
 }

@@ -10,6 +10,7 @@ import {orderJournalSymbols,journalLastRecordedAt} from "../../../lib/journal-sy
 import {orderStatusLabel} from "../../../lib/tiger-order-display";
 import Link from "next/link";
 import {decisionGuide} from "../../../lib/journal-decision-guide";
+import {PlanPriceTimeline} from "./plan-price-timeline";
 import type { TigerLedgerRead, TigerPersonalPosition, TigerPersonalOrder, TigerPersonalFill } from "../../../lib/tiger-api";
 import type {
   JournalEntry, JournalKind, JournalPlan, ManualTradeEvent,
@@ -227,6 +228,9 @@ export function JournalWorkspace({
             <div><span>투자 전략</span><strong>{active.plan.strategyType?STRATEGY_LABEL[active.plan.strategyType]??"확인 필요":"미설정"}</strong></div>
             <div><span>최대 보유 비중</span><strong>{active.plan.maxAllocationPct?formatPercent(active.plan.maxAllocationPct)+"%":"미설정"}</strong></div>
           </div>}
+          {active&&<PlanPriceTimeline ticker={selected} plans={plans}
+            trades={connectedTrades} observedFills={observedFills}
+            verifiedFills={brokerRead?.readEnabled?brokerRead.executions.filter(e=>e.symbol===selected):[]}/>}
           {!active&&<div className="journal-actions">
              <p className="journal-instruction">첫 종목을 선택하거나 새 기록을 작성하세요.</p>
              <Link className="btn btn-primary" href="/private/journal/new">+ 새 투자 기록</Link>

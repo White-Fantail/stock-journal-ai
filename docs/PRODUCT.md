@@ -85,3 +85,8 @@ include both criteria history and indicator records. List history is bounded to
 - 기존 `saas_journal_records`와 `saas_journal_tiger_observation_links`가 그대로 단일 저장 원본이다. 데이터 이동·복제·스키마 변경 없이, 조회와 작성의 진입점만 변경한다. 지우지 않는 추가형 이력·멱등성·실제 주인 소유 증거 확인이 그대로 적용된다.
 - 기존 `/private/journal/new?mode=observed` 주소는 거래 기록의 작성 화면으로 이동한다. 채팅 MCP에서 특정 거래의 이유 기록 요청은 `request_tiger_order_refresh` → `get_tiger_order_refresh_status` → `get_tiger_order_observations` → `add_tiger_order_note` 순서로 처리하며, 동일 종목의 다른 주문을 임의 선택하지 않는다.
 - AI 종목 투자 논리 비교에서는 거래-linked 메모를 별도 독립 투자전략 변경으로 취급하지 않는다. 거래 이유는 원본 한 건으로 보존하고, Tiger 주문 관측은 체결의 증거가 아닌 보조 사실로만 사용한다.
+
+
+## Investment price level timeline (2026-11-02)
+
+The dedicated authoring page now supports up to four ENTRY and four CONFIRM annotations per append-only plan revision, with short user-authored notes. The existing TARGET and STOP columns remain canonical. The ticker journal shows a responsive dated horizontal-level visualization, optional historical revisions, and source-labeled manual/observed/independently verified transaction markers in the same currency. These horizontal levels are **authored decisions, not market OHLCV**. No candlestick history is invented or fetched without authorized historical data. No price alerts or order effects.

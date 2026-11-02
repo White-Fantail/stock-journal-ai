@@ -7,6 +7,8 @@ import {fetchManualTrades,fetchJournal,fetchJournalPlans,submitJournal,submitJou
 import {tigerLedgerRead,tigerPersonalRead} from "../../../../lib/tiger-api";
 import {JournalSymbolPicker} from "./symbol-picker";
 import {PlanRiskCheck} from "./plan-risk-check";
+import {PlanPriceLevelsForm} from "./price-levels-form";
+import type {JournalPriceLevel} from "../../../../lib/saas-trades-api";
 import {fetchInvestorPrinciples} from "../../../../lib/saas-trades-api";
 import {assessPortfolioOverviewRisk} from "../../../../lib/portfolio-overview-risk";
 import {sumObservedShares} from "../../../../lib/purchase-scenario";
@@ -111,10 +113,13 @@ async function addPlan(form:FormData) {
   const target=field(form,"targetPrice")||null;
   const stop=field(form,"stopPrice")||null;
   try{
+    const priceLevels=JSON.parse(field(form,"priceLevels")||"[]") as JournalPriceLevel[];
+    if(!Array.isArray(priceLevels))throw new Error("Invalid price levels");
     await submitJournalPlan(subject,{
       idempotencyKey:field(form,"idempotencyKey"),ticker,
       targetPrice:target,stopPrice:stop,
-      priceCurrency:target||stop?field(form,"priceCurrency").toUpperCase():null,
+      priceCurrency:target||stop||priceLevels.length?field(form,"priceCurrency").toUpperCase():null,
+      priceLevels,
       rationale:field(form,"rationale"),
       strategyType:(field(form,"strategyType")||null) as InvestmentStrategyType|null,
       investmentHorizon:(field(form,"investmentHorizon")||null) as InvestmentHorizon|null,
@@ -338,6 +343,7 @@ export default async function JournalNewPage({searchParams}:{
           initialMaxPct={existingPlan?.maxAllocationPct??null}
           principleMaxPct={principle?.maxSinglePct??null}
           reference={reference} unavailableReason={unavailableReason}/>
+        <PlanPriceLevelsForm initialLevels={existingPlan?.priceLevels??[]}/>
         <p className="journal-form-hint">세부 항목을 펼치지 않아도 기존 저장값은 입력 요소에 유지됩니다.
           값을 직접 지우면 새 계획 변경 이력에 미설정으로 저장됩니다. 저장한 계획은 과거 기록을 수정하지 않고 새 이력으로 추가합니다.
           목표가·손절가는 가격 감시나 증권사 주문에 사용하지 않습니다. 위험 점검 가정과 사용자 판단은 명시적으로 체크했을 때만 새 계획의 변경 이력에 저장됩니다.</p>

@@ -729,3 +729,22 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}but
   .app-shell .analysis-mode-option-copy strong{font-size:.9rem}
   .app-shell .analysis-mode-option-copy small{font-size:.79rem}
 }
+
+/* Journal price lines (authored-only) and dedicated entry form. */
+.plan-level-editor,.plan-level-group{display:grid;gap:12px}
+.plan-level-heading,.plan-price-chart-top,.plan-price-chart-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.plan-level-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(130px,2fr) auto;gap:10px;align-items:end}
+.plan-level-row label,.plan-level-row input{min-width:0}
+.plan-level-row input{width:100%}
+.plan-price-chart{border:1px solid var(--border,#d4dbe5);border-radius:12px;padding:16px;margin-top:14px;display:grid;gap:12px;min-width:0}
+.plan-price-chart h3{margin:0}.plan-price-chart p{margin:4px 0}
+.plan-price-chart svg{display:block;width:100%;max-height:360px}
+.plan-price-chart-meta label{display:flex;gap:6px;align-items:center;font-size:.9rem}
+.plan-price-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.82rem}
+.plan-price-legend span,.plan-price-level strong{display:inline-flex;align-items:center;gap:6px}
+.plan-price-legend i,.plan-price-level i{width:12px;height:3px;border-radius:2px;display:inline-block}
+.plan-price-level-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.plan-price-level{background:transparent;color:inherit;text-align:left;display:grid;gap:6px;min-width:0;cursor:pointer;padding:10px;border:1px solid var(--border,#d4dbe5);border-radius:8px}
+.plan-price-level[aria-pressed="true"]{outline:2px solid #3885cd;outline-offset:-2px}
+.plan-price-level small{overflow-wrap:anywhere;line-height:1.45}
+@media(max-width:680px){.plan-level-row,.plan-price-level-list{grid-template-columns:minmax(0,1fr)}.plan-price-chart{padding:10px}.plan-level-row button{justify-self:start}}

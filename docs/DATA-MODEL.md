@@ -78,3 +78,8 @@ Public GitHub is not a database or archive for client data. Only synthetic test 
   tenant scope. No provider observation or trading endpoint is added.
 - Complete bounded exports include both tables; owner account deletion removes
   them before their journal/trade/membership parents. No existing SQL is changed.
+
+
+### Plan price levels (migration 030)
+
+The nullable JSONB `saas_journal_plan_revisions.price_levels` holds at most eight ENTRY or CONFIRM user-authored price/note annotations validated by the signed tenant-scoped API. The existing target and stop columns remain authoritative. Old revisions, original idempotency hashes, FORCE RLS and restricted SELECT/INSERT grants are unchanged. Historic null lists render empty. Price annotations never represent broker orders, quotes, or alerts.

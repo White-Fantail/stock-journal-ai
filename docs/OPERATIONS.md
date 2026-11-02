@@ -38,3 +38,6 @@ Active refs were previously moved to a clean source-only root. Do not restore de
 Review account authorization, login expiry/relogin, mobile touch behavior, production domain and two-user A/B isolation independently from synthetic CI. Confirm customer privacy boundaries and export/delete without committing fixtures. Avoid price polling, quote-triggered alerts or surprise AI calls.
 
 Related: [Product](PRODUCT.md) · [Roadmap](ROADMAP.md) · [Schema bootstrap](saas/HOSTED-SCHEMA-BOOTSTRAP.md) · [Personal bridge](../temporary/tiger_personal/README.md).
+
+
+**2026-11-02 price-level migration:** reviewed forward migration `030_plan_price_levels.sql` extends immutable tenant-scoped plans. Validate backed-up pre-deploy state, manifest checksum, disposable Postgres security and both required CI jobs before main. The visualization intentionally does not invent market candles or historical quote approval.

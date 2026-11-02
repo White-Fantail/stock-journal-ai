@@ -130,7 +130,7 @@ async function addPlan(form:FormData) {
     });
   }catch(error){
     // Log only a sanitized HTTP status, never the authored plan or account.
-    const status=error instanceof Error?error.message.match(/HTTP (\\d{3})/)?.[1]:undefined;
+    const status=error instanceof Error?error.message.match(/HTTP (\d{3})/)?.[1]:undefined;
     if(status)console.warn("[journal-plan] create rejected, status",status);
     redirect("/private/journal/new?error="+(status==="400"?"invalid":"unavailable"));
   }

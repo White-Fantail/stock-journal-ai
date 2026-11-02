@@ -321,16 +321,17 @@ export type JournalStrategyFields={
   maxAllocationPct?:string|null;
   reviewCadence?:ReviewCadence|null;
 };
+export type JournalPriceLevel = Readonly<{kind:"ENTRY"|"CONFIRM";price:string;note:string}>;
 export type JournalPlan = Readonly<{
   id:string; ticker:string; targetPrice:string|null; stopPrice:string|null;
   priceCurrency:string|null; rationale:string; createdAt:string;
   provenance:"USER_AUTHORED"; isBrokerOrder:false;
-  riskDecisionNote?:string|null;
+  riskDecisionNote?:string|null;priceLevels?:JournalPriceLevel[];
 } & JournalStrategyFields>;
 export type JournalPlanInput = {
   idempotencyKey:string; ticker:string; targetPrice:string|null;
   stopPrice:string|null; priceCurrency:string|null; rationale:string;
-  riskDecisionNote?:string|null;
+  riskDecisionNote?:string|null;priceLevels?:JournalPriceLevel[];
 } & JournalStrategyFields;
 export async function fetchJournalPlans(subject:string):Promise<readonly JournalPlan[]> {
   const result=await postS2("/internal/v1/journal/plans",subject) as {
@@ -346,6 +347,13 @@ export async function fetchJournalPlans(subject:string):Promise<readonly Journal
        (p.priceCurrency===null || typeof p.priceCurrency==="string") &&
        (p.riskDecisionNote==null || (typeof p.riskDecisionNote==="string" &&
           p.riskDecisionNote.length>=1 && p.riskDecisionNote.length<=1200)) &&
+       (p.priceLevels==null || (Array.isArray(p.priceLevels) &&
+          p.priceLevels.length<=8 && p.priceLevels.every(l=>
+            l && ["ENTRY","CONFIRM"].includes(l.kind) &&
+            typeof l.price==="string" && /^(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/.test(l.price) &&
+            Number(l.price)>0 && typeof l.note==="string" && l.note.length<=400) &&
+          p.priceLevels.filter(l=>l.kind==="ENTRY").length<=4 &&
+          p.priceLevels.filter(l=>l.kind==="CONFIRM").length<=4)) &&
        (p.strategyType==null || ["LONG_TERM","TECHNICAL","EVENT_DRIVEN","OTHER"].includes(p.strategyType)) &&
        (p.investmentHorizon==null || ["UNDER_3_MONTHS","THREE_TO_TWELVE_MONTHS",
           "ONE_TO_THREE_YEARS","OVER_THREE_YEARS","OPEN_ENDED"].includes(p.investmentHorizon)) &&

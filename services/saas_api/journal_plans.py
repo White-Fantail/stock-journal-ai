@@ -29,6 +29,8 @@ _EXTRA_FIELDS = frozenset((
     "maxAllocationPct","reviewCadence",
 ))
 _DECISION_FIELDS = frozenset(("riskDecisionNote",))
+_LEVEL_FIELDS = frozenset(("priceLevels",))
+_LEVEL_KINDS = frozenset(("ENTRY", "CONFIRM"))
 _STRATEGIES = frozenset(("LONG_TERM","TECHNICAL","EVENT_DRIVEN","OTHER"))
 _HORIZONS = frozenset((
     "UNDER_3_MONTHS","THREE_TO_TWELVE_MONTHS","ONE_TO_THREE_YEARS",
@@ -90,10 +92,35 @@ def _decision_note(value):
     return value.strip()
 
 
+def _price_levels(raw):
+    if not isinstance(raw, list) or len(raw) > 8:
+        raise TradeInputError("Invalid plan price levels")
+    counts = {"ENTRY": 0, "CONFIRM": 0}
+    result = []
+    for level in raw:
+        if not isinstance(level, dict) or set(level) != {"kind", "price", "note"}:
+            raise TradeInputError("Invalid plan level fields")
+        kind = level.get("kind")
+        if kind not in _LEVEL_KINDS:
+            raise TradeInputError("Invalid plan level kind")
+        price = _price(level.get("price"))
+        if price is None:
+            raise TradeInputError("Price level must be positive")
+        note = level.get("note")
+        if not isinstance(note, str) or len(note) > 400:
+            raise TradeInputError("Invalid plan level note")
+        counts[kind] += 1
+        if counts[kind] > 4:
+            raise TradeInputError("Too many price levels of one kind")
+        result.append({"kind": kind, "price": str(price), "note": note.strip()})
+    return result
+
+
 def normalize_plan(raw):
     if not isinstance(raw,dict) or frozenset(raw) not in (
         _BASE_FIELDS, _BASE_FIELDS|_EXTRA_FIELDS,
         _BASE_FIELDS|_EXTRA_FIELDS|_DECISION_FIELDS,
+        _BASE_FIELDS|_EXTRA_FIELDS|_DECISION_FIELDS|_LEVEL_FIELDS,
     ):
         raise TradeInputError("Invalid plan fields")
     try:
@@ -105,8 +132,9 @@ def normalize_plan(raw):
         raise TradeInputError("Invalid ticker")
     target=_price(raw["targetPrice"])
     stop=_price(raw["stopPrice"])
+    levels=_price_levels(raw["priceLevels"]) if _LEVEL_FIELDS.issubset(raw) else None
     currency=raw.get("priceCurrency")
-    if target is None and stop is None:
+    if target is None and stop is None and not levels:
         if currency is not None:
             raise TradeInputError("Cleared plan must have no currency")
     elif not isinstance(currency,str) or not _CURRENCY.fullmatch(currency):
@@ -128,6 +156,8 @@ def normalize_plan(raw):
         })
     if _DECISION_FIELDS.issubset(raw):
         result["riskDecisionNote"]=_decision_note(raw["riskDecisionNote"])
+    if levels is not None:
+        result["priceLevels"]=levels
     # Do not add new NULL keys for historical six-field requests:
     # their persisted idempotency digest must remain stable after migration.
     return result
@@ -145,6 +175,7 @@ def _row(row):
             "maxAllocationPct":str(row[10]) if row[10] is not None else None,
             "reviewCadence":row[11],
             "riskDecisionNote":row[12],
+            "priceLevels":row[13] if len(row)>13 and row[13] is not None else [],
             "isBrokerOrder":False}
 
 
@@ -156,7 +187,7 @@ def list_plans(identity_conn, trade_conn, subject):
         rows=trade_conn.execute("""SELECT id,ticker,target_price,stop_price,
           price_currency,rationale,created_at,
           strategy_type,investment_horizon,invalidation_condition,
-          max_allocation_pct,review_cadence,risk_decision_note
+          max_allocation_pct,review_cadence,risk_decision_note,price_levels
           FROM saas_journal_plan_revisions
           ORDER BY created_at DESC,id DESC LIMIT %s""",(_LIST_LIMIT,)).fetchall()
     return {"plans":[_row(row) for row in rows],"source":"USER_AUTHORED_ONLY",
@@ -181,15 +212,16 @@ def create_plan(identity_conn,trade_conn,subject,raw):
           (workspace_id,author_user_id,idempotency_key,request_hash,ticker,
            target_price,stop_price,price_currency,rationale,
            strategy_type,investment_horizon,invalidation_condition,
-           max_allocation_pct,review_cadence,risk_decision_note)
-          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+           max_allocation_pct,review_cadence,risk_decision_note,price_levels)
+          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb)
           ON CONFLICT(workspace_id,idempotency_key) DO NOTHING RETURNING id""",
           (scope["workspaceId"],scope["userId"],entry["idempotencyKey"],digest,
            entry["ticker"],entry["targetPrice"],entry["stopPrice"],
            entry["priceCurrency"],entry["rationale"],
            entry.get("strategyType"),entry.get("investmentHorizon"),
            entry.get("invalidationCondition"),entry.get("maxAllocationPct"),
-           entry.get("reviewCadence"),entry.get("riskDecisionNote"))).fetchone()
+           entry.get("reviewCadence"),entry.get("riskDecisionNote"),
+           json.dumps(entry["priceLevels"]) if "priceLevels" in entry else None)).fetchone()
         if not inserted:
             old=trade_conn.execute("""SELECT id,request_hash
                  FROM saas_journal_plan_revisions WHERE idempotency_key=%s""",

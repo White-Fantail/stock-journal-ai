@@ -32,8 +32,17 @@ class HostedSchemaPolicyTests(unittest.TestCase):
                            "025_user_risk_factors.sql",
                            "026_investor_principles.sql",
                            "027_review_action_followups.sql",
-                            "028_plan_risk_decision_note.sql", "029_manual_indicators.sql"])
+                            "028_plan_risk_decision_note.sql", "029_manual_indicators.sql",
+                            "030_plan_price_levels.sql"])
         self.assertTrue(all(len(m[1]) == 64 and m[2].strip() for m in planned))
+
+    def test_plan_price_levels_is_append_only_and_tenant_owned(self):
+        sql=next(body for name,_,body in manifest()
+                 if name=="030_plan_price_levels.sql")
+        self.assertIn("ALTER TABLE saas_journal_plan_revisions",sql)
+        self.assertIn("ADD COLUMN price_levels",sql)
+        self.assertNotIn("GRANT UPDATE",sql)
+        self.assertNotIn("DROP COLUMN",sql)
 
     def test_strategy_plan_extension_is_nullable_append_only_and_forward_only(self):
         sql=next(body for name,_,body in manifest()

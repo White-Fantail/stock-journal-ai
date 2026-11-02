@@ -98,6 +98,36 @@ class JournalPlanInputTests(unittest.TestCase):
         with self.assertRaises(TradeInputError):
             normalize_plan({**BASE,"riskDecisionNote":"unexpected partial"})
 
+    def test_price_level_annotations_and_historical_hash_shape(self):
+        fields={"strategyType":"TECHNICAL","investmentHorizon":None,
+                "invalidationCondition":None,"maxAllocationPct":None,
+                "reviewCadence":None,"riskDecisionNote":None}
+        before=normalize_plan({**BASE,**fields})
+        self.assertNotIn("priceLevels",before)
+        levels=[{"kind":"ENTRY","price":"613.500","note":"  First entry  "},
+                {"kind":"CONFIRM","price":"635","note":"Support retest"}]
+        record=normalize_plan({**BASE,**fields,"priceLevels":levels})
+        self.assertEqual(record["priceLevels"][0]["price"],"613.500")
+        self.assertEqual(record["priceLevels"][0]["note"],"First entry")
+        only_entry=normalize_plan({**BASE,**fields,"targetPrice":None,"stopPrice":None,
+                                   "priceCurrency":"USD","priceLevels":levels})
+        self.assertEqual(only_entry["priceCurrency"],"USD")
+        for bad in (
+            [{"kind":"ENTRY","price":"0","note":""}],
+            [{"kind":"CONFIRM","price":"NaN","note":""}],
+            [{"kind":"STOP","price":"123","note":""}],
+            [{"kind":"ENTRY","price":"101","note":"x"*401}],
+            [{"kind":"ENTRY","price":"101","note":"","workspaceId":"forged"}],
+            [{"kind":"ENTRY","price":"101","note":""}]*5,
+            [{"kind":"ENTRY","price":"101","note":""}]*9,
+            {"kind":"ENTRY"},
+        ):
+            with self.subTest(bad=bad), self.assertRaises(TradeInputError):
+                normalize_plan({**BASE,**fields,"priceLevels":bad})
+        with self.assertRaises(TradeInputError):
+            normalize_plan({**BASE,**fields,"targetPrice":None,"stopPrice":None,
+                            "priceCurrency":None,"priceLevels":levels})
+
     def test_no_guessing_invalid_money_or_currency(self):
         invalid=[
             {"targetPrice":"NaN"},{"targetPrice":"Infinity"},{"targetPrice":"0"},

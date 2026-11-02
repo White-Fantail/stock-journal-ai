@@ -74,6 +74,7 @@ APPROVED_AUTO_MIGRATIONS = frozenset((
     "027_review_action_followups.sql", # immutable user-confirmed previous action status
     "028_plan_risk_decision_note.sql", # optional user-approved scenario note on plan revision
     "029_manual_indicators.sql", # immutable manual indicator criteria and snapshots
+    "030_plan_price_levels.sql", # immutable entry and confirmation price annotations
 ))
 # Pin unattended migrations to the independently observed production Railway
 # API service. These IDs are deployment identifiers, NOT database credentials.

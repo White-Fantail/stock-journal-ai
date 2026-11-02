@@ -52,6 +52,7 @@ class ReleaseReadinessContractTests(unittest.TestCase):
   self.assertIn("len(checkins) > _LIMIT",backend)
   self.assertIn("len(action_followups) > _LIMIT",backend)
   self.assertIn("Array.isArray(result.planSelfReviews)",frontend)
+  self.assertIn("price_levels FROM saas_journal_plan_revisions",backend)
   self.assertIn("FROM saas_review_action_followups",backend)
   self.assertIn('"actionFollowups":',backend)
   self.assertIn("Array.isArray(result.actionFollowups)",frontend)

@@ -72,11 +72,20 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
 
   await page.locator('textarea[name="invalidationCondition"]').fill("Synthetic thesis invalidated when assumptions change");
   await page.locator('select[name="reviewCadence"]').selectOption("MONTHLY");
+  await page.getByRole("button",{name:"+ 가격 추가"}).first().click();
+  await page.getByRole("button",{name:"+ 가격 추가"}).nth(1).click();
+  await page.locator(".plan-level-row").first().locator("input").first().fill("390.50");
+  await page.locator(".plan-level-row").first().locator("input").nth(1).fill("Synthetic support entry");
+  await page.locator(".plan-level-row").nth(1).locator("input").first().fill("410");
+  await page.locator(".plan-level-row").nth(1).locator("input").nth(1).fill("Synthetic confirmation");
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);
   await expect(page.locator(".journal-current")).toContainText("QATEST");
   await expect(page.locator(".journal-primary-reason")).toContainText("Synthetic B7 initial investment rationale");
   await expect(page.locator(".journal-plan-snapshot")).toContainText("목표가");
+  await expect(page.locator(".plan-price-chart")).toContainText("390.50");
+  await expect(page.locator(".plan-price-chart")).toContainText("410");
+  await expect(page.locator(".plan-price-chart")).toContainText("Synthetic confirmation");
   await expect(page.locator(".journal-history")).toBeVisible();
   await expect(page.locator(".journal-guidance-details")).not.toHaveAttribute("open","");
   await page.locator(".journal-guidance-details summary").click();
@@ -85,6 +94,8 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await expect(page.locator("[data-private-hydrated]")).toBeAttached();
   await expect(page.locator('textarea[name="invalidationCondition"]')).toHaveValue("Synthetic thesis invalidated when assumptions change");
   await expect(page.locator('select[name="reviewCadence"]')).toHaveValue("MONTHLY");
+  await expect(page.locator(".plan-level-row")).toHaveCount(2);
+  await expect(page.locator(".plan-level-row").first().locator("input").first()).toHaveValue("390.50");
   await page.locator('textarea[name="rationale"]').fill("Synthetic B7 revised investment reasoning");
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);

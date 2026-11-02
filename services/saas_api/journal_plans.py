@@ -101,7 +101,7 @@ def _price_levels(raw):
         if not isinstance(level, dict) or set(level) != {"kind", "price", "note"}:
             raise TradeInputError("Invalid plan level fields")
         kind = level.get("kind")
-        if kind not in _LEVEL_KINDS:
+        if not isinstance(kind, str) or kind not in _LEVEL_KINDS:
             raise TradeInputError("Invalid plan level kind")
         price = _price(level.get("price"))
         if price is None:

@@ -350,7 +350,7 @@ export async function fetchJournalPlans(subject:string):Promise<readonly Journal
        (p.priceLevels==null || (Array.isArray(p.priceLevels) &&
           p.priceLevels.length<=8 && p.priceLevels.every(l=>
             l && ["ENTRY","CONFIRM"].includes(l.kind) &&
-            typeof l.price==="string" && /^(?:0|[1-9][0-9]{0,23})(?:\\.[0-9]{1,12})?$/.test(l.price) &&
+            typeof l.price==="string" && /^(?:0|[1-9][0-9]{0,23})(?:\.[0-9]{1,12})?$/.test(l.price) &&
             Number(l.price)>0 && typeof l.note==="string" && l.note.length<=400) &&
           p.priceLevels.filter(l=>l.kind==="ENTRY").length<=4 &&
           p.priceLevels.filter(l=>l.kind==="CONFIRM").length<=4)) &&

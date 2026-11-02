@@ -4,7 +4,7 @@ import {useMemo,useState} from "react";
 import Link from "next/link";
 import {formatMoney,formatQuantity} from "../../../lib/format-decimal";
 import {activityForTicker,planBeforeTrade,type ActivitySources,type InvestmentActivity} from "../../../lib/investment-activity";
-import {notesForObserved,tigerTradeHref} from "../../../lib/trade-reasons";
+import {notesForObserved,tigerTradeHref,latestObservedReasons,correctionOf} from "../../../lib/trade-reasons";
 import {orderStatusLabel} from "../../../lib/tiger-order-display";
 import type {TigerLedgerRead} from "../../../lib/tiger-api";
 
@@ -83,13 +83,13 @@ export function InvestmentActivityFeed(props:Props){
             </div>
             <ActivityBody item={item} entries={entries}/>
             {prior&&<details className="journal-activity-context">
-              <summary>거래 이전에 작성한 계획 확인 · {labelTime(Date.parse(prior.createdAt))}</summary>
+              <summary>{item.category==="OBSERVED_ORDER"?"주문 관측 시각 이전 계획":"거래 이전에 작성한 계획 확인"} · {labelTime(Date.parse(prior.createdAt))}</summary>
               <div className="journal-plan-values">
                 <span>당시 목표 <strong>{price(prior.targetPrice,prior.priceCurrency)}</strong></span>
                 <span>당시 손절 <strong>{price(prior.stopPrice,prior.priceCurrency)}</strong></span>
               </div>
               <p className="journal-entry-text">{prior.rationale}</p>
-              <small>거래 시각 이전의 가장 최근 작성본입니다. 거래가 이 계획을 따랐다는 증거가 아니며, 나중에 작성한 계획을 소급 적용하지 않습니다.</small>
+              <small>{item.category==="OBSERVED_ORDER"?"Tiger 주문 관측 시각 기준이며 실제 체결 시각과 다를 수 있습니다. ":""}기록된 기준 시각 이전의 가장 최근 작성본입니다. 주문이나 거래가 계획을 따랐다는 증거가 아니며, 이후 작성한 계획을 소급 적용하지 않습니다.</small>
             </details>}
           </article>;
         })}
@@ -137,20 +137,20 @@ function ActivityBody({item,entries}:{
   if(item.category==="OBSERVED_ORDER"){
     const {order:o,fills,reconciliation}=item.value;
     const reasons=notesForObserved(entries,o.sourceRef,"ORDER");
+    const currentReasons=latestObservedReasons(reasons);
     return <div>
       <strong>{o.side==="BUY"?"매수":"매도"} 주문 · 관측 체결 {formatQuantity(o.filled,"?")}주</strong>
       <small>{orderStatusLabel(o.status)} · 주문 지정 가격 {price(o.price,o.currency)} · 개별 체결 관측 {fills.length}건</small>
-      {reasons.length>0?<details className="journal-activity-context">
-        <summary>내 매매 이유 {reasons.length}건 보기</summary>
-        {reasons.map(e=><p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+      {currentReasons.length>0?<details className="journal-activity-context">
+        <summary>내 매매 이유 {currentReasons.length}건 보기</summary>
+        <ObservedReasonHistory notes={reasons}/>
       </details>:<small>이 주문에 연결한 매매 이유 미기록</small>}
       {fills.length>0&&<details className="journal-activity-context">
         <summary>연결된 개별 체결 관측 {fills.length}건 · {reconciliation==="OBSERVED_SUM_MATCH"?"관측 수량 일치":"수량 검토 필요"}</summary>
         {fills.map(f=><div className="journal-trade-row" key={f.sourceRef}>
           <div><strong>{formatQuantity(f.quantity)}주 · {price(f.price,f.currency)}</strong>
             <small>원본 시각 {f.timeRaw??"미확인"} · 시간대 미검증</small>
-            {notesForObserved(entries,f.sourceRef,"FILL").map(e=>
-              <p className="journal-entry-text" key={e.id}>{e.content}</p>)}</div>
+            <ObservedReasonHistory notes={notesForObserved(entries,f.sourceRef,"FILL")}/></div>
           <Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>상세 →</Link>
         </div>)}
       </details>}
@@ -162,8 +162,7 @@ function ActivityBody({item,entries}:{
     return <div>
       <strong>{f.side==="BUY"?"매수":"매도"} {formatQuantity(f.quantity)}주 · {price(f.price,f.currency)}</strong>
       <small>주문 연결 확인 불가 · 원본 시각 {f.timeRaw??"미확인"} · 시간대 미검증</small>
-      {notesForObserved(entries,f.sourceRef,"FILL").map(e=>
-        <p className="journal-entry-text" key={e.id}>{e.content}</p>)}
+      <ObservedReasonHistory notes={notesForObserved(entries,f.sourceRef,"FILL")}/>
       <Link href={tigerTradeHref(f.sourceRef,0,"FILL")}>개별 체결·이유 관리 →</Link>
     </div>;
   }
@@ -177,4 +176,18 @@ function ActivityBody({item,entries}:{
     {reasons.length===0&&<small>이 검증 체결에 연결한 이유 미기록</small>}
     <Link href="/private/trades">검증 체결 출처 확인 →</Link>
   </div>;
+}
+
+/** Share the trade detail's append-only correction projection; retain prior reasons on demand. */
+function ObservedReasonHistory({notes}:{notes:ActivitySources["entries"]}){
+  return <>{latestObservedReasons(notes).map(({current,history})=>
+    <div key={current.id}>
+      <p className="journal-entry-text">{correctionOf(current)?.content??current.content}</p>
+      {history.length>1&&<details className="journal-activity-context">
+        <summary>정정 전 매매 이유 {history.length-1}건</summary>
+        {history.slice(1).map(old=><p className="journal-entry-text" key={old.id}>
+          {correctionOf(old)?.content??old.content}
+        </p>)}
+      </details>}
+    </div>)}</>;
 }

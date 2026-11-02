@@ -44,6 +44,9 @@ test("trade list and detail share the SAME user-authored journal data, not a dup
  const feed=read("../app/private/journal/investment-activity-feed.tsx");
  assert.ok(journal.includes("<InvestmentActivityFeed"));
  assert.ok(feed.includes("notesForObserved(entries,o.sourceRef"));
+ assert.ok(feed.includes("latestObservedReasons(reasons)"));
+ assert.ok(feed.includes("<ObservedReasonHistory notes={reasons}/>"));
+ assert.ok(feed.includes("correctionOf(current)?.content??current.content"));
  assert.ok(feed.includes("원본 주문·매매 이유 관리"));
  assert.ok(feed.includes("거래 상세 · 이유 관리"));
  assert.ok(legacy.includes("redirect(\"/private/trades/tiger/\"+ref+\"/note"));

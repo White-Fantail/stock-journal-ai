@@ -193,7 +193,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   expect(exported.investorPrinciples.some(p=>p.note==="Synthetic B7 principles in workspace A only.")).toBe(true);
   const bpage=await b.newPage();
   await bpage.goto("/private/journal");
-  await expect(bpage.getByRole("heading",{name:"투자 일지"})).toBeVisible();
+  await expect(bpage.getByRole("heading",{name:"투자 계획·거래"})).toBeVisible();
   await expect(bpage.locator("body")).not.toContainText("Synthetic B7 revised investment reasoning");
   await bpage.goto("/private/review");
   await expect(bpage.locator("body")).not.toContainText(mark);
@@ -217,7 +217,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.goto("/private/journal");
   await expect(page).toHaveURL(/\/login(?:\?|$)/);
   await bpage.goto("/private/journal");
-  await expect(bpage.getByRole("heading",{name:"투자 일지"})).toBeVisible();
+  await expect(bpage.getByRole("heading",{name:"투자 계획·거래"})).toBeVisible();
  }finally{await a.close();await b.close();}
 });
 test("private primary and More menus keep navigating through full documents",async({browser})=>{

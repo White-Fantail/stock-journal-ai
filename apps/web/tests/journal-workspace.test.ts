@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {formatMoney} from "../lib/format-decimal";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -69,7 +70,6 @@ test("manual trade API failure does not hide readable investment notes and plans
 });
 
 test("journal chart displays plan prices with exactly two decimals, preserving source precision",()=>{
-  const {formatMoney}=require("../lib/format-decimal");
   assert.equal(formatMoney("280.000000000000"),"280.00");
   assert.equal(formatMoney("230.000000000000"),"230.00");
   assert.equal(formatMoney("613.500000000000"),"613.50");

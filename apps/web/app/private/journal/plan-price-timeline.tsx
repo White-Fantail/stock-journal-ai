@@ -1,6 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import Link from "next/link";
+import {formatMoney} from "../../../lib/format-decimal";
 import type {JournalPlan,ManualTradeEvent} from "../../../lib/saas-trades-api";
 import type {TigerPersonalFill,VerifiedBrokerExecution} from "../../../lib/tiger-api";
 
@@ -88,12 +89,12 @@ export function PlanPriceTimeline({ticker,plans,trades,observedFills,verifiedFil
             stroke={COLORS[l.kind]} strokeWidth={l.latest?2.5:1.5} strokeOpacity={l.latest?1:.5}
             strokeDasharray={l.kind==="ENTRY"?"0":"6 4"}/>
           <circle cx={x(l.at)} cy={y(l.price)} r="3" fill={COLORS[l.kind]}/>
-          <title>{NAMES[l.kind]} {l.raw} {data.currency} · {l.note}</title>
+          <title>{NAMES[l.kind]} {formatMoney(l.raw)} {data.currency} · {l.note}</title>
         </g>)}
         {data.marks.map(m=><g key={m.id}>
           <circle cx={x(m.at)} cy={y(m.price)} r="5" fill={m.side==="BUY"?"#3885cd":"#d35454"}
             stroke="currentColor" strokeWidth=".7"/>
-          <title>{m.side==="BUY"?"매수":"매도"} {m.raw} {data.currency} · {m.source} · {label(m.at)}</title>
+          <title>{m.side==="BUY"?"매수":"매도"} {formatMoney(m.raw)} {data.currency} · {m.source} · {label(m.at)}</title>
         </g>)}
         <text x="30" y="214" fill="currentColor" opacity=".7" fontSize="11">{label(start)}</text>
         <text x="470" y="214" fill="currentColor" opacity=".7" fontSize="11" textAnchor="end">{label(end)}</text>
@@ -106,14 +107,14 @@ export function PlanPriceTimeline({ticker,plans,trades,observedFills,verifiedFil
       <div className="plan-price-level-list">
         {visible.map(l=><button type="button" key={l.id} aria-pressed={selected===l.id}
           onClick={()=>setSelected(l.id)} className="plan-price-level">
-          <strong><i style={{backgroundColor:COLORS[l.kind]}}/>{NAMES[l.kind]} {l.raw} {data.currency}</strong>
+          <strong><i style={{backgroundColor:COLORS[l.kind]}}/>{NAMES[l.kind]} {formatMoney(l.raw)} {data.currency}</strong>
           <small>{l.latest?"현재":"이전"} · {label(l.at)} · {l.note||"별도 메모 없음"}</small>
         </button>)}
       </div>
-      {active&&<p role="status" className="journal-form-hint">{NAMES[active.kind]} {active.raw} {data.currency} · {active.note||"별도 메모 없음"}</p>}
+      {active&&<p role="status" className="journal-form-hint">{NAMES[active.kind]} {formatMoney(active.raw)} {data.currency} · {active.note||"별도 메모 없음"}</p>}
       {data.marks.length>0&&<details className="data-disclosure">
         <summary>거래 마커 {data.marks.length}건</summary>
-        <ul>{data.marks.map(m=><li key={m.id}>{label(m.at)} · {m.side==="BUY"?"매수":"매도"} {m.raw} {data.currency} · {m.source}</li>)}</ul>
+        <ul>{data.marks.map(m=><li key={m.id}>{label(m.at)} · {m.side==="BUY"?"매수":"매도"} {formatMoney(m.raw)} {data.currency} · {m.source}</li>)}</ul>
       </details>}
       <p className="journal-form-hint">가로축은 계획 작성·체결 날짜이며 선은 사용자 계획입니다. 실제 주가 흐름을 의미하지 않습니다. 다른 통화나 날짜가 없는 거래는 제외합니다. 거래 이유는 거래 기록에서 확인하세요.</p>
     </>}

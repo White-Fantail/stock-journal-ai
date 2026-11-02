@@ -67,3 +67,18 @@ test("manual trade API failure does not hide readable investment notes and plans
   assert.ok(page.includes('enabled={!unavailable}'));
   assert.ok(!page.includes('tradeResult.status==="fulfilled"){'));
 });
+
+test("journal chart displays plan prices with exactly two decimals, preserving source precision",()=>{
+  const {formatMoney}=require("../lib/format-decimal");
+  assert.equal(formatMoney("280.000000000000"),"280.00");
+  assert.equal(formatMoney("230.000000000000"),"230.00");
+  assert.equal(formatMoney("613.500000000000"),"613.50");
+  assert.equal(formatMoney("1.235000000000"),"1.24");
+  assert.equal(formatMoney("0.000000000001"),"<0.01");
+  const chart=source("../app/private/journal/plan-price-timeline.tsx");
+  assert.ok(chart.includes('import {formatMoney} from "../../../lib/format-decimal"'));
+  for(const value of ["l.raw","m.raw","active.raw"])
+    assert.ok(chart.includes("formatMoney("+value+")"),value);
+  for(const unformatted of ["{l.raw}","{m.raw}","{active.raw}"])
+    assert.ok(!chart.includes(unformatted),unformatted);
+});

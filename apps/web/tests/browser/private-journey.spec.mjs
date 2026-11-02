@@ -78,6 +78,7 @@ test("A completes full authored journey; B is isolated; deletion invalidates A s
   await page.locator(".plan-level-row").first().locator("input").nth(1).fill("Synthetic support entry");
   await page.locator(".plan-level-row").nth(1).locator("input").first().fill("410");
   await page.locator(".plan-level-row").nth(1).locator("input").nth(1).fill("Synthetic confirmation");
+  await expect(page.locator('input[name="priceLevels"]')).toHaveValue(/390\\.50.*410/);
   await page.getByRole("button",{name:"새 투자 계획 저장"}).click();
   await expect(page).toHaveURL(/\/private\/journal\?saved=plan&ticker=QATEST/);
   await expect(page.locator(".journal-current")).toContainText("QATEST");

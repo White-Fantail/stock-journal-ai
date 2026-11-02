@@ -115,6 +115,7 @@ export function JournalWorkspace({
   const activeTrades=trades.filter(t=>t.ticker===selected&&t.kind==="EXECUTION");
   const voided=new Set(trades.filter(t=>t.kind==="VOID").map(t=>t.voidsEventId));
   const connectedTrades=activeTrades.filter(t=>!voided.has(t.id));
+  const observedFills=personalFills.filter(f=>f.symbol===selected);
   const totalEntries=investmentEntries.length+plans.length;
   const listedPlans=summaries.filter(s=>s.plan!==null).length;
   const missingThesis=summaries.filter(s=>!s.thesis).length;

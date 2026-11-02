@@ -44,10 +44,12 @@ async function recordManualExecution(formData: FormData) {
 
 
 export default async function NewTradePage({searchParams}:{
-  searchParams:Promise<{error?:string}>
+  searchParams:Promise<{error?:string;ticker?:string}>
 }) {
   if(!await currentWorkspace()) redirect("/login");
   const query=await searchParams;
+  const ticker=(query.ticker??"").toUpperCase();
+  const initialTicker=/^[A-Z0-9][A-Z0-9.-]{0,31}$/.test(ticker)?ticker:"";
   return <main style={{maxWidth:720,margin:"2rem auto",padding:"0 1rem"}}>
     <p><Link href="/private/trades/manual">← 직접 입력 거래</Link></p>
     <h1>체결 기록 직접 추가</h1>
@@ -56,7 +58,7 @@ export default async function NewTradePage({searchParams}:{
     <section className="state-panel">
       <form action={recordManualExecution} style={{display:"grid",gap:12,maxWidth:480}}>
         <input type="hidden" name="idempotencyKey" value={randomUUID()}/>
-        <label>종목 심볼 <input required name="ticker" placeholder="TSLA" maxLength={32}/></label>
+        <label>종목 심볼 <input required name="ticker" placeholder="TSLA" defaultValue={initialTicker} maxLength={32}/></label>
         <label>매매 구분 <select required name="side"><option value="BUY">매수</option><option value="SELL">매도</option></select></label>
         <label>체결 수량 <input required name="quantity" inputMode="decimal" placeholder="1.25" pattern="[0-9]+([.][0-9]+)?"/></label>
         <label>1주 체결가 <input required name="price" inputMode="decimal" placeholder="250.50" pattern="[0-9]+([.][0-9]+)?"/></label>

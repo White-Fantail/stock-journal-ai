@@ -40,7 +40,7 @@ export function InvestmentActivityFeed(props:Props){
       계획은 사용자 작성이며 주문이 아닙니다. 거래마다 출처와 검증 상태를 구분합니다.</p>
     <nav className="journal-unified-actions" aria-label="투자 기록 작업">
       <Link className="btn btn-primary" href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(ticker)}>계획 변경</Link>
-      <Link className="btn btn-outline" href={"/private/trades/new"}>+ 거래 직접 기록</Link>
+      <Link className="btn btn-outline" href={"/private/trades/new?ticker="+encodeURIComponent(ticker)}>+ 거래 직접 기록</Link>
       <Link className="btn btn-outline" href={"/private/journal/review/new?ticker="+encodeURIComponent(ticker)}>투자 복기</Link>
       <Link className="btn btn-outline" href="/private/trades">Tiger 거래 상세</Link>
     </nav>
@@ -48,7 +48,7 @@ export function InvestmentActivityFeed(props:Props){
       {([
         ["ALL","전체 흐름",activity.length],
         ["PLAN","계획·판단",planCount],
-        ["TRADE","실제 거래",tradeCount],
+        ["TRADE","거래·주문",tradeCount],
       ] as const).map(([key,name,count])=>
         <button type="button" key={key} className={"btn "+(filter===key?"journal-tab-active":"")}
           aria-pressed={filter===key} onClick={()=>setFilter(key)}>
@@ -60,7 +60,7 @@ export function InvestmentActivityFeed(props:Props){
     {!brokerRead&&<p role="status" className="journal-activity-warning">
       독립 검증 체결 조회가 불가능합니다. 기존 기록이 없다는 뜻은 아닙니다.</p>}
     {visible.length===0?<div className="journal-empty">
-      {filter==="TRADE"?"현재 조회한 범위에서 이 종목의 거래가 확인되지 않습니다. 거래가 없었다는 의미는 아닙니다.":
+      {filter==="TRADE"?"현재 조회한 범위에서 이 종목의 거래·주문이 확인되지 않습니다. 거래가 없었다는 의미는 아닙니다.":
       filter==="PLAN"?"아직 작성한 투자 판단이나 계획이 없습니다.":"현재 조회한 기록이 없습니다."}
       <p><Link href={"/private/journal/new?mode=plan&ticker="+encodeURIComponent(ticker)}>내 투자 계획 작성 →</Link></p>
     </div>:
@@ -113,7 +113,7 @@ function ActivityBody({item,entries}:{
       </div>
       <p className="journal-entry-text">{p.rationale}</p>
       {p.invalidationCondition&&<p className="journal-entry-text">무효화 기준: {p.invalidationCondition}</p>}
-      {(p.priceLevels?.length??0)>0&&<small>진입·확인 가격 {p.priceLevels.length}개 · 상단 가격 계획 차트에서 확인</small>}
+      {(p.priceLevels?.length??0)>0&&<small>진입·확인 가격 {(p.priceLevels?.length??0)}개 · 상단 가격 계획 차트에서 확인</small>}
       <small>사용자 직접 작성 · 실제 주문 아님 · 이전 개정 이력 보존</small>
     </div>;
   }

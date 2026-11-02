@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
+import {readFileSync} from "node:fs";
 import {activityForTicker,planBeforeTrade,type ActivitySources} from "../lib/investment-activity";
 import type {JournalEntry,JournalPlan,ManualTradeEvent} from "../lib/saas-trades-api";
 import type {TigerPersonalOrder,TigerPersonalFill,VerifiedBrokerExecution} from "../lib/tiger-api";
@@ -83,6 +84,12 @@ test("order observation is never labelled with a fabricated execution time",()=>
   const record=rows.find(e=>e.category==="OBSERVED_ORDER");
   assert.equal(record?.at,null);
   assert.equal(planBeforeTrade(record!,[plan("p","2026-01-01T00:00:00Z")]),null);
+});
+
+test("manual trade authoring accepts a ticker suggestion but preserves explicit confirmation",()=>{
+  const page=readFileSync(new URL("../app/private/trades/new/page.tsx",import.meta.url),"utf8");
+  assert.ok(page.includes("defaultValue={initialTicker}"));
+  assert.ok(page.includes('name="confirm"'));
 });
 
 test("different ticker cannot borrow plan or trade",()=>{

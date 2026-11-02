@@ -41,8 +41,11 @@ test("trade list and detail share the SAME user-authored journal data, not a dup
  assert.ok(edit.includes("submitTigerObservationNote("));
  assert.ok(edit.includes("fetchJournal("));
  assert.ok(journal.includes("investmentEntries=useMemo(()=>entries.filter(e=>!tradeLinked(e))"));
- assert.ok(journal.includes("recentTradeSummary.map("));
- assert.ok(journal.includes("거래 상세 →"));
+ const feed=read("../app/private/journal/investment-activity-feed.tsx");
+ assert.ok(journal.includes("<InvestmentActivityFeed"));
+ assert.ok(feed.includes("notesForObserved(entries,o.sourceRef"));
+ assert.ok(feed.includes("원본 주문·매매 이유 관리"));
+ assert.ok(feed.includes("거래 상세 · 이유 관리"));
  assert.ok(legacy.includes("redirect(\"/private/trades/tiger/\"+ref+\"/note"));
  assert.ok(!list.includes("매매 이유 기록 →"));
 });

@@ -136,12 +136,15 @@ test("historical self assessment shows its own plan details or an explicit unkno
  assert.ok(page.includes("전체 투자계획 개정 이력을 확인할 수 없어"));
  assert.ok(page.includes("현재 계획으로 대체하지 않습니다"));
 });
-test("journal compares plan revisions and manual rationale at authored times only",()=>{
- const page=read("../app/private/journal/journal-workspace.tsx");
- assert.ok(page.includes("계획 개정과 직접 입력 거래 이유를 작성 시각순으로 비교"));
- assert.ok(page.includes('...plans.filter(p=>p.ticker===selected)'));
- assert.ok(page.includes('...connectedTrades.map(t=>({'));
- assert.ok(page.includes("at:t.createdAt"));
- assert.ok(page.includes("Date.parse(b.at)-Date.parse(a.at)"));
- assert.ok(page.includes("실제 체결 시각과 다를 수 있고"));
+test("journal compares only plans already authored before the transaction",()=>{
+  const page=read("../app/private/journal/journal-workspace.tsx");
+  const view=read("../app/private/journal/investment-activity-feed.tsx");
+  const model=read("../lib/investment-activity.ts");
+  assert.ok(page.includes("<InvestmentActivityFeed"));
+  assert.ok(view.includes("planBeforeTrade(item,selectedPlans)"));
+  assert.ok(view.includes("거래 시각 이전의 가장 최근 작성본"));
+  assert.ok(view.includes("소급 적용하지 않습니다"));
+  assert.ok(model.includes("isoTime(p.createdAt)"));
+  assert.ok(model.includes("activity.at"));
+
 });
